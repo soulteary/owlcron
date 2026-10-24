@@ -1,4 +1,4 @@
-FROM node:22-bookworm-slim AS frontend
+FROM node:25-bookworm-slim AS frontend
 WORKDIR /src
 COPY htdocs-deps/package*.json htdocs-deps/
 RUN npm ci --prefix htdocs-deps
