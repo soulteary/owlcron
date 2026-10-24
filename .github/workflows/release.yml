@@ -5,6 +5,12 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Archive version to validate; manual runs never create tags or releases'
+        required: false
+        default: 'v0.0.0-dev'
+        type: string
 permissions:
   contents: read
 concurrency:
@@ -16,7 +22,7 @@ jobs:
     timeout-minutes: 10
     env:
       GOTOOLCHAIN: local
-      VERSION: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'v0.0.0-dev' }}
+      VERSION: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || inputs.version || 'v0.0.0-dev' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -39,8 +45,13 @@ jobs:
       - run: python3 -m unittest discover -s tests -p 'test_release_package.py'
       - name: Build native Linux archive
         run: make release VERSION="$VERSION"
-      - name: Verify archive and run extracted distribution
-        run: python3 tools/verify_release.py dist/*.tar.gz
+      - name: Prepare deployment acceptance
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends nginx openssl
+          go build -trimpath -o dist/owlcron-migrate-check ./cmd/owlcron-migrate-check
+      - name: Verify archive, HTTPS deployment and synthetic migration
+        run: python3 tools/verify_release.py dist/*.tar.gz --deployment-checker dist/owlcron-migrate-check
       - name: Verify archive in a clean runtime container
         run: |
           docker run --rm --network none --read-only \

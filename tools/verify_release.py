@@ -17,6 +17,8 @@ ROOT = Path(__file__).resolve().parents[1]
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('archive', type=Path)
+    parser.add_argument('--deployment-checker', type=Path,
+                        help='Also run Nginx HTTPS and synthetic migration acceptance with this checker binary')
     args = parser.parse_args()
     archive = args.archive.resolve()
     require(archive.name.endswith('.tar.gz'), 'Expected a .tar.gz archive')
@@ -42,6 +44,10 @@ def main():
         env.pop('PYTHONOPTIMIZE', None)
         subprocess.run([sys.executable, str(ROOT / 'tests/release_acceptance.py'), str(distribution)],
                        env=env, check=True, timeout=150)
+        if args.deployment_checker:
+            subprocess.run([sys.executable, str(ROOT / 'tests/release_deployment.py'), str(distribution),
+                            '--checker', str(args.deployment_checker.resolve())],
+                           env=env, check=True, timeout=180)
         print(f'Release verified: checksum, metadata, adapter and installed application ({metadata["target"]})')
 
 
