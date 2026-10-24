@@ -151,3 +151,31 @@ func TestCheckSupportsNegativePageNumbersAndMultiplePages(t *testing.T) {
 		t.Fatal("page splitting changed reconstructed results")
 	}
 }
+
+func TestCheckRejectsNullListHeaderNumbers(t *testing.T) {
+	for _, field := range []string{"first_page", "last_page", "length"} {
+		t.Run(field, func(t *testing.T) {
+			lines := strings.Split(fixture(t), "\n")
+			for i, line := range lines {
+				key, value, ok := strings.Cut(line, " - ")
+				if !ok || key != "global/api_keys" {
+					continue
+				}
+				var header map[string]interface{}
+				if err := json.Unmarshal([]byte(value), &header); err != nil {
+					t.Fatal(err)
+				}
+				header[field] = nil
+				raw, err := json.Marshal(header)
+				if err != nil {
+					t.Fatal(err)
+				}
+				lines[i] = key + " - " + string(raw)
+			}
+			report, err := Check(strings.NewReader(strings.Join(lines, "\n")), nil)
+			if err == nil || report != nil {
+				t.Fatalf("null %s was treated as zero: report=%+v, err=%v", field, report, err)
+			}
+		})
+	}
+}
