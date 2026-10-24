@@ -1724,7 +1724,7 @@ Class.subclass( Page.Base, "Page.Schedule", {
 		var retention = $('#fe_ee_log_expire_days').val().trim();
 		event.log_expire_days = retention === '' ? null : Number(retention);
 		if (retention !== '' && (!Number.isInteger(event.log_expire_days) || event.log_expire_days < 0 || event.log_expire_days > 36500)) return quiet ? false : app.badField('fe_ee_log_expire_days', 'Enter 0 through 36500, or leave blank.');
-		
+
 		// event title
 		event.title = trim( $('#fe_ee_title').val() );
 		if (!event.title) return quiet ? false : app.badField('fe_ee_title', "Please enter a title for the event.");
