@@ -238,7 +238,7 @@ func (e *Engine) ConsumePasswordRecovery(ctx context.Context, userID, token, new
 	if err != nil {
 		return err
 	}
-	return e.mutateAccountAction(ctx, userID, func(user *types.User) error {
+	err = e.mutateAccountAction(ctx, userID, func(user *types.User) error {
 		if _, ok := e.validAccountAction(user, resetPasswordAction, token); !ok {
 			return ErrAccountActionInvalid
 		}
@@ -246,6 +246,19 @@ func (e *Engine) ConsumePasswordRecovery(ctx context.Context, userID, token, new
 		user.AccountActions = nil
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+	// The credential update is authoritative. Notification trouble must not
+	// turn a completed password change into an apparent reset failure.
+	p, noticeErr := e.jobManager.mailManager.prepareEmail(user.Email, "OwlCron password changed", "The password for your OwlCron account has changed. All previous sessions and reset links are invalid. If you did not request this change, contact your administrator immediately.", nil)
+	if noticeErr == nil {
+		noticeErr = e.enqueueNotification(ctx, "account-password-changed/"+accountTokenDigest(token), "email", p)
+	}
+	if noticeErr != nil {
+		e.logger.Warn("Password changed but account notification could not be queued")
+	}
+	return nil
 }
 
 func (e *Engine) prepareAccountEmail(ctx context.Context, n *Notification) (EmailPayload, error) {

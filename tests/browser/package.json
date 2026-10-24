@@ -4,7 +4,8 @@
   "license": "MIT",
   "scripts": {
     "test": "bun smoke.mjs",
-    "licenses": "bun check-licenses.mjs"
+    "licenses": "bun check-licenses.mjs",
+    "test:account-mail": "bun account-mail.mjs"
   },
   "devDependencies": {
     "playwright": "1.64.1"

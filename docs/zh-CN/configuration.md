@@ -152,4 +152,4 @@ mTLS 使用 `cluster_tls_require_client_cert: true`，要求显式 CA 和每节�
 
 数值为零或省略时使用以下默认值：`account_token_ttl_seconds: 1800`（非零时允许 60–86400）、`account_email_cooldown_seconds: 60`、`account_email_rate_limit: 5`、`account_email_ip_rate_limit: 20`、`account_email_rate_window_seconds: 3600`。冷却时间和窗口最大为 86400 秒，请求限额最大为 100000，负数均被拒绝。
 
-既有邮箱初始状态为未验证。验证仅对当前完全一致的地址有效，邮箱变更后清除验证状态。启用账号邮件后，可在 My Account 验证邮箱；密码重置接口由独立改动提供。公开注册保持关闭，仍由管理员创建账号和重置密码。
+既有邮箱初始状态为未验证。验证仅对当前完全一致的地址有效，邮箱变更后清除验证状态。启用账号邮件后，可在 My Account 验证邮箱；已启用且邮箱已验证的账号可以从登录页找回密码，详见[账号邮件操作指南](operations.md#账号邮件与密码找回)。公开注册保持关闭，仍由管理员创建账号和重置密码。

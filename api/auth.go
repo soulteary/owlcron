@@ -104,6 +104,8 @@ func skipAuth(path string) bool {
 		"/api/app/config",
 		"/api/user/login",
 		"/api/user/verify_email",
+		"/api/user/forgot_password",
+		"/api/user/reset_password",
 		"/api/user/logout",
 		"/api/user/resume_session",
 	}

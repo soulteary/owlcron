@@ -106,3 +106,53 @@ an address; account creation remains an administrator operation.
 The link opens a confirmation screen. Opening it alone does not consume the
 single-use token. Expired or previously used links require a new request from
 My Account. Registration remains disabled.
+
+## Account email and password recovery
+
+Public registration stays disabled. Enable `account_email_enabled` only after
+configuring the [account email policy](configuration.md#account-email-policy):
+a trusted HTTPS `base_app_url` matching `base_path`, an explicit `smtp_hostname`,
+SMTP TLS and `email_from`. Keep `account_email_allow_insecure` false in production.
+Test delivery with a dedicated account before announcing recovery availability.
+Imported and existing email addresses start unverified; users who cannot sign in
+must first use administrator-assisted recovery, then verify their address.
+
+After verification, select **Forgot Password?** on the login page and provide the
+exact username and verified email address. The response is intentionally the same
+for missing, disabled, unverified and matching accounts. A successful response
+does not prove delivery. Open the email link, enter and confirm a new password
+(12–72 UTF-8 bytes), then explicitly select **Reset Password**. All previous HTTP
+and WebSocket sessions and outstanding account links become invalid. Sign in
+again with the new password; recovery never creates or enables an account and
+never changes privileges.
+
+Links expire after `account_token_ttl_seconds` (30 minutes by default). Requesting
+a new link for the same action replaces the previous link. Opening a link alone
+does not change the account. The browser removes the token from its address bar
+before loading application assets; refreshing loses the in-memory token, so open
+the original email again. Do not copy links into logs, tickets or screenshots.
+The API accepts these actions only by POST; it does not consume tokens from GET
+requests. Old Cronicle recovery links cannot be used.
+
+Email and password edits, account disablement/deletion and secret-key rotation
+revoke outstanding links. Changing the email requires the current password and
+verification of the new address; the current address remains active until then.
+An email-change notice goes to the old address and a password-change notice goes
+to the recovery address. Notices are best effort after the account change: a
+notification failure does not roll back a successful change.
+
+Requests have process-local IP/account limits and a persistent per-user cooldown.
+Use shared ingress limits for multi-node deployments. The durable mail queue
+stores account-action references, not reusable reset tokens, and rechecks expiry
+and revocation immediately before delivery. SMTP failures retry under the normal
+notification policy, which can outlast a link's lifetime; expired/revoked messages
+are discarded. Check SMTP connectivity, TLS, sender policy and notification
+errors if messages do not arrive, then request a fresh link after the cooldown.
+A storage/queue failure can prevent delivery; never report a generic request
+response as a confirmed email delivery.
+
+When restoring backups, treat saved account-action state as sensitive: isolate
+the restore, disable real recipients, and rotate the restored `secret_key` before
+serving users so historical links cannot become usable again. This also
+invalidates existing signed credentials. Preserve offline administrator recovery
+as the fallback when email is unavailable.
