@@ -98,6 +98,8 @@ Restore into an isolated environment and check login, jobs, history, and logs be
 
 The [release workflow and version policy](releases.md) define verified archive contents and the supported build matrix. Data-migration compatibility is not yet guaranteed. Validate upgrades, cross-version rollback, and remote-backend disaster recovery against the intended deployment.
 
+The CLI streams backup records to the existing `owlcron-storage-v1` format instead of retaining the full export in memory. File exports are written to a private temporary file, synced, and renamed only after completion; errors before the rename preserve the previous destination. A directory-sync failure after the rename reports unconfirmed durability; the new file may already be visible. The key list and largest individual record still consume memory. Standard-output exports can be partial on failure, so check the exit status before using them. Streaming does not make a live backend snapshot consistent.
+
 ## Hosting under a URL prefix
 
 Set `base_path` to a path such as `/tools/cron` (no trailing slash) and
