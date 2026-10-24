@@ -18,6 +18,7 @@ smoke:
 
 build:
 	go build -o owlcron-engine .
+	go build -o owlcron-script ./cmd/owlcron-script
 	cd bin/echo-plugin && go build -o echo-plugin .
 
 test:

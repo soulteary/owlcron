@@ -4,19 +4,30 @@ package engine
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
+
+// procfs may report ESRCH as well as ENOENT when a process disappears.
+// Preserve permission and other failures for live processes.
+func processReadError(err error) error {
+	if errors.Is(err, syscall.ESRCH) || errors.Is(err, os.ErrNotExist) {
+		return os.ErrNotExist
+	}
+	return err
+}
 
 func processStat(pid int) ([]string, error) {
 	raw, err := os.ReadFile(fmt.Sprintf("/proc/%d/stat", pid))
 	if err != nil {
-		return nil, err
+		return nil, processReadError(err)
 	}
 	// comm may contain spaces and parentheses; the last closing parenthesis
 	// precedes the fixed-layout fields beginning at state (field 3).
@@ -80,6 +91,7 @@ func processGroupMembers(group int) ([]int, error) {
 }
 func processHasRecoveryToken(pid int, token string) (owned bool, resultErr error) {
 	defer func() {
+		resultErr = processReadError(resultErr)
 		if resultErr != nil {
 			if _, err := processIdentity(pid); os.IsNotExist(err) {
 				owned = false
