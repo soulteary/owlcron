@@ -336,10 +336,9 @@ Class.subclass( Page.Base, "Page.Home", {
 		// render table
 		var self = this;
 		html += this.getBasicTable( this.jobs, cols, 'active job', function(job, idx) {
-			var actions = [
-				// '<span class="link" onMouseUp="$P().go_job_details('+idx+')"><b>Details</b></span>',
+			var actions = app.hasPrivilege('abort_events') ? [
 				'<span class="link" onMouseUp="$P().abort_job('+idx+')"><b>Abort Job</b></span>'
-			];
+			] : [];
 			
 			var cat = job.category ? find_object( app.categories || [], { id: job.category } ) : { title: 'n/a' };
 			// var group = item.target ? find_object( app.server_groups || [], { id: item.target } ) : null;
@@ -440,9 +439,9 @@ Class.subclass( Page.Base, "Page.Home", {
 			var group = item.target ? find_object( app.server_groups, { id: item.target } ) : null;
 			var plugin = item.plugin ? find_object( app.plugins, { id: item.plugin } ) : null;
 			
-			var actions = [
+			var actions = app.hasPrivilege('abort_events') ? [
 				'<span class="link" onMouseUp="$P().flush_event_queue('+idx+')"><b>Flush Queue</b></span>'
-			];
+			] : [];
 			
 			var tds = [
 				'<div class="td_big" style="white-space:nowrap;"><a href="#Schedule?sub=edit_event&id='+item.id+'">' + '<b>' + self.getNiceEvent(item.title, col_width) + '</b>' + '</a></div>',
@@ -474,6 +473,7 @@ Class.subclass( Page.Base, "Page.Home", {
 	
 	abort_job: function(idx) {
 		// abort job, after confirmation
+		if (!app.hasPrivilege('abort_events')) return app.doError('You do not have permission to abort jobs.');
 		var job = this.jobs[idx];
 		
 		app.confirm( '<span style="color:red">Abort Job</span>', "Are you sure you want to abort the job &ldquo;<b>"+job.id+"</b>&rdquo;?</br>(Event: "+job.event_title+")", "Abort", function(result) {
@@ -488,7 +488,8 @@ Class.subclass( Page.Base, "Page.Home", {
 	},
 	
 	flush_event_queue: function(idx) {
-		// abort job, after confirmation
+		// flush queue, after confirmation
+		if (!app.hasPrivilege('abort_events')) return app.doError('You do not have permission to flush event queues.');
 		var stub = this.queue_stubs[idx];
 		
 		app.confirm( '<span style="color:red">Flush Event Queue</span>', "Are you sure you want to flush the queue for event &ldquo;<b>"+stub.title+"</b>&rdquo;?", "Flush", function(result) {
