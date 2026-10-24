@@ -3,7 +3,13 @@ import assert from 'node:assert/strict';
 // Use physical key events, never invoke handlers or focus the destination control.
 async function tabTo(page, target) {
   await target.waitFor();
-  for (let n = 0; n < 100; n++) {
+  // Start independent page scenarios at the document, not a focus position
+  // retained from the previous route or Firefox's browser chrome. The target
+  // is still reached exclusively by Tab; modal tests keep their current focus.
+  if (!await page.locator('#dialog_container:visible').count()) {
+    await page.evaluate(() => { document.body.tabIndex = -1; document.body.focus(); });
+  }
+  for (let n = 0; n < 200; n++) {
     if (await target.evaluate(element => element === document.activeElement)) return;
     await page.keyboard.press('Tab');
   }
@@ -13,6 +19,7 @@ async function tabTo(page, target) {
 export async function checkKeyboardPages(page, base, session) {
   await page.goto(base + '/#Home');
   await page.locator('#d_home_header_stats').waitFor();
+  await page.locator('#d_home_upcoming_events:not(.loading)').waitFor();
   const schedule = page.locator('#tab_Schedule');
   await tabTo(page, schedule);
   await page.keyboard.press('Enter');
@@ -65,6 +72,7 @@ export async function checkKeyboardPages(page, base, session) {
   // Enter must activate the focused Cancel, not the framework's default confirm.
   await page.goto(base + '/#Home');
   await page.locator('#d_home_header_stats').waitFor();
+  await page.locator('#d_home_upcoming_events:not(.loading)').waitFor();
   const toggle = page.locator('#d_tab_master');
   await tabTo(page, toggle);
   const previous = await toggle.textContent();

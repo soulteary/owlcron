@@ -41,12 +41,14 @@ export async function checkResponsivePages(page, base, jobID) {
     for (const [route, marker] of pages) {
       await page.goto(base + '/?layout=' + width + '#'+ route);
       await page.locator(marker + ':visible').first().waitFor();
+      if (route === 'Home') await page.locator('#d_home_upcoming_events:not(.loading)').waitFor();
       await fitsViewport(page, route + ' at ' + width);
       // Navigation must remain present; clipping overflow is not an acceptable fix.
       assert.equal(await page.locator('#tab_Admin').isVisible(), true);
     }
     await page.goto(base + '/#Home');
     await page.locator('#d_home_header_stats').waitFor();
+    await page.locator('#d_home_upcoming_events:not(.loading)').waitFor();
     await page.locator('#d_tab_master').click();
     await page.locator('#dialog_container').waitFor();
     await fitsViewport(page, 'Confirmation at ' + width);

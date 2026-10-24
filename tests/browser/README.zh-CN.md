@@ -13,7 +13,7 @@
   同时验证新页面及已有页面内的邮件链接跳转，确保令牌不进入浏览器日志。
 
 两项测试均使用所选的无头浏览器，未捕获的浏览器 JavaScript 异常会使测试失败。
-账号邮件测试不会向外部发送邮件，公开注册保持关闭。
+账号邮件测试还会检查 375px 视口下的表单布局，不会向外部发送邮件；公开注册保持关闭。
 
 在仓库根目录使用 Bun 1.4.2 和项目要求的 Go 工具链运行：
 
@@ -58,7 +58,7 @@ bun audit --cwd tests/browser --audit-level=moderate
 
 CI 并行运行 Chromium、Firefox、WebKit；每组都运行逐页冒烟测试和隔离邮件流程。
 `OWLCRON_BROWSER` 默认为 `chromium`，也可设置为 `firefox` 或 `webkit`。
-`OWLCRON_BROWSER_EXECUTABLE` 仅用于 Chromium 的本地可执行文件覆盖。错误的引擎名会直接失败。
+`OWLCRON_BROWSER_EXECUTABLE` 仅用于 Chromium 的本地可执行文件覆盖。错误的引擎名会直接失败。Firefox 不继承本机代理设置，测试服务全部位于回环地址。
 
 ```sh
 (cd tests/browser && bunx --bun --no-install playwright install --with-deps chromium firefox webkit)

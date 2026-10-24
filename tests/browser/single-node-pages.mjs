@@ -119,6 +119,7 @@ export async function checkSingleNodePages(page, responseFor, {base, session, po
   try {
     assert.deepEqual((await okay('app/run_event', {id:'browser_smoke'})).ids, [], 'Second singleton execution must queue');
     await page.goto(base + '/#Home');
+    await page.locator('#d_home_upcoming_events:not(.loading)').waitFor();
     const flush = page.locator('#d_home_queued_jobs .link:visible').filter({hasText:'Flush Queue'});
     await flush.waitFor();
     await flush.click();
@@ -146,6 +147,7 @@ export async function checkSingleNodePages(page, responseFor, {base, session, po
     const loggedIn = await response.json();
     assert.equal(loggedIn.code, 0);
     await reader.locator('#d_home_header_stats').waitFor();
+    await reader.locator('#d_home_upcoming_events:not(.loading)').waitFor();
     assert.equal(await reader.locator('a:visible').filter({hasText:/^Admin$/}).count(), 0);
     await reader.goto(base + '/#Admin?sub=users');
     await reader.waitForURL(/#Home$/);
@@ -167,6 +169,7 @@ export async function checkSingleNodePages(page, responseFor, {base, session, po
     const liveID = (await okay('app/run_event', {id:'browser_smoke'})).ids[0];
     try {
       await reader.goto(base + '/#Home');
+      await reader.locator('#d_home_upcoming_events:not(.loading)').waitFor();
       await reader.locator('#d_home_active_jobs').getByText('Browser smoke edited', {exact:false}).first().waitFor();
       assert.equal(await reader.locator('.link:visible').filter({hasText:/Abort Job|Flush Queue/}).count(), 0);
       await reader.goto(base + '/#JobDetails?id=' + liveID);

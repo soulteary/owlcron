@@ -20,7 +20,7 @@ not read an existing service configuration or target a deployed instance.
   and same-document email links without exposing their tokens in browser logs.
 
 Both run in the selected headless browser and fail on uncaught browser JavaScript errors. CI runs Chromium, Firefox and WebKit in parallel.
-The account runner sends no external email; public registration stays disabled.
+The account runner also checks its forms at a 375px viewport. It sends no external email; public registration stays disabled.
 
 From the repository root, using Bun 1.4.2 and the documented Go toolchain:
 
@@ -41,7 +41,8 @@ OWLCRON_BROWSER=webkit bun run --cwd tests/browser test:account-mail
 To use an existing compatible Chrome/Chromium installation locally, set
 `OWLCRON_BROWSER_EXECUTABLE` to its absolute executable path. This override is only supported for Chromium. `OWLCRON_BROWSER` defaults to
 `chromium` and accepts `firefox` or `webkit`; invalid values fail explicitly.
-CI uses the browser revisions pinned by Playwright. Both runners need permission to bind localhost ports
+CI uses the browser revisions pinned by Playwright. Firefox bypasses inherited
+host proxy preferences because every fixture is served on loopback. Both runners need permission to bind localhost ports
 and launch browser/daemon processes.
 
 The general smoke runner saves failure screenshots in `tests/browser/test-results/`.
