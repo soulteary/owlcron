@@ -689,6 +689,21 @@ app.extend({
 	
 }); // app
 
+// Account credentials must not pass through the framework's request-body debug log.
+app.api.postAccountAction = function(cmd, params, callback, errorCallback) {
+	var url = cmd;
+	if (!url.match(/^(\w+\:\/\/|\/)/)) url = app.base_api_url + '/' + cmd;
+	var payload = Object.assign({}, params || {});
+	if (app.plain_text_post && app.getPref('session_id')) {
+		payload.session_id = app.getPref('session_id');
+	}
+	return this.request(url, {
+		type: 'POST',
+		data: JSON.stringify(payload),
+		contentType: app.plain_text_post ? 'text/plain' : 'application/json'
+	}, callback, errorCallback);
+};
+
 function get_pretty_int_list(arr, ranges) {
 	// compose int array to string using commas + spaces, and
 	// the english "and" to group the final two elements.

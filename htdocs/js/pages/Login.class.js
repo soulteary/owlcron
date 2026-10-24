@@ -7,7 +7,13 @@ Class.subclass( Page.Base, "Page.Login", {
 	},
 	
 	onActivate: function(args) {
-		// page activation
+		// Consume token fragments before normal authenticated navigation.
+		if (args && args.verify) {
+			var action = window.owlcronAccountAction;
+			delete window.owlcronAccountAction;
+			this.showEmailVerification(action);
+			return true;
+		}
 		if (app.user) {
 			// user already logged in
 			setTimeout( function() { Nav.go(app.navAfterLogin || config.DefaultPage) }, 1 );
@@ -87,6 +93,37 @@ Class.subclass( Page.Base, "Page.Login", {
 		}
 	}, 
 	
+
+	showEmailVerification: function(action) {
+		app.setWindowTitle('Verify Email');
+		app.showTabBar(false);
+		this.pendingEmailAction = null;
+		var valid = config.email_verification && action && action.purpose === 'verify' &&
+			typeof action.userID === 'string' && /^[a-zA-Z0-9_.-]{1,128}$/.test(action.userID) &&
+			typeof action.token === 'string' && /^[a-f0-9]{64}$/.test(action.token);
+		if (valid) this.pendingEmailAction = action;
+		this.div.html('<div class="inline_dialog_container"><div class="dialog_title shade-light">Verify Email</div>' +
+			'<div class="dialog_content"><p>' + (valid ?
+			'Confirm that you want to use the email address from this verification request.' :
+			'This verification link is unavailable. Sign in and request a new link from My Account, or contact your administrator.') + '</p></div>' +
+			'<div class="dialog_buttons">' + (valid ? '<div class="button" id="confirm_email_verification" onMouseUp="$P().confirmEmailVerification()">Verify Email</div>' : '') +
+			'<a class="button" href="#Login">Back to Login</a></div></div>');
+	},
+
+	confirmEmailVerification: function() {
+		var action = this.pendingEmailAction;
+		if (!action) return;
+		this.pendingEmailAction = null;
+		var self = this;
+		app.api.postAccountAction('user/verify_email', {user_id:action.userID, token:action.token}, function() {
+			self.div.html('<div class="inline_dialog_container"><div class="dialog_title shade-light">Email Verified</div>' +
+				'<div class="dialog_content"><p>Your email address has been verified. Return to your account to continue.</p></div>' +
+				'<div class="dialog_buttons"><a class="button" href="#MyAccount">Continue</a></div></div>');
+		}, function() {
+			self.showEmailVerification(null);
+		});
+	},
+
 	showAccountHelp: function() {
 		app.setWindowTitle('Account Access');
 		app.showTabBar(false);
@@ -101,6 +138,7 @@ Class.subclass( Page.Base, "Page.Login", {
 	
 	onDeactivate: function() {
 		// called when page is deactivated
+		this.pendingEmailAction = null;
 		this.div.html( '' );
 		return true;
 	}

@@ -6,7 +6,7 @@ const vm = require('node:vm');
 const zxcvbn = require('../htdocs-deps/node_modules/zxcvbn');
 
 function application() {
-  const app = {extend(properties) { Object.assign(this, properties); }};
+  const app = {api:{}, extend(properties) { Object.assign(this, properties); }};
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../htdocs/js/app.js'), 'utf8'),
     {app, window:{app}, zxcvbn, hash_keys_to_array:Object.keys});
   return app;

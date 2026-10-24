@@ -96,6 +96,7 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 			},
 			"free_accounts":            0,
 			"account_email_enabled":    s.engine.GetConfig().AccountEmailEnabled,
+			"email_verification":       s.engine.GetConfig().AccountEmailEnabled,
 			"external_users":           0,
 			"external_user_api":        "",
 			"web_socket_use_hostnames": 0,

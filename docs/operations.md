@@ -88,3 +88,16 @@ at once to clear errors. The [known limitations](limitations.md) still apply to
 remote dispatch and recovery; metrics do not establish exactly-once execution.
 
 Record backup success and age in the backup system and regularly rehearse isolated restores. Follow [deployment and rollback](deployment.md#backups-upgrades-and-rollback) for shutdown requirements, backup scope, import behavior, and verification steps.
+
+### Verify an account email
+
+When account email is enabled, open **My Account**, enter the intended email and
+current password, and select **Send verification email**. The existing email
+remains active until the confirmation link is explicitly confirmed. Saving other
+profile settings does not apply a pending email change. Existing addresses are
+not automatically trusted. Administrators cannot bypass verification by editing
+an address; account creation remains an administrator operation.
+
+The link opens a confirmation screen. Opening it alone does not consume the
+single-use token. Expired or previously used links require a new request from
+My Account. Registration remains disabled.
