@@ -24,6 +24,9 @@ func (s *Server) handleCreateCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !s.authorizeCategoryMutation(w, r, category.ID) {
+		return
+	}
 	if category.ID == "" {
 		category.ID = generateID()
 	}
@@ -71,6 +74,9 @@ func (s *Server) handleUpdateCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !s.authorizeCategoryMutation(w, r, category.ID) {
+		return
+	}
 	// 验证分类数据
 	if err := ValidateCategory(&category); err != nil {
 		s.sendError(w, 1, err.Error())
@@ -104,6 +110,9 @@ func (s *Server) handleDeleteCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !s.authorizeCategoryMutation(w, r, req.ID) {
+		return
+	}
 	if s.configurationInUse("categories", req.ID) {
 		s.sendError(w, 1, "Category is still assigned to events")
 		return
@@ -167,4 +176,19 @@ func (s *Server) handleListCategories(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.sendResponse(w, 0, recordPage(r, categories), "")
+}
+
+// Validate the decoded body's ID as well as middleware parameters: a query
+// parameter must never authorize a different object than the mutation body.
+func (s *Server) authorizeCategoryMutation(w http.ResponseWriter, r *http.Request, id string) bool {
+	auth := GetAuthContext(r)
+	if auth == nil {
+		s.sendError(w, 1, "Authentication required")
+		return false
+	}
+	if !auth.IsAdmin && auth.Privileges["cat_limit"] && (id == "" || !auth.Privileges["cat_"+id]) {
+		s.sendError(w, 1, "Category access denied")
+		return false
+	}
+	return true
 }
