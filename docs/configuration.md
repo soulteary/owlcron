@@ -158,4 +158,4 @@ Account email is opt-in: `account_email_enabled` defaults to `false`. Enabling i
 
 Zero or omitted limits select these defaults: `account_token_ttl_seconds: 1800` (allowed nonzero values 60–86400), `account_email_cooldown_seconds: 60`, `account_email_rate_limit: 5`, `account_email_ip_rate_limit: 20`, and `account_email_rate_window_seconds: 3600`. Cooldown/window values are capped at 86400 seconds; request limits are capped at 100000. Negative values are rejected.
 
-Existing email addresses are initially unverified. Verification applies only to the exact current address and is cleared when that address changes. This policy foundation alone does not provide verification or reset endpoints. Public registration remains disabled; administrators continue to create accounts and can reset passwords.
+Existing email addresses are initially unverified. Verification applies only to the exact current address and is cleared when that address changes. With account email enabled, My Account provides email verification. Password reset endpoints are introduced separately. Public registration remains disabled; administrators continue to create accounts and can reset passwords.

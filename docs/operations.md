@@ -93,3 +93,16 @@ retain matching binaries/configuration and regularly restore into an isolated
 environment with real notification recipients disabled. Verify accounts,
 schedule, history and logs before declaring a restore successful. Follow the
 [deployment and rollback procedure](deployment.md#backups-upgrades-and-rollback).
+
+### Verify an account email
+
+When account email is enabled, open **My Account**, enter the intended email and
+current password, and select **Send verification email**. The existing email
+remains active until the confirmation link is explicitly confirmed. Saving other
+profile settings does not apply a pending email change. Existing addresses are
+not automatically trusted. Administrators cannot bypass verification by editing
+an address; account creation remains an administrator operation.
+
+The link opens a confirmation screen. Opening it alone does not consume the
+single-use token. Expired or previously used links require a new request from
+My Account. Registration remains disabled.

@@ -14,18 +14,20 @@ import (
 
 // Server API 服务器
 type Server struct {
-	engine       *engine.Engine
-	logger       *zap.Logger
-	mu           sync.RWMutex
-	loginLimiter *loginLimiter
+	engine         *engine.Engine
+	logger         *zap.Logger
+	mu             sync.RWMutex
+	loginLimiter   *loginLimiter
+	accountLimiter *loginLimiter
 }
 
 // NewServer 创建 API 服务器
 func NewServer(eng *engine.Engine, logger *zap.Logger) *Server {
 	return &Server{
-		engine:       eng,
-		logger:       logger,
-		loginLimiter: newLoginLimiter(eng.GetConfig()),
+		engine:         eng,
+		logger:         logger,
+		loginLimiter:   newLoginLimiter(eng.GetConfig()),
+		accountLimiter: newAccountLimiter(eng.GetConfig()),
 	}
 }
 
@@ -108,6 +110,8 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 	// 用户 API
 	register("/api/app/check_user_exists", s.handleCheckUserExists)
 	register("/api/user/login", s.handleUserLogin)
+	register("/api/user/request_email_verification", s.handleRequestEmailVerification)
+	register("/api/user/verify_email", s.handleVerifyEmail)
 	register("/api/user/logout", s.handleUserLogout)
 	register("/api/user/resume_session", s.handleResumeSession)
 	register("/api/user/create", s.handleUserCreate)

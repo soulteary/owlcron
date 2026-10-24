@@ -49,6 +49,11 @@ Class.subclass( Page.Base, "Page.MyAccount", {
 		html += get_form_table_caption( "Used for your profile picture. Contact your administrator if you need a password reset." );
 		html += get_form_table_spacer();
 		
+		if (app.config.account_email_enabled) {
+			html += get_form_table_row('Email Verification', '<span>' + (user.email_verified ? 'Verified' : 'Not verified') + '</span> <button type="button" onClick="$P().request_email_verification()">Send verification email</button>');
+			html += get_form_table_caption('Enter your current password and desired email above, then send a verification email. Your existing address stays active until you confirm the link.');
+		}
+
 		// current password
 		html += get_form_table_row( 'Current Password', '<input type="' + app.get_password_type() + '" id="fe_ma_old_password" size="30" value="" spellcheck="false"/>' + app.get_password_toggle_html() );
 		html += get_form_table_caption( "Enter your current account password to make changes." );
@@ -103,6 +108,18 @@ Class.subclass( Page.Base, "Page.MyAccount", {
 		}, 1 );
 	},
 	
+	request_email_verification: function() {
+		if (!app.config.account_email_enabled) return;
+		var password = $('#fe_ma_old_password').val();
+		if (!password) return app.badField('#fe_ma_old_password', 'Enter your current password to verify an email address.');
+		app.api.post('user/request_email_verification', {
+			email: trim($('#fe_ma_email').val()), current_password: password
+		}, function() {
+			$('#fe_ma_old_password').val('');
+			app.showMessage('success', 'Verification email requested. Confirm the link in your inbox; your existing address remains active until then.');
+		});
+	},
+
 	edit_gravatar: function() {
 		// edit profile pic at gravatar.com
 		window.open( 'https://en.gravatar.com/connect/' );
@@ -128,7 +145,7 @@ Class.subclass( Page.Base, "Page.MyAccount", {
 		app.api.post( 'user/update', {
 			username: app.username,
 			full_name: trim($('#fe_ma_fullname').val()),
-			email: trim($('#fe_ma_email').val()),
+			email: app.config.account_email_enabled ? app.user.email : trim($('#fe_ma_email').val()),
 			old_password: $('#fe_ma_old_password').val(),
 			new_password: $('#fe_ma_new_password').val()
 		}, 

@@ -2,6 +2,17 @@
 <html lang="en">
 <head>
 	<meta charset="utf-8">
+	<meta name="referrer" content="no-referrer">
+	<script>
+	(function () {
+		var parts = location.hash.split('?');
+		if (parts[0] !== '#Login') return;
+		var values = new URLSearchParams(parts.slice(1).join('?'));
+		if (values.get('verify') !== '1') return;
+		window.owlcronAccountAction = { purpose: 'verify', userID: values.get('u'), token: values.get('token') };
+		history.replaceState(null, '', location.pathname + location.search + '#Login?verify=1');
+	})();
+	</script>
 	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
 	<title>Loading...</title>
 	<meta name="description" content="A simple distributed task scheduler and runner.">

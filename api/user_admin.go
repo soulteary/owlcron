@@ -160,6 +160,10 @@ func (s *Server) updateUser(w http.ResponseWriter, r *http.Request, admin bool) 
 			return
 		}
 	}
+	if req.Email != nil && s.engine.GetConfig().AccountEmailEnabled && strings.TrimSpace(*req.Email) != user.Email {
+		s.sendError(w, 1, "Use email verification to change the email address")
+		return
+	}
 	if req.Email != nil {
 		user.Email = strings.TrimSpace(*req.Email)
 	}
