@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func processStat(pid int) ([]string, error) {
@@ -77,14 +78,36 @@ func processGroupMembers(group int) ([]int, error) {
 	}
 	return result, nil
 }
-func processHasRecoveryToken(pid int, token string) (bool, error) {
+func processHasRecoveryToken(pid int, token string) (owned bool, resultErr error) {
+	defer func() {
+		if resultErr != nil {
+			if _, err := processIdentity(pid); os.IsNotExist(err) {
+				owned = false
+				resultErr = os.ErrNotExist
+			}
+		}
+	}()
 	if pid <= 0 {
 		return false, os.ErrNotExist
 	}
 	if _, err := processIdentity(pid); err != nil {
 		return false, err
 	}
-	f, err := os.Open(filepath.Join("/proc", strconv.Itoa(pid), "environ"))
+	var f *os.File
+	var err error
+	for attempt := 0; attempt < 10; attempt++ {
+		f, err = os.Open(filepath.Join("/proc", strconv.Itoa(pid), "environ"))
+		if err == nil || !os.IsPermission(err) {
+			break
+		}
+		// Linux can revoke environ access after SIGKILL before stat reports a
+		// zombie. Recheck briefly; a persistently inaccessible live PID remains
+		// an error and can never become proof of ownership.
+		if _, identityErr := processIdentity(pid); os.IsNotExist(identityErr) {
+			return false, os.ErrNotExist
+		}
+		time.Sleep(time.Millisecond)
+	}
 	if err != nil {
 		return false, err
 	}
