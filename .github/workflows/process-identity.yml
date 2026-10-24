@@ -1,0 +1,23 @@
+name: Linux process identity regression
+on:
+  push:
+    paths: ['engine/process_identity*', '.github/workflows/process-identity.yml']
+  pull_request:
+    paths: ['engine/process_identity*', '.github/workflows/process-identity.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  process-identity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.x'
+          cache-dependency-path: go.sum
+      - name: Repeat recovery identity and exit races
+        run: go test -race ./engine -run '^TestRecovery(ProcessIdentity|ProcessIdentityRejectsInvalidPID|TokenDuringProcessExit)$' -count=30 -timeout=180s
