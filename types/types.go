@@ -243,6 +243,7 @@ type Category struct {
 
 // ServerGroup 表示一个服务器组
 type ServerGroup struct {
+	MaxJobs  int    `json:"max_jobs,omitempty"`
 	Created  int64  `json:"created,omitempty"`
 	Modified int64  `json:"modified,omitempty"`
 	ID       string `json:"id"`

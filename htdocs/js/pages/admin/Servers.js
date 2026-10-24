@@ -279,6 +279,9 @@ Class.add( Page.Admin, {
 			get_form_table_row('Hostname Match:', '<input type="text" id="fe_eg_regexp" size="30" style="font-family:monospace; font-size:13px;" value="'+escape_text_field_value(group.regexp)+'" spellcheck="false"/>') + 
 			get_form_table_caption("Enter a regular expression to auto-assign servers to this group by their hostnames, e.g. \"^mtx\\d+\\.\".") + 
 			get_form_table_spacer() + 
+			get_form_table_row('Maximum Jobs per Node:', '<input type="number" id="fe_eg_max_jobs" min="0" step="1" value="' + (group.max_jobs || 0) + '" />') +
+			get_form_table_caption('Zero is unlimited. The strictest matching group applies, including direct host targets.') +
+			get_form_table_spacer() +
 			get_form_table_row('Server Class:', '<select id="fe_eg_master">' + render_menu_options([ [1,'Primary Eligible'], [0,'Worker Only'] ], group.master, false) + '</select>') + 
 			get_form_table_caption("Select whether servers in the group are eligible to become the primary server, or run as workers only.") + 
 		'</table>';
@@ -297,6 +300,8 @@ Class.add( Page.Admin, {
 					return app.badField('fe_eg_regexp', "Invalid regular expression: " + err);
 				}
 				
+				group.max_jobs = Number($('#fe_eg_max_jobs').val());
+				if (!Number.isSafeInteger(group.max_jobs) || group.max_jobs < 0) return app.badField('fe_eg_max_jobs', 'Enter a non-negative integer.');
 				group.master = parseInt( $('#fe_eg_master').val() );
 				Dialog.hide();
 				
