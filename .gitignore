@@ -1,5 +1,6 @@
 # Local runtime state and private configuration
 /owlcron-engine
+/owlcron-script
 /bin/echo-plugin/echo-plugin
 /data/
 /logs/
