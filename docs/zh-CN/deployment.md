@@ -1,0 +1,123 @@
+# 安全部署与首次运行
+
+[English](../deployment.md) | 简体中文
+
+目前建议用于开发、评估和受控环境。严格集群持续收敛问题尚未完成验收，
+请先阅读 [已知限制](limitations.md)，不要把单机冒烟测试视为集群可靠性证明。
+
+## 安装和启动
+
+使用 Go 1.27.3 或同系列更高安全补丁、Node.js 22、npm、Python 3 和 make。
+CI 仅验证 Go 1.27 系列，建议使用该系列最新安全补丁版本。
+模块默认建议工具链为 Go 1.27.3，旧版 Go 在允许自动下载时会选择该工具链。
+
+```sh
+git clone https://github.com/soulteary/owlcron.git
+cd owlcron
+npm ci --prefix htdocs-deps
+make frontend build
+make licenses-check smoke
+cp config.json config.local.json
+chmod 600 config.local.json
+```
+
+在 `config.local.json` 设置至少 32 字节的随机 `secret_key`，并将数据、队列和日志
+目录放在服务账户独占的持久目录中。不要复用示例秘密。也可通过
+`OWLCRON_SECRET_KEY` 注入秘密；密钥不要写进镜像、Git 或公开日志。
+
+```sh
+./owlcron-engine -config config.local.json setup
+./owlcron-engine -config config.local.json
+```
+
+空用户数据库首次启动时，可通过 `OWLCRON_ADMIN_USERNAME` 和
+`OWLCRON_ADMIN_PASSWORD` 注入管理员凭据，密码须为 12–72 字节。如果没有设置密码，
+程序生成随机密码并写入存储目录的 `bootstrap-admin.json`，该文件含敏感凭据。
+使用受控终端读取，确认可以登录后移除引导凭据文件并撤销环境注入。
+已有用户数据库不会因重新设置环境变量而重置密码。
+
+不要将密码直接写入 shell 命令行、服务启动参数或仓库。使用部署平台的 secret
+管理或仅服务账户可读的环境文件；应用不自动读取 `.env` 文件。
+
+## HTTPS 反向代理
+
+以下片段用于 **同一宿主机上的 Nginx**；证书路径和域名需要替换。
+先保证宿主机防火墙阻止外部直接访问 3012。容器部署可使用
+`127.0.0.1:3012:3012` 端口映射；不要使用对所有网卡公开的映射。
+
+在应用配置中合并：
+
+```json
+{
+  "base_app_url": "https://cron.example.com",
+  "http_port": 3012,
+  "session_cookie_secure": true,
+  "trusted_proxy_cidrs": ["127.0.0.1/32", "::1/128"]
+}
+```
+
+只信任实际代理来源地址，不要设置 `0.0.0.0/0` 或宽泛的内网网段。
+使用远端或容器代理时，应按实际网络配置替换上述回环地址。
+
+```nginx
+# 放在 http 上下文中
+map $http_upgrade $owlcron_connection {
+    default upgrade;
+    ''      close;
+}
+
+server {
+    listen 443 ssl;
+    server_name cron.example.com;
+    ssl_certificate     /etc/nginx/tls/fullchain.pem;
+    ssl_certificate_key /etc/nginx/tls/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    location / {
+        proxy_pass http://127.0.0.1:3012;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        # 单层代理覆盖客户端提交的转发头。
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $owlcron_connection;
+        proxy_read_timeout 360s;
+        proxy_buffering off;
+    }
+}
+```
+
+HTTP 重定向到 HTTPS 可另设 80 端口虚拟主机。多层代理需要逐跳维护可信来源，
+不能直接照搬单层转发头示例。HTTPS 下检查登录 Cookie 包含 Secure、HttpOnly 和
+SameSite=Lax。启用 Secure Cookie 后不要继续通过 HTTP 登录。
+
+如果同时设置了 `cluster_tls_cert_file` 和 `cluster_tls_key_file`，应用的同一监听端口
+会启用 TLS。此时代理上游也要改为 HTTPS，并配置受信任 CA、服务器名和证书校验，
+不能继续使用上面面向明文后端的 `proxy_pass http://...`。不要关闭上游证书校验来绕过配置问题。
+
+## 权限、网络和数据
+
+- 使用专用非 root 服务账户，配置和数据目录仅该账户可读写。
+- 只给可信管理员插件和任务管理权限。示例插件用于测试，不提供隔离能力。
+- WebHook、SMTP、S3、Couchbase 等凭据按最小权限配置；验证 TLS，限制出站网络。
+- 集群节点通过同一监听端口的 `/cluster/ws` 使用 WSS、节点认证和可选 mTLS；
+  HTTP 反向代理不会替代这些认证，
+  相关配置见 [配置文档](configuration.md)，端口只对集群成员开放。
+- 无需自动发现时可设置 `udp_broadcast_port: -1` 禁用广播；不要在公网开放发现端口。
+- 设置适合业务的并发、CPU、内存、日志大小和保留策略，并监控磁盘容量。
+  单任务限制不等于整个节点磁盘配额。
+
+## 备份、升级与回滚
+
+升级前停止接受新任务并等待当前任务结束，再优雅停止服务，备份配置、完整后端数据、
+队列和日志。备份包含密码哈希、会话、令牌和任务输出，需加密并限制访问。
+本地 Filesystem 后端优先采用停机一致性快照；远程后端使用其一致性备份机制。
+不要把运行中复制目录当作已验证的一致性备份。
+
+先在隔离环境恢复备份并验证登录、任务、历史与日志，再升级正式环境。
+回滚保留旧二进制、静态资源、插件及升级前快照；如数据格式发生变化，须配套恢复
+对应快照，不能假设旧二进制可以读取新数据。恢复测试不得向真实收件人重复发通知。
+
+首次开源尚未形成稳定发行包和数据迁移兼容承诺。正式升级流程、跨版本回滚和
+远程后端灾备仍需按目标部署环境验收。
