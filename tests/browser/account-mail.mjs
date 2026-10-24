@@ -71,10 +71,10 @@ try {
   execFileSync(command, ['-config',configPath,'setup'], {cwd:root,env,stdio:'pipe',timeout:15000});
   daemon = spawn(command, ['-config',configPath], {cwd:root,env:{...env,
     OWLCRON_ADMIN_USERNAME:username,OWLCRON_ADMIN_PASSWORD:password},stdio:['ignore',log,log]});
-  await waitFor(async () => { try { return (await fetch(base+'/api/app/ping')).ok; } catch { return false; } }, 'startup');
-  await waitFor(async () => (await (await fetch(base+'/api/app/status')).json()).master, 'leadership');
+  await waitFor(async () => { try { return (await fetch(base+'/api/app/ping',{signal:AbortSignal.timeout(2000)})).ok; } catch { return false; } }, 'startup');
+  await waitFor(async () => (await (await fetch(base+'/api/app/status',{signal:AbortSignal.timeout(2000)})).json()).master, 'leadership');
   async function api(endpoint, body, session) {
-    return (await fetch(base+'/api/user/'+endpoint, {method:'POST',headers:{'Content-Type':'application/json',
+    return (await fetch(base+'/api/user/'+endpoint, {method:'POST',signal:AbortSignal.timeout(5000),headers:{'Content-Type':'application/json',
       ...(session ? {'X-Session-ID':session} : {})},body:JSON.stringify(body)})).json();
   }
   browser = await chromium.launch({headless:true,...(process.env.OWLCRON_BROWSER_EXECUTABLE ?
@@ -82,6 +82,8 @@ try {
   const page = await browser.newPage();
   page.setDefaultTimeout(15000);
   const errors = [];
+  const consoleMessages = [];
+  page.on('console', message => consoleMessages.push(message.text()));
   page.on('pageerror', () => errors.push('Browser JavaScript exception'));
   async function responseFor(endpoint, action) {
     const [response] = await Promise.all([page.waitForResponse(response =>
@@ -95,7 +97,7 @@ try {
     await waitFor(() => {
       for (const message of messages) {
         // Support both plain text and quoted-printable SMTP bodies.
-        const decoded = message.replace(/=\n/g,'').replace(/=([0-9A-F]{2})/gi, (_,hex) => String.fromCharCode(parseInt(hex,16)));
+        const decoded = /Content-Transfer-Encoding: quoted-printable/i.test(message) ? message.replace(/=\n/g,'').replace(/=([0-9A-F]{2})/gi, (_,hex) => String.fromCharCode(parseInt(hex,16))) : message;
         const urls = decoded.match(/https?:\/\/[^\s<>]+/g) || [];
         link = urls.find(value => { try { return new URLSearchParams(new URL(value).hash.split('?')[1]).get(purpose)==='1'; } catch { return false; } });
         if (link) return true;
@@ -120,6 +122,7 @@ try {
   const verificationURL = new URL(verificationLink);
   const verificationParams = new URLSearchParams(verificationURL.hash.split('?')[1]);
   stage = 'verification confirmation';
+  await page.goto('about:blank');
   await page.goto(verificationLink);
   await page.locator('#confirm_email_verification').waitFor();
   assert.ok(!page.url().includes('token='),'Verification token removed from URL before rendering');
@@ -131,12 +134,17 @@ try {
   await delay(1100); // Per-account cooldown is intentionally one second in this fixture.
   stage = 'password recovery request';
   const absent = await api('forgot_password',{username:'missing-account',email});
-  const known = await api('forgot_password',{username,email});
+  await page.evaluate(() => app.doUserLogout(true));
+  await page.goto(base+'/#Login?recover=1');
+  await page.locator('#fe_recovery_username').fill(username);
+  await page.locator('#fe_recovery_email').fill(email);
+  const known = await responseFor('forgot_password', () => page.locator('#request_password_recovery').click());
   assert.deepEqual(known,absent,'Recovery response must not disclose account existence');
   stage = 'recovery SMTP delivery';
   const recoveryLink = await mailAction('reset');
   const recoveryParams = new URLSearchParams(new URL(recoveryLink).hash.split('?')[1]);
   stage = 'password reset form';
+  await page.goto('about:blank');
   await page.goto(recoveryLink);
   await page.locator('#fe_reset_password').waitFor();
   assert.ok(!page.url().includes('token='),'Recovery token removed from URL before rendering');
@@ -147,6 +155,7 @@ try {
   await page.locator('#fe_reset_confirm').fill(replacement);
   await responseFor('reset_password', () => page.locator('#confirm_password_reset').click());
   await page.locator('#fe_login_username').waitFor();
+  await waitFor(() => messages.some(message => message.includes('OwlCron password changed')), 'password change notification');
   stage = 'revocation and replay checks';
   const replay = await api('reset_password',{user_id:recoveryParams.get('u'),token:recoveryParams.get('token'),new_password:replacement,confirm_password:replacement});
   assert.notEqual(replay.code,0,'Recovery token must be single-use');
@@ -157,6 +166,9 @@ try {
   await responseFor('login', () => page.locator('.button:visible').filter({hasText:'Login'}).click());
   await page.locator('#fe_login_username').waitFor({state:'hidden'});
   assert.deepEqual(errors,[]);
+  for (const token of [verificationParams.get('token'),recoveryParams.get('token')]) {
+    assert.ok(!consoleMessages.some(message => message.includes(token)), 'Action tokens must not appear in browser console');
+  }
   console.log('Account mail passed: local SMTP, verification, private recovery response, explicit reset, replay protection, session revocation, new login and closed registration');
 } catch (error) {
   console.error(String(error.message).replace(/https?:\/\/[^\s]+/g, '[redacted URL]').replace(/[a-f0-9]{48,}/gi, '[redacted secret]'));
