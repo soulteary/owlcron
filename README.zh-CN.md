@@ -1,5 +1,7 @@
 # OwlCron
 
+[English](README.md) | 简体中文
+
 通过 Web 界面调度任务、执行插件，并查看执行历史与日志。
 
 [![CI](https://github.com/soulteary/owlcron/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/soulteary/owlcron/actions/workflows/ci.yml)
@@ -9,7 +11,6 @@
 [![Go](https://img.shields.io/badge/Go-1.27-00ADD8?logo=go&logoColor=white)](docs/zh-CN/releases.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-[English](README.md) | 简体中文
 
 OwlCron 是一个使用 Go 编写、以替代 [Cronicle](https://github.com/jhuckaby/Cronicle) 为目标的任务调度服务，提供 Web 管理界面、定时和按需任务、插件执行、任务日志及通知，并对 Cronicle 的部分工作流、API 和插件约定提供兼容。迁移范围见 [Cronicle 兼容性](docs/zh-CN/compatibility.md)。
 
