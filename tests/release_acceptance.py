@@ -24,7 +24,7 @@ def require(condition, message):
         raise RuntimeError(message)
 
 
-def accept_distribution(distribution):
+def accept_distribution(distribution, runtime_checks=False):
     distribution = Path(distribution).resolve()
     binary = distribution / 'owlcron-engine'
     require(binary.is_file(), 'Distribution engine missing')
@@ -35,7 +35,8 @@ def accept_distribution(distribution):
         env = {key: value for key, value in os.environ.items()
                if not key.startswith(('OWLCRON_', 'GO', 'BUN', 'NODE'))}
         env.update(PATH=str(empty_path), HOME=str(work), TMPDIR=str(work))
-        password = secrets.token_urlsafe(24)
+        password = ''
+        username = 'admin'
         with socket.socket() as sock:
             sock.bind(('127.0.0.1', 0))
             port = sock.getsockname()[1]
@@ -68,10 +69,8 @@ def accept_distribution(distribution):
             return result
 
         def start(bootstrap=False):
-            nonlocal session
+            nonlocal session, password
             launch_env = dict(env)
-            if bootstrap:
-                launch_env.update(OWLCRON_ADMIN_USERNAME='release-admin', OWLCRON_ADMIN_PASSWORD=password)
             log = (work / f'daemon-{len(processes)}.log').open('wb')
             process = subprocess.Popen([str(binary), '--config', str(path)],
                                        cwd=distribution, env=launch_env, stdout=log, stderr=log)
@@ -87,7 +86,19 @@ def accept_distribution(distribution):
                     time.sleep(0.1)
             else:
                 raise RuntimeError('Distribution daemon readiness timed out')
-            session = api('user/login', dict(username='release-admin', password=password))['session_id']
+            credential_path = Path(config['storage_base_dir']) / 'bootstrap-admin.json'
+            if bootstrap:
+                require(credential_path.is_file(), 'Generated administrator credentials missing')
+                require(credential_path.stat().st_mode & 0o777 == 0o600, 'Bootstrap credentials are not private')
+                credential = json.loads(credential_path.read_text())
+                require(credential['username'] == username, 'Unexpected default administrator name')
+                password = credential['password']
+                require(12 <= len(password.encode()) <= 72, 'Invalid generated password length')
+            else:
+                require(not credential_path.exists(), 'Restart or restore recreated bootstrap credentials')
+            session = api('user/login', dict(username=username, password=password))['session_id']
+            if bootstrap:
+                credential_path.unlink()
             while time.monotonic() < deadline:
                 if api('app/status').get('master'):
                     return process
@@ -167,20 +178,48 @@ def accept_distribution(distribution):
                         'Restore lost persisted job log')
             run_event()
             stop(process)
+            if runtime_checks:
+                # A deployable host also supplies ps and timezone data. The
+                # empty-PATH pass above deliberately tests only core execution.
+                require(shutil.which('ps'), 'Install procps for runtime monitoring acceptance')
+                env['PATH'] = os.environ.get('PATH', '')
+                process = start()
+                api('app/create_event', dict(id='release-runtime', title='Runtime dependencies', enabled=0,
+                    category='general', target='local', plugin='echoplug', timing=False,
+                    timezone='Asia/Shanghai', max_children=1, memory_limit=1,
+                    params=dict(message='RELEASE_RUNTIME_OK', repeat='30', delay_ms='1000')))
+                runtime_job = api('app/run_event', {'id': 'release-runtime'})['ids'][0]
+                deadline = time.monotonic() + 20
+                while time.monotonic() < deadline:
+                    status = api('app/get_job_status', {'id': runtime_job})
+                    if status.get('complete'):
+                        job = status['job']
+                        require(job['code'] != 0 and 'memory limit' in job.get('description', '').lower(),
+                                'Runtime memory limit was not enforced')
+                        require(job.get('mem', {}).get('max', 0) > 0, 'No process memory sample recorded')
+                        break
+                    time.sleep(0.1)
+                else:
+                    raise RuntimeError('Runtime monitoring acceptance timed out')
+                stop(process)
         finally:
             for process, log in processes:
                 if process.poll() is None:
                     process.kill()
                     process.wait(timeout=5)
                 log.close()
-    print('Release acceptance passed: empty runtime PATH, frontend asset graph, login, Echo Plugin, script adapter, '
+    print('Release acceptance passed: empty runtime PATH, private generated admin credentials, frontend asset graph, login, Echo Plugin, script adapter, '
           'history, restart, offline backup and fresh-store restore')
+    if runtime_checks:
+        print('Runtime dependencies passed: non-UTC timezone, process memory sampling and memory-limit enforcement')
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('distribution', type=Path)
-    accept_distribution(parser.parse_args().distribution)
+    parser.add_argument('--runtime-checks', action='store_true')
+    args = parser.parse_args()
+    accept_distribution(args.distribution, args.runtime_checks)
 
 
 if __name__ == '__main__':

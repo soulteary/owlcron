@@ -7,6 +7,19 @@
 
 ## 安装和启动
 
+在 Linux 上使用压缩包部署还需要系统运行依赖：安装 CA 信任库以验证出站 TLS，
+安装 IANA 时区数据以支持 UTC 以外的事件时区，并保证服务的 `PATH` 中能够找到
+`procps` 提供的 `ps`。CPU/内存采样及相应任务限制依赖该命令；登录或普通任务成功
+不代表资源监控可用。Debian/Ubuntu 可以执行：
+
+```sh
+sudo apt-get update
+sudo apt-get install --no-install-recommends ca-certificates tzdata procps
+```
+
+项目容器已经提供这些依赖。二进制不需要 Go、Bun 或 Node.js，但不能替代上述
+操作系统数据文件和工具。自定义插件还需要各自的解释器。
+
 源码构建需要 Go、Bun、Python 和 make；版本及平台支持范围以[版本和发行](releases.md#支持的工具链和平台)为准。
 
 使用 `curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.2"` 安装固定版本的 Bun，再执行 `bun --version` 核实。前端和浏览器测试分别提交 `bun.lock`，安装时始终使用 `--frozen-lockfile` 保持可复现。`bunfig.toml` 保留静态资源路径和许可证校验所需的 hoisted 布局。这些构建和测试命令不需要 Node.js 或 npm。

@@ -7,6 +7,12 @@ frontend assets, example configuration, build metadata, bilingual
 [release notes](docs/release-notes.md), and third-party licenses.
 Run commands from this directory so the daemon can find the frontend and plugin.
 
+On Linux, install the system CA certificates and IANA timezone data, and keep
+`procps`'s `ps` in the service's `PATH` for CPU/memory monitoring and job resource
+limits. On Debian/Ubuntu, install `ca-certificates tzdata procps`. Basic job
+execution without these monitoring tools does not validate resource limits.
+Custom scripts also need their interpreters, such as `/bin/sh`.
+
 ```sh
 cp config.json config.local.json
 chmod 600 config.local.json

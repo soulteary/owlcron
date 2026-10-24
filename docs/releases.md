@@ -67,6 +67,14 @@ histories and their persisted log contents. Storage export includes persisted
 job logs, but not configuration, script files or independent local log files;
 preserve those separately.
 
+First-boot acceptance uses the documented generated administrator credentials,
+checks their private file mode, removes the bootstrap file after successful
+login, and confirms that restart and restore do not recreate it. Add
+`--runtime-checks` to verify non-UTC timezone support, real process memory
+sampling and memory-limit enforcement with the host runtime dependencies from
+the [deployment guide](deployment.md#installation-and-startup). These checks use
+the normal runtime `PATH` after the separate empty-`PATH` execution check.
+
 The harness uses Python's standard library from the source checkout; the daemon
 and its child plugins run outside the checkout with an empty executable `PATH`,
 without Go, Bun, Node.js or `node_modules`. `/bin/sh` is required for this test's
@@ -142,3 +150,31 @@ Before publication, the deployment owner must still check their real hostname,
 certificate chain, proxy/firewall rules, filesystem ownership, business scripts,
 local timezone and any enabled SMTP relay. The synthetic rehearsal cannot attest
 to an existing Cronicle installation or authorize production cutover.
+
+## Verify a published download
+
+The [published-release workflow](../.github/workflows/published-release.yml)
+downloads the archive and checksum from the public GitHub release URLs, resolves
+the release tag's source commit, and requires matching version/commit metadata
+before running the extracted files. It repeats generated-account bootstrap,
+jobs, restart, fresh-store restore, timezone and resource-monitoring acceptance.
+It runs after publication and supports manual verification of a version; it
+does not rebuild or replace the published archive. Its evidence log is retained
+as a workflow artifact. HTTPS proxy and synthetic migration checks remain part
+of the pre-publication release pipeline.
+
+To reproduce on Linux, first install the documented runtime dependencies and
+download the archive and adjacent checksum from the release page. Use the
+validator from current source without building the application:
+
+```sh
+python3 tools/verify_release.py owlcron-v0.1.0-rc.1024-linux-amd64.tar.gz \
+  --expected-version v0.1.0-rc.1024 \
+  --expected-commit f64ecb8ce6c206fb4b838412ff84eff803bde95c --runtime-checks
+```
+
+The expected source for this published candidate is fixed above; for another
+version, resolve that tag's commit rather than copying the example. The
+validator uses Python as test infrastructure. The installed application still
+does not require Python. Existing release tags and binary attachments stay
+unchanged when documentation or validators are corrected later.

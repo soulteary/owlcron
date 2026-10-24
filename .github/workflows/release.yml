@@ -48,10 +48,10 @@ jobs:
       - name: Prepare deployment acceptance
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends nginx openssl
+          sudo apt-get install -y --no-install-recommends nginx openssl procps tzdata ca-certificates
           go build -trimpath -o dist/owlcron-migrate-check ./cmd/owlcron-migrate-check
       - name: Verify archive, HTTPS deployment and synthetic migration
-        run: python3 tools/verify_release.py dist/*.tar.gz --deployment-checker dist/owlcron-migrate-check
+        run: python3 tools/verify_release.py dist/*.tar.gz --runtime-checks --deployment-checker dist/owlcron-migrate-check
       - name: Verify archive in a clean runtime container
         run: |
           docker run --rm --network none --read-only \

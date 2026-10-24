@@ -17,6 +17,9 @@ ROOT = Path(__file__).resolve().parents[1]
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('archive', type=Path)
+    parser.add_argument('--expected-version', help='Require this published version before executing the archive')
+    parser.add_argument('--expected-commit', help='Require this source commit before executing the archive')
+    parser.add_argument('--runtime-checks', action='store_true', help='Also require timezone data and working ps monitoring')
     parser.add_argument('--deployment-checker', type=Path,
                         help='Also run Nginx HTTPS and synthetic migration acceptance with this checker binary')
     args = parser.parse_args()
@@ -31,6 +34,10 @@ def main():
             safe_extract(bundle, root, expected_root)
         distribution = root / expected_root
         metadata = json.loads((distribution / 'BUILD.json').read_text())
+        if args.expected_version:
+            require(metadata['version'] == args.expected_version, 'Unexpected published version')
+        if args.expected_commit:
+            require(metadata['commit'] == args.expected_commit, 'Unexpected published source commit')
         env = {key:value for key,value in os.environ.items() if not key.startswith('OWLCRON_')}
         before = set(distribution.iterdir())
         version = subprocess.check_output([str(distribution / 'owlcron-engine'), 'version'], cwd=distribution, env=env, text=True).strip()
@@ -42,7 +49,10 @@ def main():
         # The harness itself needs Python; the extracted application runs with
         # an empty PATH and cannot fall back to developer toolchains.
         env.pop('PYTHONOPTIMIZE', None)
-        subprocess.run([sys.executable, str(ROOT / 'tests/release_acceptance.py'), str(distribution)],
+        acceptance = [sys.executable, str(ROOT / 'tests/release_acceptance.py'), str(distribution)]
+        if args.runtime_checks:
+            acceptance.append('--runtime-checks')
+        subprocess.run(acceptance,
                        env=env, check=True, timeout=150)
         if args.deployment_checker:
             subprocess.run([sys.executable, str(ROOT / 'tests/release_deployment.py'), str(distribution),
