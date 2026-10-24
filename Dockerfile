@@ -14,6 +14,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go build -trimpath -o /out/owlcron-engine . \
+    && CGO_ENABLED=0 go build -trimpath -o /out/owlcron-script ./cmd/owlcron-script \
     && cd bin/echo-plugin && CGO_ENABLED=0 go build -trimpath -o /out/echo-plugin .
 
 FROM debian:trixie-slim
@@ -26,6 +27,7 @@ RUN apt-get update \
     && chown 10001:10001 /var/lib/owlcron
 WORKDIR /opt/owlcron
 COPY --from=build /out/owlcron-engine ./owlcron-engine
+COPY --from=build /out/owlcron-script ./owlcron-script
 COPY --from=build /out/echo-plugin ./bin/echo-plugin/echo-plugin
 COPY --from=frontend /out/htdocs/ ./htdocs/
 COPY deploy/container-config.json /etc/owlcron/config.json
