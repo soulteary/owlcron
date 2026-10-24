@@ -2,11 +2,11 @@
 
 English | [简体中文](README.zh-CN.md)
 
-Schedule tasks, run plugins, and inspect execution history and logs from a Web UI.
+A Go-based task scheduler with a web UI, built as an alternative to Cronicle.
 
 [![Go Tests](https://img.shields.io/github/actions/workflow/status/soulteary/owlcron/ci.yml?branch=main&label=Go%20Tests)](https://github.com/soulteary/owlcron/actions/workflows/ci.yml) [![Go Report Card](https://goreportcard.com/badge/github.com/soulteary/owlcron)](https://goreportcard.com/report/github.com/soulteary/owlcron) [![Release](https://img.shields.io/github/v/release/soulteary/owlcron)](https://github.com/soulteary/owlcron/releases) [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-OwlCron is a task scheduler written in Go, designed to replace [Cronicle](https://github.com/jhuckaby/Cronicle). It provides a web interface, scheduled and on-demand jobs, plugin execution, job logs, and notifications, with selected compatibility for Cronicle workflows, APIs, and plugin conventions. See [Cronicle compatibility](docs/compatibility.md) for the current migration scope.
+OwlCron lets you schedule and run jobs on demand, execute plugins, and inspect job history, logs, and notifications from a web UI. Built as an alternative to [Cronicle](https://github.com/jhuckaby/Cronicle), it supports selected Cronicle workflows, APIs, and plugin conventions. See [Cronicle compatibility](docs/compatibility.md) for the current migration scope.
 
 The project is experimental. Review the [known limitations](docs/limitations.md), including sustained cluster convergence, remote dispatch acknowledgment, and production capacity, before deploying it.
 
