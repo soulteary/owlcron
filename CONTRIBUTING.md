@@ -37,3 +37,5 @@ After updating Bun-managed npm dependencies, run `make licenses-update licenses-
 ## Dependency updates
 
 Dependabot proposes weekly updates for the engine, independent example plugin, frontend, container bases, and GitHub Actions. Actions are pinned to full commit IDs; retain the version comment when reviewing a pin update. Minor and patch Go/Bun updates are grouped, while major changes remain separate. Updates are reviewed and tested before merging; there is no automatic merge. Run the license checks and update inventories when dependencies change, and validate container or plugin behavior where applicable.
+
+Keep documentation responsibilities distinct: the README introduces the project and provides a minimal quick start; the documentation index owns full navigation; deployment owns installation and secure setup; testing owns check commands and quality reports. Maintain details in their relevant guide and link to them elsewhere. Essential quick-start commands may be repeated, but must stay consistent with deployment.

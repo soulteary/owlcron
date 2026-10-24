@@ -36,36 +36,11 @@ HTTP 服务默认监听所有网卡，`base_app_url` 不限制监听地址。对
 
 ## 文档
 
-- [部署与首次运行](docs/zh-CN/deployment.md)：安装、HTTPS、权限、备份和升级。
-- [配置与运行机制](docs/zh-CN/configuration.md)：存储、保留策略、通知和节点身份。
-- [Cronicle 兼容性](docs/zh-CN/compatibility.md)：支持范围和迁移差异。
-- [架构](docs/zh-CN/architecture.md)：调度、持久化、完成确认和恢复。
-- [测试](docs/zh-CN/testing.md)：本地检查、CI 和故障验收。
-- [已知限制](docs/zh-CN/limitations.md)：部署前需要了解的边界。
-- [贡献指南](CONTRIBUTING.zh-CN.md)与[安全策略](SECURITY.zh-CN.md)。
-
-文档也可从[中文索引](docs/zh-CN/README.md)浏览。
-
-## 开发检查
-
-在仓库根目录执行：
-
-```sh
-bun install --cwd htdocs-deps --frozen-lockfile
-make frontend build
-make fmt-check vet test frontend-test licenses-check docs-check smoke
-```
-
-`make race` 运行竞态检查；需要 Docker 的故障验收见[测试文档](docs/zh-CN/testing.md)。示例插件是独立 Go 模块，修改时还需在 `bin/echo-plugin` 中运行测试。
-
-可选的[真实浏览器冒烟测试](tests/browser/README.zh-CN.md)在 Chromium 中覆盖登录、事件编辑和执行、历史、日志以及主题偏好持久化。
+- [文档索引](docs/zh-CN/README.md)：按部署、运行任务、运维和开发查找完整指南。
+- [Cronicle 迁移预检](docs/zh-CN/migration.md)与[兼容性](docs/zh-CN/compatibility.md)：迁移前检查数据及行为差异。
+- [贡献指南](CONTRIBUTING.zh-CN.md)与[测试指南](docs/zh-CN/testing.md)：开发流程、检查命令和质量报告。
+- [安全策略](SECURITY.zh-CN.md)：安全问题报告方式。
 
 ## 许可证
 
 OwlCron 原创代码采用 [MIT License](LICENSE)。继承的 Cronicle 代码保留原作者版权和 MIT 许可。第三方代码与字体遵循各自许可证，详见[第三方声明](THIRD_PARTY_NOTICES.zh-CN.md)及 `licenses/`。
-
-## Go quality reports
-
-Go 质量报告在推送标签、发布 Release 或手动触发时运行，包含竞态检测、覆盖率、独立示例插件检查和 Go Report Card。报告及原始测试记录可从工作流产物下载，保留 14 天。仅当被测提交仍与默认分支一致时才回写稳定报告，否则仅保存为产物。现有 CI 继续检查 PR。
-
-[Go quality reports](https://github.com/soulteary/owlcron/actions/workflows/go-quality-reports.yml)
