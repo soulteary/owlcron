@@ -107,3 +107,41 @@ session revocation. Run both locally with the commands in the browser guide;
 they require local ports and Chromium, but no external SMTP service.
 
 Workflow display names are grouped under `CI /`, `Reports /`, and `Release /`; filenames stay unchanged so existing links remain valid. The README badges follow test status, Go Report Card, release and license order. The Go Tests badge shows the main branch build-and-test workflow status, not a coverage percentage. The Go Report Card badge uses the public assessment service and may differ in freshness from the workflow-generated report. Generated coverage and quality badges are saved as `.github/coverage.svg` and `.github/goreportcard.svg`; before the first successful writeback, inspect the workflow artifacts.
+
+## Single-node UI release gate
+
+The browser smoke runner covers the following pages against a disposable local
+Filesystem daemon. It drives visible controls and checks persisted responses;
+these checks do not connect to an existing installation.
+
+- **Home:** dashboard and live jobs render; a second singleton run queues, the
+  administrator flushes it, and a read-only account cannot see abort or
+  queue-flush actions.
+- **Schedule:** create and edit an event, reload its title/retention, preserve
+  API-managed chain arrays, and persist timezone, daily timing, timeout, retry
+  delay, queue limits and both chain selectors. Chain targets use on-demand
+  timing; other scheduled fixtures stay disabled to avoid wall-clock dependent
+  execution.
+- **Job Details:** manual execution, archived Run Again, live Abort, failed job
+  logs, a single bounded retry, a one-second timeout, successful/failing chain
+  execution, progress/
+  resource charts and read-only action visibility. Direct mutation
+  API requests from the read-only account must also fail.
+- **History:** list-to-job navigation, event statistics and chart tooltips.
+- **My Account/Login:** profile persistence and disabled-registration help in
+  smoke; email verification, password recovery and session revocation in the
+  separate isolated SMTP runner.
+- **Administration:** activity, API keys, categories, plugins, server cluster and
+  users render; temporary keys/categories/plugins/users are created, edited and
+  deleted. Non-admin access redirects to Home and the users API rejects it.
+
+Timing persistence is a browser check, not proof of a scheduled firing. Engine
+regressions separately cover timezone/DST matching, catch-up, concurrency,
+abort-without-retry, timeout updates and persisted job history after restart
+(`engine/scheduler_cluster_test.go` and `engine/job_integration_test.go`).
+Before a candidate release, also run the full Go suite and the clean release
+package installation check. Manually inspect narrow-screen layout, keyboard
+navigation, long logs and notifications; verify scheduled execution in the
+operator's actual timezone. Cluster fault tests are a separate capability gate
+and do not expand the single-node compatibility promise. Chromium success does
+not establish full Cronicle API/plugin compatibility or cross-browser coverage.
