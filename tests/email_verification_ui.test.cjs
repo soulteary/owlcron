@@ -24,3 +24,20 @@ test('disabled capability never offers verification or retains a token', () => {
  page.showEmailVerification({purpose:'verify',userID:'u',token:'a'.repeat(64)});
  assert.equal(page.pendingEmailAction,null); assert.doesNotMatch(html,/confirm_email_verification/);
 });
+
+
+test('profile saves omit cached email when verification manages the address', () => {
+ for (const enabled of [true,false]) {
+  let definition, sent;
+  const values={'#fe_ma_old_password':'current-password','#fe_ma_new_password':'','#fe_ma_fullname':'Updated Name','#fe_ma_email':'pending@example.test'};
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../htdocs/js/pages/MyAccount.class.js'),'utf8'),{
+   Page:{Base:{}},Class:{subclass:(_a,_b,d)=>definition=d},trim:value=>value.trim(),
+   $:selector=>({val:()=>values[selector]}),
+   app:{config:{account_email_enabled:enabled},username:'user',user:{email:'stale@example.test'},clearError(){},showProgress(){},api:{postAccountAction:(_endpoint,body)=>sent=body}}
+  });
+  definition.save_changes();
+  assert.equal(sent.full_name,'Updated Name');
+  assert.equal(Object.hasOwn(sent,'email'),!enabled);
+  if (!enabled) assert.equal(sent.email,'pending@example.test');
+ }
+});
