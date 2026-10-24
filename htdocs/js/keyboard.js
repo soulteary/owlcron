@@ -84,6 +84,17 @@
 	};
 
 	document.addEventListener('keydown', function(event) {
+		var scrollTarget = event.target;
+		if ((event.key === 'ArrowLeft' || event.key === 'ArrowRight') &&
+			!event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey &&
+			scrollTarget === document.activeElement && scrollTarget.dataset && scrollTarget.dataset.keyboardScroll) {
+			// WebKit does not consistently scroll a focusable native table with arrow keys.
+			var limit = Math.max(0, scrollTarget.scrollWidth - scrollTarget.clientWidth);
+			scrollTarget.scrollLeft = Math.max(0, Math.min(limit, scrollTarget.scrollLeft + (event.key === 'ArrowRight' ? 40 : -40)));
+			event.preventDefault();
+			event.stopPropagation();
+			return;
+		}
 		var dialog = Dialog.active && document.getElementById('dialog_container');
 		if (dialog && event.key === 'Escape') {
 			event.preventDefault();
