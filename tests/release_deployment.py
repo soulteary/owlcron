@@ -151,6 +151,11 @@ error_log {work}/nginx-error.log;
 events {{ worker_connections 64; }}
 http {{
   access_log off;
+  client_body_temp_path {work}/client-body;
+  proxy_temp_path {work}/proxy;
+  fastcgi_temp_path {work}/fastcgi;
+  uwsgi_temp_path {work}/uwsgi;
+  scgi_temp_path {work}/scgi;
   map $http_upgrade $owlcron_connection {{ default upgrade; '' close; }}
   server {{
     listen 127.0.0.1:{public} ssl;
