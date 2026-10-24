@@ -69,7 +69,14 @@ func (e *Engine) mutateAccountAction(ctx context.Context, id string, change func
 	}); err != nil {
 		return err
 	}
-	return e.updateAuthIndex(ctx, "users", id, committed, false)
+	if err := e.updateAuthIndex(ctx, "users", id, committed, false); err != nil {
+		// The canonical mutation is committed and cannot be retried safely.
+		// Existing index entries still discover the account, and readers reload
+		// its canonical state. A later successful mutation refreshes the index.
+		// Do not log the storage error: it may contain account or token data.
+		e.logger.Warn("Account action committed but user index refresh failed")
+	}
+	return nil
 }
 
 func (e *Engine) accountActionToken(id, purpose string, action types.AccountAction) string {
