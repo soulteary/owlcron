@@ -115,6 +115,7 @@ Class.add( Page.Admin, {
 	
 	gosub_new_user: function(args) {
 		// create new user
+		this.editing_user = false;
 		var html = '';
 		app.setWindowTitle( "Add New User" );
 		this.div.removeClass('loading');
@@ -221,6 +222,7 @@ Class.add( Page.Admin, {
 	
 	receive_user: function(resp) {
 		// edit existing user
+		this.editing_user = true;
 		var html = '';
 		app.setWindowTitle( "Editing User \"" + (this.args.username) + "\"" );
 		this.div.removeClass('loading');
@@ -348,7 +350,7 @@ Class.add( Page.Admin, {
 		// get html for editing a user (or creating a new one)
 		var html = '';
 		var user = this.user;
-		var editing = !!user.username;
+		var editing = this.editing_user === true;
 		
 		// user id
 		html += get_form_table_row( 'Username', 
@@ -513,7 +515,7 @@ Class.add( Page.Admin, {
 			privileges: {}
 		};
 		
-		var editing = !!(this.user && this.user.username);
+		var editing = this.editing_user === true;
 		if (editing) user.username = this.user.username;
 		if (editing && app.config.account_email_enabled) delete user.email;
 		if (!editing && !/^[a-zA-Z0-9_.-]{3,50}$/.test(user.username)) return app.badField('fe_eu_username', 'Use 3-50 letters, digits, periods, underscores or dashes.');

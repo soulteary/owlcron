@@ -18,7 +18,8 @@ function fixture({enabled = true, user = {}, crypto = webcrypto} = {}) {
     render_menu_options:()=>'',get_form_table_row:(label,html)=>label+html,get_form_table_caption:text=>text,get_form_table_spacer:()=>''
   });
   page.user = {privileges:{},...user};
-  return {page,values,errors};
+  page.editing_user = !!user.username;
+  return {page,values,errors,app};
 }
 
 test('generated admin passwords use secure randomness and satisfy the form policy',()=>{
@@ -72,4 +73,24 @@ test('disabled email features retain editable optional contact information and a
   assert.doesNotMatch(f.page.get_user_edit_html(),/readonly="readonly"/);
   assert.match(f.page.get_user_edit_html(),/Account email features are disabled/);
   assert.equal(f.page.get_user_form_json().email,'new@example.test');
+});
+
+
+test('failed creation retains create mode when corrected username and email are retried',()=>{
+  const f=fixture();const requests=[];
+  f.page.new_user_finish=()=>{};
+  // A rejected request leaves this.user populated; it must not imply a persisted account.
+  const appContext = {clearError(){},showProgress(){},api:{post(route,payload){requests.push({route,payload});}}};
+  // Capture app methods through the same fixture so the real submit handler executes twice.
+  Object.assign(f.app,appContext);
+  f.values['#fe_eu_password']='TwelveBytes!!';
+  f.page.do_new_user();
+  assert.equal(requests[0].payload.username,'new-user');
+  f.values['#fe_eu_username']='corrected-user';
+  f.values['#fe_eu_email']='corrected@example.test';
+  f.page.do_new_user();
+  assert.equal(requests[1].route,'user/admin_create');
+  assert.equal(requests[1].payload.username,'corrected-user');
+  assert.equal(requests[1].payload.email,'corrected@example.test');
+  assert.doesNotMatch(f.page.get_user_edit_html(),/readonly="readonly"/);
 });
