@@ -53,7 +53,12 @@ messages and daemon state are temporary and cleaned up when each run exits.
 The path-filtered [CI / Browser Tests](../../.github/workflows/browser.yml)
 workflow runs both runners in each browser, caches the pinned browser separately,
 and uses a five-minute outer timeout for cold installations. It keeps browser installation out of the
-quick Go job. Engine coverage does not certify every Chrome, Edge or Safari release, real
+quick Go job. On macOS, WebKit keyboard checks use Option+Tab to include native buttons and
+links, matching Safari's full keyboard-navigation shortcut. Other engines and
+Linux use Tab. Each independent keyboard scenario starts at document focus;
+target controls must still be reached by key events.
+
+Engine coverage does not certify every Chrome, Edge or Safari release, real
 mobile devices, or screen-reader accessibility. Keep release notes limited to
 the workflows and viewport checks actually exercised.
 

@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 
+// macOS WebKit uses Option+Tab to include native buttons and links.
+const tabKey = process.platform === 'darwin' && process.env.OWLCRON_BROWSER === 'webkit' ? 'Alt+Tab' : 'Tab';
+
 // Use physical key events, never invoke handlers or focus the destination control.
 async function tabTo(page, target) {
   await target.waitFor();
@@ -11,7 +14,7 @@ async function tabTo(page, target) {
   }
   for (let n = 0; n < 200; n++) {
     if (await target.evaluate(element => element === document.activeElement)) return;
-    await page.keyboard.press('Tab');
+    await page.keyboard.press(tabKey);
   }
   throw new Error('Control is not reachable with Tab: ' + await target.getAttribute('id'));
 }
@@ -39,7 +42,7 @@ export async function checkKeyboardPages(page, base, session) {
   await page.locator('#fe_ee_plugin').selectOption('keyboard_textarea');
   const script = page.locator('#fe_ee_pp_script');
   await script.fill('printf hello');
-  await page.keyboard.press('Tab');
+  await page.keyboard.press(tabKey);
   assert.equal(await script.evaluate(element => element === document.activeElement), false, 'Tab must leave a script editor');
   assert.equal(await script.inputValue(), 'printf hello');
 
@@ -92,7 +95,7 @@ export async function checkKeyboardPages(page, base, session) {
   await dialog.waitFor();
   // A complete cycle, including backwards navigation, cannot escape the modal.
   for (let n = 0; n < 6; n++) {
-    await page.keyboard.press(n % 2 ? 'Shift+Tab' : 'Tab');
+    await page.keyboard.press(n % 2 ? 'Shift+' + tabKey : tabKey);
     assert.equal(await dialog.evaluate(element => element.contains(document.activeElement)), true);
   }
   await page.keyboard.press('Escape');

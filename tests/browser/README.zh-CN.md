@@ -70,3 +70,5 @@ OWLCRON_BROWSER=webkit bun run --cwd tests/browser test:account-mail
 
 这是固定版本的浏览器引擎验收，不代表认证所有 Chrome、Edge、Safari 版本、真实移动设备或读屏软件。
 发布说明应以实际覆盖的页面、操作和视口为准。
+
+macOS 上的 WebKit 使用 Option+Tab 遍历原生按钮和链接，对应 Safari 的完整键盘导航快捷方式；其他引擎和 Linux 使用 Tab。独立键盘场景从文档焦点开始，目标控件仍必须通过按键到达。
