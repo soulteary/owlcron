@@ -23,8 +23,7 @@ runtime checks are added.
 The first release targets a single node with familiar Cronicle pages and
 workflows. Run one standalone OwlCron node, validate your events and permissions,
 and review the [compatibility boundary](compatibility.md). Cluster discovery,
-failover and remote dispatch remain experimental and are outside this release's
-production compatibility promise. This is not a drop-in data or cluster upgrade
+failover and remote dispatch remain experimental and are outside the initial compatibility scope. This is not a drop-in data or cluster upgrade
 from Cronicle; use the [migration preflight](migration.md) and manually recreate
 reviewed configuration, credentials, plugins and events.
 
