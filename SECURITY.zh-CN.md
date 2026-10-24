@@ -29,6 +29,11 @@ https://github.com/soulteary/owlcron/security/advisories/new
 
 具体反向代理、Cookie、凭据和备份要求见 [部署指南](docs/zh-CN/deployment.md)。
 
+账号邮件默认关闭，公开注册保持关闭。启用邮箱验证和邮件找回密码需要可信的
+公共 HTTPS 地址及 SMTP TLS。恢复链接属于凭据，不应出现在公开问题、日志或截图中。
+有效期、撤销、投递故障和备份恢复的处理方法见
+[账号邮件操作指南](docs/zh-CN/operations.md#账号邮件与密码找回)。
+
 ## 依赖检查
 
 CI 对锁定 npm 依赖执行 `bun audit`，对主模块和示例插件执行 `govulncheck`。

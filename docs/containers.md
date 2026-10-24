@@ -4,9 +4,11 @@ English | [简体中文](zh-CN/containers.md)
 
 These examples run **one node** for evaluation and controlled deployments. They
 do not establish high availability or remove the [known limitations](limitations.md).
-The image contains the engine, example plugin, static UI and license notices; it
+The image contains the engine, `owlcron-script` adapter, example plugin, static UI and license notices; it
 runs as UID/GID 10001. It includes `procps` for resource monitoring and CA/timezone
-data. Build it locally; no published registry image is assumed:
+data. The adapter can run `/bin/sh` scripts; install any additional
+interpreters required by your plugins. See [running script files](script-files.md).
+Build it locally; no published registry image is assumed:
 
 ```sh
 docker build -t owlcron:local .

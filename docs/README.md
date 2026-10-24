@@ -17,6 +17,11 @@ Start with the [project README](../README.md) for a quick setup. English is the 
 - [Migration preflight](migration.md): read-only checks for a Cronicle export.
 - [Compatibility](compatibility.md): supported Cronicle behavior and migration to OwlCron.
 
+## Accounts
+
+- [Account email policy](configuration.md#account-email-policy): opt-in configuration and limits.
+- [Email verification and password recovery](operations.md#account-email-and-password-recovery): user steps, delivery failures and recovery.
+
 ## Operations and reliability
 
 - [Operations and metrics](operations.md): collection, alerting and recovery runbooks.
@@ -26,5 +31,4 @@ Start with the [project README](../README.md) for a quick setup. English is the 
 ## Development
 
 - [Testing](testing.md): development checks, CI, and fault scenarios.
-
 - [Contributing](../CONTRIBUTING.md), [security](../SECURITY.md), and [third-party notices](../THIRD_PARTY_NOTICES.md).

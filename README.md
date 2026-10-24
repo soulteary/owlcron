@@ -4,14 +4,7 @@ English | [简体中文](README.zh-CN.md)
 
 Schedule tasks, run plugins, and inspect execution history and logs from a Web UI.
 
-[![Build and Test](https://github.com/soulteary/owlcron/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/soulteary/owlcron/actions/workflows/ci.yml)
-[![Browser Tests](https://github.com/soulteary/owlcron/actions/workflows/browser.yml/badge.svg?branch=main)](https://github.com/soulteary/owlcron/actions/workflows/browser.yml)
-[![Container and Deployment](https://github.com/soulteary/owlcron/actions/workflows/container.yml/badge.svg?branch=main)](https://github.com/soulteary/owlcron/actions/workflows/container.yml)
-[![Go Test Report](https://github.com/soulteary/owlcron/actions/workflows/go-quality-reports.yml/badge.svg)](https://github.com/soulteary/owlcron/actions/workflows/go-quality-reports.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/soulteary/owlcron)](https://goreportcard.com/report/github.com/soulteary/owlcron)
-[![Release](https://img.shields.io/github/v/release/soulteary/owlcron)](https://github.com/soulteary/owlcron/releases)
-[![Go](https://img.shields.io/badge/Go-1.27-00ADD8?logo=go&logoColor=white)](docs/releases.md)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Go Tests](https://img.shields.io/github/actions/workflow/status/soulteary/owlcron/ci.yml?branch=main&label=Go%20Tests)](https://github.com/soulteary/owlcron/actions/workflows/ci.yml) [![Go Report Card](https://goreportcard.com/badge/github.com/soulteary/owlcron)](https://goreportcard.com/report/github.com/soulteary/owlcron) [![Release](https://img.shields.io/github/v/release/soulteary/owlcron)](https://github.com/soulteary/owlcron/releases) [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 OwlCron is a task scheduler written in Go, designed to replace [Cronicle](https://github.com/jhuckaby/Cronicle). It provides a web interface, scheduled and on-demand jobs, plugin execution, job logs, and notifications, with selected compatibility for Cronicle workflows, APIs, and plugin conventions. See [Cronicle compatibility](docs/compatibility.md) for the current migration scope.
 
@@ -57,6 +50,13 @@ On the first start with an empty user database, OwlCron generates administrator 
 Initialization provides a General category and an Echo Plugin. Create a local event using that plugin, run it manually, and inspect its history and logs. `make smoke` checks this workflow automatically with isolated temporary data.
 
 The HTTP service listens on all interfaces. `base_app_url` does not restrict the listening address. Restrict access to the backend port and configure HTTPS before exposing the service. Keep secrets, runtime data, and logs out of version control.
+
+## Account access
+
+Administrators create accounts; public registration is disabled. Email verification
+and password recovery are available when an operator enables account email and
+configures HTTPS and SMTP TLS. Existing email addresses must be verified before
+they can receive password-reset links. See [account email and password recovery](docs/operations.md#account-email-and-password-recovery).
 
 ## Documentation
 

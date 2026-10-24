@@ -89,6 +89,16 @@ remote dispatch and recovery; metrics do not establish exactly-once execution.
 
 Record backup success and age in the backup system and regularly rehearse isolated restores. Follow [deployment and rollback](deployment.md#backups-upgrades-and-rollback) for shutdown requirements, backup scope, import behavior, and verification steps.
 
+## Account email and password recovery
+
+Public registration stays disabled. Enable `account_email_enabled` only after
+configuring the [account email policy](configuration.md#account-email-policy):
+a trusted HTTPS `base_app_url` matching `base_path`, an explicit `smtp_hostname`,
+SMTP TLS and `email_from`. Keep `account_email_allow_insecure` false in production.
+Test delivery with a dedicated account before announcing recovery availability.
+Imported and existing email addresses start unverified; users who cannot sign in
+must first use administrator-assisted recovery, then verify their address.
+
 ### Verify an account email
 
 When account email is enabled, open **My Account**, enter the intended email and
@@ -102,15 +112,7 @@ The link opens a confirmation screen. Opening it alone does not consume the
 single-use token. Expired or previously used links require a new request from
 My Account. Registration remains disabled.
 
-## Account email and password recovery
-
-Public registration stays disabled. Enable `account_email_enabled` only after
-configuring the [account email policy](configuration.md#account-email-policy):
-a trusted HTTPS `base_app_url` matching `base_path`, an explicit `smtp_hostname`,
-SMTP TLS and `email_from`. Keep `account_email_allow_insecure` false in production.
-Test delivery with a dedicated account before announcing recovery availability.
-Imported and existing email addresses start unverified; users who cannot sign in
-must first use administrator-assisted recovery, then verify their address.
+### Reset a password
 
 After verification, select **Forgot Password?** on the login page and provide the
 exact username and verified email address. The response is intentionally the same
@@ -124,10 +126,12 @@ never changes privileges.
 Links expire after `account_token_ttl_seconds` (30 minutes by default). Requesting
 a new link for the same action replaces the previous link. Opening a link alone
 does not change the account. The browser removes the token from its address bar
-before loading application assets; refreshing loses the in-memory token, so open
-the original email again. Do not copy links into logs, tickets or screenshots.
+before loading application assets and when following a link within an open page;
+refreshing loses the in-memory token, so open the original email again. Do not copy links into logs, tickets or screenshots.
 The API accepts these actions only by POST; it does not consume tokens from GET
 requests. Old Cronicle recovery links cannot be used.
+
+### Delivery failures and recovery
 
 Email and password edits, account disablement/deletion and secret-key rotation
 revoke outstanding links. Changing the email requires the current password and

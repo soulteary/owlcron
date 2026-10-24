@@ -3,8 +3,10 @@
 [English](../containers.md) | 简体中文
 
 示例仅运行单节点，适合评估和受控部署，不代表高可用认证，也不消除
-[已知限制](limitations.md)。镜像包含引擎、示例插件、静态界面与许可声明，
-以 UID/GID 10001 运行，带有进程监控、CA 与时区数据。先本地构建：
+[已知限制](limitations.md)。镜像包含引擎、`owlcron-script` 适配器、示例插件、静态界面与许可声明，
+以 UID/GID 10001 运行，带有进程监控、CA 与时区数据。适配器可运行 `/bin/sh`
+脚本，其他解释器需要安装到派生镜像，具体见[运行脚本文件](script-files.md)。
+先本地构建：
 
 ```sh
 docker build -t owlcron:local .

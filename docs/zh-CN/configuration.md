@@ -9,7 +9,7 @@
 ## 基础配置
 
 - `hostname`：节点的唯一名称；集群中应显式配置，并与节点登记、公钥和证书保持一致。
-- `base_app_url`：外部访问地址，用于链接和跨来源检查，不控制网络监听范围。
+- `base_app_url`：生成链接使用的外部访问地址，不控制网络监听范围，也不替代 HTTP/WebSocket 根据请求 Host 执行的跨来源检查。
 - `http_port`：HTTP 服务端口，默认 3012。服务监听所有网卡，外部访问控制由防火墙或代理负责。
 - `secret_key`：至少 32 字节的随机秘密，也可由 `OWLCRON_SECRET_KEY` 提供。所有配置和密钥文件应限制访问。
 - `storage_engine`：`Filesystem`、`S3` 或 `Couchbase`；本地默认使用 Filesystem。
