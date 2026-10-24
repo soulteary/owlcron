@@ -16,3 +16,5 @@ For Chinese documentation, open the [Chinese index](zh-CN/README.md). Update bot
 
 - [Containers and Kubernetes](containers.md)
 - [Running script files](script-files.md)
+
+- [Operations and metrics](operations.md): collection, alerting and recovery runbooks.

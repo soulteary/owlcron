@@ -16,3 +16,5 @@
 
 - [容器与 Kubernetes](containers.md)
 - [运行脚本文件](script-files.md)
+
+- [运维与指标](operations.md)：采集、告警和恢复流程。
