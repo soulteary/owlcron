@@ -33,7 +33,7 @@ frontend:
 	cd htdocs-deps && node build.js dist
 
 frontend-test:
-	node --test tests/job_log_ui.test.cjs
+	node --test tests/*_ui.test.cjs
 
 integration:
 	@test -n "$$OWLCRON_TEST_S3_ENDPOINT" || (echo "Set OWLCRON_TEST_S3_ENDPOINT" >&2; exit 1)
