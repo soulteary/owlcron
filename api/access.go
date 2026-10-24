@@ -85,6 +85,12 @@ func validateParameterName(key string) error {
 }
 
 func decodeRequestParameters(raw []byte) (map[string]interface{}, error) {
+	// Older clients encode an absent POST payload as null. It has no fields;
+	// direct-body mutations still authorize against this empty body, never
+	// against selectors introduced only by the query string.
+	if bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
+		return make(map[string]interface{}), nil
+	}
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	token, err := decoder.Token()
 	if err != nil || token != json.Delim('{') {
