@@ -22,3 +22,7 @@ HTTPS。示例配置不代表已经完成生产环境安全加固。
 `.sha256` 文件，再解压运行。`BUILD.json` 记录版本、源码提交、目标平台和 Go
 工具链。分发时保留 [LICENSE](LICENSE)、[第三方声明](THIRD_PARTY_NOTICES.zh-CN.md)
 及 `licenses/`。
+
+首版面向独立单节点部署，集群行为仍属于实验能力。服务本身不需要 Go、Bun
+或 Node.js；自定义插件仍需安装各自的运行依赖。Cronicle 迁移预检器是需要
+单独从源码构建的工具，不包含在此压缩包中。

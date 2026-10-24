@@ -23,3 +23,8 @@ The release remains experimental; do not assume cross-version data rollback.
 Verify the adjacent `.sha256` file before extracting a downloaded archive.
 `BUILD.json` records its version, source commit, target and Go toolchain. Preserve
 [LICENSE](LICENSE), [third-party notices](THIRD_PARTY_NOTICES.md), and `licenses/`.
+
+The first release is intended for a standalone single node. Cluster behavior
+remains experimental. The daemon does not require Go, Bun or Node.js; custom
+plugins still need their own runtime dependencies. The Cronicle migration
+preflight checker is a separate source-build tool, not included in this archive.

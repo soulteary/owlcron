@@ -18,6 +18,16 @@ rejects cross-compilation because the resulting binaries could not be run by
 its validation steps. A platform becomes supported only after native build and
 runtime checks are added.
 
+## First-release scope
+
+The first release targets a single node with familiar Cronicle pages and
+workflows. Run one standalone OwlCron node, validate your events and permissions,
+and review the [compatibility boundary](compatibility.md). Cluster discovery,
+failover and remote dispatch remain experimental and are outside this release's
+production compatibility promise. This is not a drop-in data or cluster upgrade
+from Cronicle; use the [migration preflight](migration.md) and manually recreate
+reviewed configuration, credentials, plugins and events.
+
 ## Build and verify a local archive
 
 Install the supported toolchain, then run from the repository root:
@@ -43,8 +53,20 @@ CLI and `BUILD.json` to identify the OwlCron release.
 
 The adjacent `.tar.gz.sha256` file is compatible with `sha256sum --check` on
 Linux. The verification command checks the digest, extracts to a temporary
-directory, checks executable metadata and the adapter, and runs the existing
-installation smoke test against the extracted frontend and plugin. A digest
+directory, checks executable metadata and the adapter, and runs a single-node
+acceptance test against only the extracted distribution. The test checks the
+built frontend, first boot and login, an actual job using the bundled script
+adapter, history and logs, graceful restart with persistent state, and an offline
+backup imported into fresh storage followed by another successful job. It stops
+the daemon before both export and import. Core-data export does not back up
+configuration, script files or job-log files; preserve those separately.
+
+The harness uses Python's standard library from the source checkout; the daemon
+and its child plugins run outside the checkout with an empty executable `PATH`,
+without Go, Bun, Node.js or `node_modules`. `/bin/sh` is required for this test's
+shell script. Production custom plugins may require their own interpreters and
+dependencies. This validates isolation from build tools, not a container image
+or every possible target operating system. A digest
 checks file integrity; it is not a signature or independent proof of origin.
 The output directory must not already contain the same archive name. Completed
 archives and checksums are staged before final filenames are created. Archive
