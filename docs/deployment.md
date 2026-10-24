@@ -131,3 +131,5 @@ Input must contain one password of 12–72 bytes, with an optional trailing newl
 ## Preparing account email
 
 Keep `account_email_enabled` disabled until verification and password-reset support is deployed and tested with your SMTP relay. Choose the public HTTPS `base_app_url` explicitly, including `base_path` when deployed under a subpath; account links must never derive their origin from request headers. Configure a dedicated sender and restrict SMTP credentials to this service. Existing users retain login access without email verification, and administrator password recovery remains available. See [account email policy](configuration.md#account-email-policy) for validation and limits. Public registration remains closed.
+
+Account verification and recovery links contain bearer tokens: keep both public links and SMTP transport encrypted. `account_email_allow_insecure` permits plaintext HTTP and SMTP only for isolated local testing; never enable it in production.
