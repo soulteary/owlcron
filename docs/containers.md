@@ -72,3 +72,19 @@ validation of shared-storage semantics, TLS, identity and failure recovery.
 CI builds and boots the image with persistent state, restarts it, and checks the
 deployment's offline safety invariants. This is not a live Kubernetes certification;
 validate scheduling, volume ownership and policy on the target cluster.
+
+## Health probes
+
+`GET /api/app/ping` is a liveness check. `GET /api/app/ready` (also available
+with `/v1`) returns HTTP 200 after local startup completes and storage can
+answer a read-only existence check, or HTTP 503 while starting, draining,
+closed, or when the check fails or exceeds two seconds. Both are public and
+readiness returns only a generic result, without backend error details.
+A healthy worker does not need to hold leadership to be ready. Concurrent
+requests share a storage probe; a stuck backend cannot accumulate probe tasks.
+
+The Kubernetes example uses readiness for startup and service routing, and
+liveness for restarts. A storage outage therefore removes the pod from service
+without causing a restart loop. Readiness checks connectivity and read access;
+it does not certify write permission, free disk space, quorum, job execution,
+or the durability guarantees described in [known limitations](limitations.md).
