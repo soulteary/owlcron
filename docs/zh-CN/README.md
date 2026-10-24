@@ -15,3 +15,4 @@
 英文文档见 [English index](../README.md)。修改配置、行为、命令或限制时，应同步更新两个版本。
 
 - [容器与 Kubernetes](containers.md)
+- [运行脚本文件](script-files.md)

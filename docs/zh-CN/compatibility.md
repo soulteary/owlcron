@@ -49,3 +49,12 @@ OwlCron 的目标是通过 Go 实现替代 Cronicle，并通过一定程度的�
 - 登录和 Basic Auth 共用按 IP/账户的进程内限流及密码验证并发上限；这不是跨节点全局限流。仅信任配置代理的转发头，Cookie 使用一致的 Secure、HttpOnly、SameSite 策略。
 - 普通 HTTP API 和日志流分别有时间边界，WebSocket 使用自身生命周期。Go 引擎保留跨来源写请求检查，没有照搬原版关闭防护的设置。
 
+
+### 分类 API 委派管理
+
+管理员可分别授予用户或 API Key：`create_categories`、`update_categories`、
+`delete_categories`，不会同时授予插件、用户、服务器或 API Key 管理权限。
+启用 `cat_limit` 时，创建、更新、删除均必须显式指定获准的 `cat_<id>` 分类 ID，
+查询参数不能覆盖请求正文的鉴权对象。不启用范围限制时，权限适用于所有分类。
+禁止重复创建 ID 或删除仍有事件引用的分类。浏览器管理区仍仅管理员可访问；
+委派客户端通过分类 API 操作，也支持 `/v1` 后缀。管理员界面可配置这些权限。

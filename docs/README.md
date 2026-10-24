@@ -15,3 +15,4 @@ Start with the [project README](../README.md) for a quick setup. English is the 
 For Chinese documentation, open the [Chinese index](zh-CN/README.md). Update both editions when configuration, behavior, commands, or limitations change.
 
 - [Containers and Kubernetes](containers.md)
+- [Running script files](script-files.md)
