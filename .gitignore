@@ -1,0 +1,38 @@
+# Local runtime state and private configuration
+/owlcron-engine
+/bin/echo-plugin/echo-plugin
+/data/
+/logs/
+/queue/
+/engine/data/
+/engine/logs/
+/engine/queue/
+/reports/
+/.artifacts/
+
+# Installed frontend dependencies and generated assets
+/htdocs-deps/node_modules/
+/htdocs/index.html
+/htdocs/index.html.gz
+/htdocs/js/_combo*
+/htdocs/css/_combo*
+/config.local.json
+.env
+.env.*
+!.env.example
+
+
+# Editor, OS and test output
+.DS_Store
+__pycache__/
+*.py[cod]
+*.test
+coverage.out
+/htdocs/js/external/
+/htdocs/js/common
+/htdocs/css/base.css
+/htdocs/css/base.css.gz
+/htdocs/css/font-awesome*
+/htdocs/css/materialdesignicons*
+/htdocs/fonts/
+/htdocs/socket.io/

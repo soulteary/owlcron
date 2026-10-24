@@ -1,0 +1,14 @@
+[extend]
+useDefault = true
+
+# Deterministic fixture keys used only with isolated test storage. Match both
+# the exact value and its test file; do not exclude tests or generic key rules.
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+description = "Known synthetic keys in isolated Go test fixtures"
+condition = "AND"
+paths = ['''(^|/)(api/(system_integration|login_limiter|security)_test\.go|engine/security_test\.go|cli/cli_test\.go|main_test\.go)$''']
+regexTarget = "secret"
+regexes = ['''^(integration-secret-0123456789abcdef|0123456789abcdef0123456789abcdef|test-secret-0123456789abcdef0123456789)$''']

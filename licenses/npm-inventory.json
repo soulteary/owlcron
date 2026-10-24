@@ -1,0 +1,327 @@
+[
+  {
+    "name": "@socket.io/component-emitter",
+    "version": "3.1.2",
+    "license": "MIT",
+    "notices": "licenses/npm/@socket.io__component-emitter@3.1.2",
+    "files": [
+      "LICENSE",
+      "Readme.md"
+    ]
+  },
+  {
+    "name": "async",
+    "version": "2.6.4",
+    "license": "MIT",
+    "notices": "licenses/npm/async@2.6.4",
+    "files": [
+      "LICENSE",
+      "README.md"
+    ]
+  },
+  {
+    "name": "chart.js",
+    "version": "2.9.4",
+    "license": "MIT",
+    "notices": "licenses/npm/chart.js@2.9.4",
+    "files": [
+      "LICENSE.md",
+      "README.md"
+    ]
+  },
+  {
+    "name": "chartjs-color",
+    "version": "2.4.1",
+    "license": "MIT",
+    "notices": "licenses/npm/chartjs-color@2.4.1",
+    "files": [
+      "LICENSE",
+      "README.md"
+    ]
+  },
+  {
+    "name": "chartjs-color-string",
+    "version": "0.6.0",
+    "license": "MIT",
+    "notices": "licenses/npm/chartjs-color-string@0.6.0",
+    "files": [
+      "LICENSE",
+      "README.md"
+    ]
+  },
+  {
+    "name": "color-convert",
+    "version": "1.9.3",
+    "license": "MIT",
+    "notices": "licenses/npm/color-convert@1.9.3",
+    "files": [
+      "LICENSE",
+      "README.md"
+    ]
+  },
+  {
+    "name": "color-name",
+    "version": "1.1.3",
+    "license": "MIT",
+    "notices": "licenses/npm/color-name@1.1.3",
+    "files": [
+      "LICENSE",
+      "README.md"
+    ]
+  },
+  {
+    "name": "color-name",
+    "version": "1.1.4",
+    "license": "MIT",
+    "notices": "licenses/npm/color-name@1.1.4",
+    "files": [
+      "LICENSE",
+      "README.md"
+    ]
+  },
+  {
+    "name": "debug",
+    "version": "4.4.3",
+    "license": "MIT",
+    "notices": "licenses/npm/debug@4.4.3",
+    "files": [
+      "LICENSE",
+      "README.md"
+    ]
+  },
+  {
+    "name": "engine.io-client",
+    "version": "6.6.7",
+    "license": "MIT",
+    "notices": "licenses/npm/engine.io-client@6.6.7",
+    "files": [
+      "LICENSE",
+      "README.md"
+    ]
+  },
+  {
+    "name": "engine.io-parser",
+    "version": "5.2.3",
+    "license": "MIT",
+    "notices": "licenses/npm/engine.io-parser@5.2.3",
+    "files": [
+      "LICENSE",
+      "Readme.md"
+    ]
+  },
+  {
+    "name": "errno",
+    "version": "0.1.7",
+    "license": "MIT",
+    "notices": "licenses/npm/errno@0.1.7",
+    "files": [
+      "README.md"
+    ]
+  },
+  {
+    "name": "font-awesome",
+    "version": "4.7.0",
+    "license": "(OFL-1.1 AND MIT)",
+    "notices": "licenses/npm/font-awesome@4.7.0",
+    "files": [
+      "README.md"
+    ]
+  },
+  {
+    "name": "jquery",
+    "version": "3.5.0",
+    "license": "MIT",
+    "notices": "licenses/npm/jquery@3.5.0",
+    "files": [
+      "LICENSE.txt",
+      "README.md"
+    ]
+  },
+  {
+    "name": "jstimezonedetect",
+    "version": "1.0.6",
+    "license": [
+      {
+        "type": "MIT",
+        "url": "https://bitbucket.org/pellepim/jstimezonedetect/src/default/LICENCE.txt"
+      }
+    ],
+    "notices": "licenses/npm/jstimezonedetect@1.0.6",
+    "files": [
+      "LICENCE.txt",
+      "README.md"
+    ]
+  },
+  {
+    "name": "lodash",
+    "version": "4.18.1",
+    "license": "MIT",
+    "notices": "licenses/npm/lodash@4.18.1",
+    "files": [
+      "LICENSE",
+      "README.md"
+    ]
+  },
+  {
+    "name": "mdi",
+    "version": "1.9.33",
+    "license": [
+      {
+        "type": "OFL-1.1",
+        "url": "http://scripts.sil.org/OFL"
+      },
+      {
+        "type": "MIT",
+        "url": "http://opensource.org/licenses/mit-license.html"
+      }
+    ],
+    "notices": "licenses/npm/mdi@1.9.33",
+    "files": [
+      "README.md",
+      "license.md"
+    ]
+  },
+  {
+    "name": "moment",
+    "version": "2.31.0",
+    "license": "MIT",
+    "notices": "licenses/npm/moment@2.31.0",
+    "files": [
+      "LICENSE",
+      "README.md"
+    ]
+  },
+  {
+    "name": "moment-timezone",
+    "version": "0.5.35",
+    "license": "MIT",
+    "notices": "licenses/npm/moment-timezone@0.5.35",
+    "files": [
+      "LICENSE",
+      "README.md"
+    ]
+  },
+  {
+    "name": "ms",
+    "version": "2.1.3",
+    "license": "MIT",
+    "notices": "licenses/npm/ms@2.1.3",
+    "files": [
+      "license.md",
+      "readme.md"
+    ]
+  },
+  {
+    "name": "picomatch",
+    "version": "4.0.4",
+    "license": "MIT",
+    "notices": "licenses/npm/picomatch@4.0.4",
+    "files": [
+      "LICENSE",
+      "README.md"
+    ]
+  },
+  {
+    "name": "pixl-class",
+    "version": "1.0.3",
+    "license": "MIT",
+    "notices": "licenses/npm/pixl-class@1.0.3",
+    "files": [
+      "README.md"
+    ]
+  },
+  {
+    "name": "pixl-tools",
+    "version": "2.0.5",
+    "license": "MIT",
+    "notices": "licenses/npm/pixl-tools@2.0.5",
+    "files": [
+      "LICENSE.md",
+      "README.md"
+    ]
+  },
+  {
+    "name": "pixl-webapp",
+    "version": "2.0.3",
+    "license": "MIT",
+    "notices": "licenses/npm/pixl-webapp@2.0.3",
+    "files": [
+      "README.md"
+    ]
+  },
+  {
+    "name": "prr",
+    "version": "1.0.1",
+    "license": "MIT",
+    "notices": "licenses/npm/prr@1.0.1",
+    "files": [
+      "LICENSE.md",
+      "README.md"
+    ]
+  },
+  {
+    "name": "socket.io-client",
+    "version": "4.8.4",
+    "license": "MIT",
+    "notices": "licenses/npm/socket.io-client@4.8.4",
+    "files": [
+      "LICENSE",
+      "README.md"
+    ]
+  },
+  {
+    "name": "socket.io-parser",
+    "version": "4.2.7",
+    "license": "MIT",
+    "notices": "licenses/npm/socket.io-parser@4.2.7",
+    "files": [
+      "LICENSE",
+      "Readme.md"
+    ]
+  },
+  {
+    "name": "uglify-js",
+    "version": "3.14.3",
+    "license": "BSD-2-Clause",
+    "notices": "licenses/npm/uglify-js@3.14.3",
+    "files": [
+      "LICENSE",
+      "README.md"
+    ]
+  },
+  {
+    "name": "ws",
+    "version": "8.21.3",
+    "license": "MIT",
+    "notices": "licenses/npm/ws@8.21.3",
+    "files": [
+      "LICENSE",
+      "README.md"
+    ]
+  },
+  {
+    "name": "xmlhttprequest-ssl",
+    "version": "2.1.2",
+    "license": [
+      {
+        "type": "MIT",
+        "url": "http://creativecommons.org/licenses/MIT/"
+      }
+    ],
+    "notices": "licenses/npm/xmlhttprequest-ssl@2.1.2",
+    "files": [
+      "LICENSE",
+      "README.md"
+    ]
+  },
+  {
+    "name": "zxcvbn",
+    "version": "3.5.0",
+    "license": "MIT",
+    "notices": "licenses/npm/zxcvbn@3.5.0",
+    "files": [
+      "LICENSE.txt",
+      "README.md"
+    ]
+  }
+]

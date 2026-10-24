@@ -1,0 +1,309 @@
+[
+  {
+    "module": "github.com/aws/aws-sdk-go-v2",
+    "version": "v1.47.4",
+    "notices": "licenses/go/github.com__aws__aws-sdk-go-v2@v1.47.4",
+    "files": [
+      "LICENSE.txt",
+      "NOTICE.txt"
+    ]
+  },
+  {
+    "module": "github.com/aws/aws-sdk-go-v2/credentials",
+    "version": "v1.20.10",
+    "notices": "licenses/go/github.com__aws__aws-sdk-go-v2__credentials@v1.20.10",
+    "files": [
+      "LICENSE.txt"
+    ]
+  },
+  {
+    "module": "github.com/aws/aws-sdk-go-v2/service/s3",
+    "version": "v1.114.5",
+    "notices": "licenses/go/github.com__aws__aws-sdk-go-v2__service__s3@v1.114.5",
+    "files": [
+      "LICENSE.txt"
+    ]
+  },
+  {
+    "module": "github.com/aws/smithy-go",
+    "version": "v1.28.6",
+    "notices": "licenses/go/github.com__aws__smithy-go@v1.28.6",
+    "files": [
+      "LICENSE",
+      "NOTICE"
+    ]
+  },
+  {
+    "module": "github.com/couchbase/gocb/v2",
+    "version": "v2.13.0",
+    "notices": "licenses/go/github.com__couchbase__gocb__v2@v2.13.0",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "module": "github.com/gorilla/websocket",
+    "version": "v1.5.3",
+    "notices": "licenses/go/github.com__gorilla__websocket@v1.5.3",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "module": "go.uber.org/zap",
+    "version": "v1.28.0",
+    "notices": "licenses/go/go.uber.org__zap@v1.28.0",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "module": "golang.org/x/crypto",
+    "version": "v0.58.0",
+    "notices": "licenses/go/golang.org__x__crypto@v0.58.0",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "module": "golang.org/x/net",
+    "version": "v0.61.0",
+    "notices": "licenses/go/golang.org__x__net@v0.61.0",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "module": "golang.org/x/sys",
+    "version": "v0.49.0",
+    "notices": "licenses/go/golang.org__x__sys@v0.49.0",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "module": "github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream",
+    "version": "v1.7.24",
+    "notices": "licenses/go/github.com__aws__aws-sdk-go-v2__aws__protocol__eventstream@v1.7.24",
+    "files": [
+      "LICENSE.txt"
+    ]
+  },
+  {
+    "module": "github.com/aws/aws-sdk-go-v2/internal/configsources",
+    "version": "v1.5.7",
+    "notices": "licenses/go/github.com__aws__aws-sdk-go-v2__internal__configsources@v1.5.7",
+    "files": [
+      "LICENSE.txt"
+    ]
+  },
+  {
+    "module": "github.com/aws/aws-sdk-go-v2/internal/endpoints/v2",
+    "version": "v2.8.7",
+    "notices": "licenses/go/github.com__aws__aws-sdk-go-v2__internal__endpoints__v2@v2.8.7",
+    "files": [
+      "LICENSE.txt"
+    ]
+  },
+  {
+    "module": "github.com/aws/aws-sdk-go-v2/internal/v4a",
+    "version": "v1.5.7",
+    "notices": "licenses/go/github.com__aws__aws-sdk-go-v2__internal__v4a@v1.5.7",
+    "files": [
+      "LICENSE.txt"
+    ]
+  },
+  {
+    "module": "github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding",
+    "version": "v1.13.22",
+    "notices": "licenses/go/github.com__aws__aws-sdk-go-v2__service__internal__accept-encoding@v1.13.22",
+    "files": [
+      "LICENSE.txt"
+    ]
+  },
+  {
+    "module": "github.com/aws/aws-sdk-go-v2/service/internal/checksum",
+    "version": "v1.11.8",
+    "notices": "licenses/go/github.com__aws__aws-sdk-go-v2__service__internal__checksum@v1.11.8",
+    "files": [
+      "LICENSE.txt"
+    ]
+  },
+  {
+    "module": "github.com/aws/aws-sdk-go-v2/service/internal/presigned-url",
+    "version": "v1.14.7",
+    "notices": "licenses/go/github.com__aws__aws-sdk-go-v2__service__internal__presigned-url@v1.14.7",
+    "files": [
+      "LICENSE.txt"
+    ]
+  },
+  {
+    "module": "github.com/aws/aws-sdk-go-v2/service/internal/s3shared",
+    "version": "v1.20.7",
+    "notices": "licenses/go/github.com__aws__aws-sdk-go-v2__service__internal__s3shared@v1.20.7",
+    "files": [
+      "LICENSE.txt"
+    ]
+  },
+  {
+    "module": "github.com/cespare/xxhash/v2",
+    "version": "v2.3.0",
+    "notices": "licenses/go/github.com__cespare__xxhash__v2@v2.3.0",
+    "files": [
+      "LICENSE.txt"
+    ]
+  },
+  {
+    "module": "github.com/couchbase/gocbcore/v10",
+    "version": "v10.10.0",
+    "notices": "licenses/go/github.com__couchbase__gocbcore__v10@v10.10.0",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "module": "github.com/couchbase/gocbcoreps",
+    "version": "v0.1.5-0.20261005161736-7de374b343fa",
+    "notices": "licenses/go/github.com__couchbase__gocbcoreps@v0.1.5-0.20261005161736-7de374b343fa",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "module": "github.com/couchbase/goprotostellar",
+    "version": "v1.0.6-0.20261005130525-13bdd85cd6ce",
+    "notices": "licenses/go/github.com__couchbase__goprotostellar@v1.0.6-0.20261005130525-13bdd85cd6ce",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "module": "github.com/couchbaselabs/gocbconnstr/v2",
+    "version": "v2.0.0",
+    "notices": "licenses/go/github.com__couchbaselabs__gocbconnstr__v2@v2.0.0",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "module": "github.com/go-logr/logr",
+    "version": "v1.4.4",
+    "notices": "licenses/go/github.com__go-logr__logr@v1.4.4",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "module": "github.com/go-logr/stdr",
+    "version": "v1.2.2",
+    "notices": "licenses/go/github.com__go-logr__stdr@v1.2.2",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "module": "github.com/golang/snappy",
+    "version": "v1.0.0",
+    "notices": "licenses/go/github.com__golang__snappy@v1.0.0",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "module": "github.com/google/uuid",
+    "version": "v1.6.0",
+    "notices": "licenses/go/github.com__google__uuid@v1.6.0",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "module": "go.opentelemetry.io/auto/sdk",
+    "version": "v1.2.1",
+    "notices": "licenses/go/go.opentelemetry.io__auto__sdk@v1.2.1",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "module": "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc",
+    "version": "v0.72.0",
+    "notices": "licenses/go/go.opentelemetry.io__contrib__instrumentation__google.golang.org__grpc__otelgrpc@v0.72.0",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "module": "go.opentelemetry.io/otel",
+    "version": "v1.47.0",
+    "notices": "licenses/go/go.opentelemetry.io__otel@v1.47.0",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "module": "go.opentelemetry.io/otel/log",
+    "version": "v1.47.0",
+    "notices": "licenses/go/go.opentelemetry.io__otel__log@v1.47.0",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "module": "go.opentelemetry.io/otel/metric",
+    "version": "v1.47.0",
+    "notices": "licenses/go/go.opentelemetry.io__otel__metric@v1.47.0",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "module": "go.opentelemetry.io/otel/trace",
+    "version": "v1.47.0",
+    "notices": "licenses/go/go.opentelemetry.io__otel__trace@v1.47.0",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "module": "go.uber.org/multierr",
+    "version": "v1.11.0",
+    "notices": "licenses/go/go.uber.org__multierr@v1.11.0",
+    "files": [
+      "LICENSE.txt"
+    ]
+  },
+  {
+    "module": "golang.org/x/text",
+    "version": "v0.43.0",
+    "notices": "licenses/go/golang.org__x__text@v0.43.0",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "module": "google.golang.org/genproto/googleapis/rpc",
+    "version": "v0.0.0-20261019180522-ce908d29299b",
+    "notices": "licenses/go/google.golang.org__genproto__googleapis__rpc@v0.0.0-20261019180522-ce908d29299b",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "module": "google.golang.org/grpc",
+    "version": "v1.84.0",
+    "notices": "licenses/go/google.golang.org__grpc@v1.84.0",
+    "files": [
+      "LICENSE",
+      "NOTICE.txt"
+    ]
+  },
+  {
+    "module": "google.golang.org/protobuf",
+    "version": "v1.36.12",
+    "notices": "licenses/go/google.golang.org__protobuf@v1.36.12",
+    "files": [
+      "LICENSE"
+    ]
+  }
+]

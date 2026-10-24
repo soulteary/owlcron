@@ -1,0 +1,50 @@
+{
+  "checked_on": "2026-10-24",
+  "files": [
+    {
+      "file": "Cronicle.txt",
+      "source": "https://raw.githubusercontent.com/jhuckaby/Cronicle/master/LICENSE.md",
+      "sha256": "3a552be6e693d173be5181414f5aea6781b1c0d1213b5aa647bb7752e11cd0a2"
+    },
+    {
+      "file": "Go-LICENSE",
+      "source": "https://raw.githubusercontent.com/golang/go/master/LICENSE",
+      "sha256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad"
+    },
+    {
+      "file": "mdi-LICENSE.txt",
+      "source": "https://raw.githubusercontent.com/Templarian/MaterialDesign-Webfont/v1.9.33/license.md",
+      "sha256": "ce05a73c8a514aed49119ca0dee2d1b1cdadc6db8c2cbb779c80d4299e347b7d"
+    },
+    {
+      "file": "Lato-OFL.txt",
+      "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/lato/OFL.txt",
+      "sha256": "74ba064d03f1f1c4a952da936c3eb71866c34404916734de3cae73b34357e59e"
+    },
+    {
+      "file": "Apache-2.0.txt",
+      "source": "https://www.apache.org/licenses/LICENSE-2.0.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "file": "Paul-Johnston-BSD.html",
+      "source": "https://pajhome.org.uk/site/legal.html",
+      "sha256": "2f5fb66a6a44fd8f1cb1dd30a103d71e331bfc2b8b11f88d82d88ee0b7fdc5cc"
+    },
+    {
+      "file": "Paul-Johnston-MD5.html",
+      "source": "https://pajhome.org.uk/crypt/md5/",
+      "sha256": "2d2b93c1306b68953b0fcd1e396e3b76ad6a461a5decf4fb3704c93fc1ac115f"
+    },
+    {
+      "file": "Font-Awesome-font-metadata.txt",
+      "source": "Extracted from font-awesome 4.7.0 fonts/fontawesome-webfont.ttf name table",
+      "sha256": "5202416af65b0922110b1cc34f86939cfb9a5f36b93ffe4627faa34006a37ab3"
+    },
+    {
+      "file": "Font-Awesome-OFL.txt",
+      "source": "https://fontawesome.com/v4/license/; standard OFL text from Lato-OFL.txt",
+      "sha256": "f885ed8f3ec5c8a980a2df62464e5cb0cb82372096a4097552d318c55c778d4a"
+    }
+  ]
+}
