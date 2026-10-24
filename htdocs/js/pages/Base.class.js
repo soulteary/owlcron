@@ -94,6 +94,12 @@ Class.subclass( Page, "Page.Base", {
 		}
 	},
 	
+	getNiceRecordDate: function(value, dateOnly) {
+		var epoch = Number(value);
+		if (!Number.isFinite(epoch) || epoch <= 0 || !Number.isFinite(new Date(epoch * 1000).getTime())) return 'Not recorded';
+		return dateOnly ? get_nice_date(epoch, true) : get_nice_date_time(epoch, true);
+	},
+
 	getNicePlugin: function(plugin, width) {
 		if (!width) width = 500;
 		if (!plugin) return '(None)';
@@ -111,7 +117,7 @@ Class.subclass( Page, "Page.Base", {
 		var html = '<div class="ellip" style="max-width:'+width+'px;">';
 		if (link && key) html += '<a href="#Admin?sub=edit_api_key&id='+item.id+'">';
 		
-		html += '<i class="mdi mdi-key-variant">&nbsp;</i>' + title;
+		html += '<i class="mdi mdi-key-variant">&nbsp;</i>' + encode_entities(title || '');
 		
 		if (link && key) html += '</a>';
 		html += '</div>';

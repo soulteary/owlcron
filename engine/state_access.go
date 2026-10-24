@@ -3,10 +3,11 @@ package engine
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-
 	"time"
 
+	"github.com/soulteary/owlcron/storage"
 	"github.com/soulteary/owlcron/types"
 	"go.uber.org/zap"
 )
@@ -102,7 +103,10 @@ func (e *Engine) GetActivity(offset, limit int) ([]map[string]interface{}, error
 	ctx := context.Background()
 	items, err := e.storage.ListGet(ctx, "logs/activity", offset, limit)
 	if err != nil {
-		return result, nil
+		if errors.Is(err, storage.ErrNotFound) {
+			return result, nil
+		}
+		return nil, err
 	}
 
 	for _, item := range items {

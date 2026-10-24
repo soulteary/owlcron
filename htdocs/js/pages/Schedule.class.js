@@ -735,7 +735,7 @@ Class.subclass( Page.Base, "Page.Schedule", {
 			
 			for (var idx = 0, len = keys.length; idx < len; idx++) {
 				var key = keys[idx];
-				if (event[key] != this.old_event[key]) {
+				if (JSON.stringify(event[key]) !== JSON.stringify(this.old_event[key])) {
 					updates[key] = event[key];
 					need_update = true;
 				}
@@ -1002,10 +1002,10 @@ Class.subclass( Page.Base, "Page.Schedule", {
 			'<div style="font-size:13px;'+(chain_expanded ? 'display:none;' : '')+'"><span class="link addme" onMouseUp="$P().expand_fieldset($(this))"><i class="fa fa-plus-square-o">&nbsp;</i>Chain Options</span></div>' + 
 			'<fieldset style="padding:10px 10px 0 10px; margin-bottom:5px;'+(chain_expanded ? '' : 'display:none;')+'"><legend class="link addme" onMouseUp="$P().collapse_fieldset($(this))"><i class="fa fa-minus-square-o">&nbsp;</i>Chain Options</legend>' + 
 				'<div class="plugin_params_label">Run Event on Success:</div>' + 
-				'<div class="plugin_params_content"><select id="fe_ee_chain" style="width:90%; margin-left:10px; font-size:12px;"><option value="">(None)</option>' + render_menu_options( sorted_events, event.chain, false ) + '</select></div>' + 
+				this.get_chain_editor('fe_ee_chain', event.chain, sorted_events) +
 				
 				'<div class="plugin_params_label">Run Event on Failure:</div>' + 
-				'<div class="plugin_params_content"><select id="fe_ee_chain_error" style="width:90%; margin-left:10px; font-size:12px;"><option value="">(None)</option>' + render_menu_options( sorted_events, event.chain_error, false ) + '</select></div>' + 
+				this.get_chain_editor('fe_ee_chain_error', event.chain_error, sorted_events) +
 				
 			'</fieldset>'
 		);
@@ -1716,6 +1716,19 @@ Class.subclass( Page.Base, "Page.Schedule", {
 		$('#d_ee_plugin_params').html( this.get_plugin_params_html() );
 	},
 	
+	get_chain_editor: function(id, value, events) {
+		if (Array.isArray(value)) {
+			return '<div class="plugin_params_content">' + encode_entities(value.join(', ') || '(None)') +
+				'<div class="caption">This event uses API-managed chain targets. They are preserved when saving this form; use the event API to change them.</div></div>';
+		}
+		return '<div class="plugin_params_content"><select id="' + id + '" style="width:90%; margin-left:10px; font-size:12px;"><option value="">(None)</option>' +
+			render_menu_options(events, value, true) + '</select></div>';
+	},
+
+	get_chain_form_value: function(id, original) {
+		return Array.isArray(original) ? original.slice() : $('#' + id).val();
+	},
+
 	get_event_form_json: function(quiet) {
 		// get event elements from form, used for new or edit
 		var event = this.event;
@@ -1809,8 +1822,8 @@ Class.subclass( Page.Base, "Page.Schedule", {
 		if (event.queue_max < 0) return quiet ? false : app.badField('fe_ee_queue_max', "Please enter a positive integer for the event queue max.");
 		
 		// chain reaction
-		event.chain = $('#fe_ee_chain').val();
-		event.chain_error = $('#fe_ee_chain_error').val();
+		event.chain = this.get_chain_form_value('fe_ee_chain', event.chain);
+		event.chain_error = this.get_chain_form_value('fe_ee_chain_error', event.chain_error);
 		
 		// cursor reset
 		if (event.id && event.catch_up && $('#fe_ee_rc_enabled').is(':checked')) {

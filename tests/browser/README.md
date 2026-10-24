@@ -6,8 +6,8 @@ This isolated development dependency runs one headless Chromium session against 
 fresh OwlCron daemon. It bootstraps an administrator in temporary storage, logs in
 through the UI, checks persisted light/dark preferences, creates and edits an
 event (including log retention), runs it, and opens its history and log. It also
-also checks live and archived charts, time-axis tooltips, and chart colors when
-switching themes. It fails on uncaught browser JavaScript errors. No existing configuration is read.
+checks live and archived charts, time-axis tooltips, and chart colors when
+switching themes. It fails on uncaught browser JavaScript errors. It also checks account access help, profile updates, all six administration pages, and temporary user, API-key, plugin and category changes. No existing configuration is read.
 
 From the repository root, using Bun 1.4.2 and the documented Go toolchain:
 

@@ -46,7 +46,7 @@ Class.subclass( Page.Base, "Page.MyAccount", {
 		
 		// email
 		html += get_form_table_row( 'Email Address', '<input type="text" id="fe_ma_email" size="30" value="'+escape_text_field_value(user.email)+'"/>' );
-		html += get_form_table_caption( "This is used to generate your profile pic, and to<br/>recover your password if you forget it." );
+		html += get_form_table_caption( "Used for your profile picture. Contact your administrator if you need a password reset." );
 		html += get_form_table_spacer();
 		
 		// current password

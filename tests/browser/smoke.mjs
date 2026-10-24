@@ -8,6 +8,7 @@ import {fileURLToPath} from 'node:url';
 import net from 'node:net';
 import {setTimeout as delay} from 'node:timers/promises';
 import {chromium} from 'playwright';
+import {checkAdminPages} from './admin-pages.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const work = mkdtempSync(path.join(tmpdir(), 'owlcron-browser-'));
@@ -56,9 +57,13 @@ try {
   page.setDefaultTimeout(15000);
   page.on('pageerror', error => errors.push(error.stack || error.message));
   await page.goto(base);
+  await page.getByRole('link', {name:'Account access help'}).click();
+  await page.getByText('Accounts are created by your OwlCron administrator.', {exact:false}).waitFor();
+  assert.equal(await page.locator('#fe_pr_email, #fe_reset_password, #fe_ca_username').count(), 0);
+  await page.getByRole('link', {name:'Back to Login'}).click();
   await page.locator('#fe_login_username').fill('browser-admin');
   await page.locator('#fe_login_password').fill(password);
-  const login = await responseFor('user/login', () => page.locator('.button').filter({hasText:'Login'}).click());
+  const login = await responseFor('user/login', () => page.locator('.button:visible').filter({hasText:'Login'}).click());
   await page.locator('#fe_login_username').waitFor({state:'hidden'});
   await page.locator('#theme-preference').selectOption('dark');
   assert.match(await page.locator('body').getAttribute('class'), /dark-theme/);
@@ -66,6 +71,15 @@ try {
   assert.match(await page.locator('body').getAttribute('class'), /dark-theme/);
   await page.locator('#theme-preference').selectOption('light');
   assert.doesNotMatch(await page.locator('body').getAttribute('class') || '', /dark-theme/);
+  await page.goto(base + '/#MyAccount');
+  await page.locator('#fe_ma_fullname').fill('Browser Admin');
+  await page.locator('#fe_ma_old_password').fill(password);
+  await responseFor('user/update', () => page.locator('.button:visible').filter({hasText:/Save Changes/}).click());
+  await page.reload();
+  assert.equal(await page.locator('#fe_ma_fullname').inputValue(), 'Browser Admin');
+  await page.goto(base + '/#Home');
+  await page.locator('#d_home_header_stats').waitFor();
+  await checkAdminPages(page, responseFor);
   await page.goto(base + '/#Schedule?sub=new_event');
   await page.locator('#fe_ee_title').fill('[browser_smoke] Browser smoke');
   await page.locator('#fe_ee_enabled').uncheck();
@@ -75,16 +89,25 @@ try {
   await page.locator('#fe_ee_pp_message').fill('OWLCRON_BROWSER_SMOKE_OK');
   await page.locator('#fe_ee_pp_repeat').fill('6');
   await page.locator('#fe_ee_pp_delay_ms').fill('1000');
-  await responseFor('app/create_event', () => page.locator('.button').filter({hasText:'Create Event'}).click());
+  await responseFor('app/create_event', () => page.locator('.button:visible').filter({hasText:'Create Event'}).click());
   await page.waitForURL(/#Schedule$/);
+  const emptyChains = await fetch(base + '/api/app/update_event', {method:'POST',
+    headers:{'Content-Type':'application/json','X-Session-ID':login.session_id},
+    body:JSON.stringify({id:'browser_smoke',chain:[],chain_error:[]})});
+  assert.equal((await emptyChains.json()).code,0);
   await page.goto(base + '/#Schedule?sub=edit_event&id=browser_smoke');
   await page.locator('#fe_ee_title').fill('Browser smoke edited');
   await page.locator('#fe_ee_log_expire_days').fill('7');
-  await responseFor('app/update_event', () => page.locator('.button').filter({hasText:/Save Changes/}).click());
+  await responseFor('app/update_event', () => page.locator('.button:visible').filter({hasText:/Save Changes/}).click());
   await page.reload();
   assert.equal(await page.locator('#fe_ee_title').inputValue(), 'Browser smoke edited');
   assert.equal(await page.locator('#fe_ee_log_expire_days').inputValue(), '7');
-  const result = await responseFor('app/run_event', () => page.locator('.button').filter({hasText:/^Run Now$/}).click());
+  const storedEvent = await (await fetch(base + '/api/app/get_event', {method:'POST',
+    headers:{'Content-Type':'application/json','X-Session-ID':login.session_id},
+    body:JSON.stringify({id:'browser_smoke'})})).json();
+  assert.deepEqual(storedEvent.event.chain,[]);
+  assert.deepEqual(storedEvent.event.chain_error,[]);
+  const result = await responseFor('app/run_event', () => page.locator('.button:visible').filter({hasText:/^Run Now$/}).click());
   const id = result.ids[0];
   assert.ok(id, 'Manual run did not create a job');
   await page.waitForFunction(id => !!app.activeJobs[id], id);
@@ -144,8 +167,9 @@ try {
     return [chart.options.scales.x.ticks.color, chart.options.scales.y.grid.color, chart.options.plugins.legend.labels.color];
   }), ['#555555','rgba(0,0,0,0.1)','#555555']);
   assert.deepEqual(errors, [], 'Browser JavaScript errors');
-  console.log('Browser smoke passed: bootstrap login, persistent theme, create/edit/run event, history, job log, live/archive charts, time axes, tooltips and chart themes');
+  console.log('Browser smoke passed: account help, profile, six admin pages and CRUD, event chain preservation, execution, history, logs, charts and themes');
 } catch (error) {
+  if (errors.length) console.error(errors.join('\n'));
   if (page) {
     const artifacts = path.join(root, 'tests/browser/test-results');
     mkdirSync(artifacts, {recursive:true});
