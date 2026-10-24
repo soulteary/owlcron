@@ -196,6 +196,8 @@ http {{
             try:
                 response = opener.open(request, timeout=5)
             except urllib.error.HTTPError as error:
+                if expected == 0:
+                    raise
                 require(expected != 0 and error.code == expected_http,
                         endpoint + ' returned an unexpected HTTP error')
                 error.close()
@@ -225,7 +227,10 @@ http {{
                     result, _ = api('app/status')
                     if result.get('master'):
                         return process
-                except (OSError, urllib.error.URLError):
+                except urllib.error.HTTPError as error:
+                    if error.code not in (502, 503, 504):
+                        raise
+                except OSError:
                     pass
                 time.sleep(0.1)
             raise RuntimeError('Deployment readiness timed out')
