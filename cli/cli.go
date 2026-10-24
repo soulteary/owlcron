@@ -61,7 +61,8 @@ Commands:
   version               Print version
   status                Check if the daemon is running
   setup                 Initialize storage for first run
-  admin <user> <pw>     Create/reset admin account
+  admin <user> --password-stdin
+                        Create/reset admin account from standard input
   export [file]         Export core data (stdout if no file)
   import <file>         Import data from file
   maint                 Run daily storage maintenance
@@ -159,18 +160,35 @@ func cmdSetup(config *types.Config, logger *zap.Logger) (err error) {
 			}
 		}
 	}
-	fmt.Println("Storage initialized. Set OWLCRON_ADMIN_PASSWORD before first startup, or use admin <username> <password>.")
+	fmt.Println("Storage initialized. Set OWLCRON_ADMIN_PASSWORD before first startup, or use admin <username> --password-stdin.")
 	return nil
 }
 
-func cmdAdmin(args []string, config *types.Config, logger *zap.Logger) (err error) {
-	if len(args) < 2 {
-		return fmt.Errorf("usage: admin <username> <password>")
+func cmdAdmin(args []string, config *types.Config, logger *zap.Logger) error {
+	return cmdAdminWithInput(args, config, logger, os.Stdin)
+}
+
+func cmdAdminWithInput(args []string, config *types.Config, logger *zap.Logger, input io.Reader) (err error) {
+	if len(args) != 2 {
+		return fmt.Errorf("usage: admin <username> --password-stdin")
 	}
 	if len(args[0]) < 3 || len(args[0]) > 50 || !regexp.MustCompile(`^[a-zA-Z0-9_.-]+$`).MatchString(args[0]) {
 		return fmt.Errorf("invalid username")
 	}
-	if len(args[1]) < 12 || len(args[1]) > 72 {
+	password := args[1]
+	if password == "--password-stdin" {
+		// A single optional line ending supports secret files without trimming
+		// significant spaces or silently accepting multiple input lines.
+		data, readErr := io.ReadAll(io.LimitReader(input, 75))
+		if readErr != nil {
+			return fmt.Errorf("read password from standard input")
+		}
+		password = strings.TrimSuffix(strings.TrimSuffix(string(data), "\n"), "\r")
+		if strings.ContainsAny(password, "\r\n") {
+			return fmt.Errorf("password input must contain a single line")
+		}
+	}
+	if len(password) < 12 || len(password) > 72 {
 		return fmt.Errorf("password must contain 12-72 bytes")
 	}
 	eng, err := engine.NewEngine(config, logger)
@@ -178,7 +196,7 @@ func cmdAdmin(args []string, config *types.Config, logger *zap.Logger) (err erro
 		return fmt.Errorf("open engine storage: %w", err)
 	}
 	defer finishStorage(eng.GetStorage(), &err)
-	hash, err := bcrypt.GenerateFromPassword([]byte(args[1]), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return fmt.Errorf("hash password: %w", err)
 	}
