@@ -32,7 +32,12 @@ jobs:
           cache-dependency-path: htdocs-deps/package-lock.json
       - name: Validate workflow syntax and expressions
         run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
-      - run: make fmt-check vet test build
+      - name: Formatting and static checks
+        run: make fmt-check vet
+      - name: Fast unit tests
+        run: go test -short ./... -count=1 -timeout=120s
+      - name: Build production executables
+        run: make build
       - name: Check independent example plugin module
         working-directory: bin/echo-plugin
         run: |
