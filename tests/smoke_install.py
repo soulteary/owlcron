@@ -10,6 +10,7 @@ import subprocess
 import tempfile
 import time
 import urllib.request
+from check_frontend_assets import check_frontend_assets
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -65,6 +66,7 @@ def main():
                 for asset in ['/js/_combo.js', '/css/_combo.css', '/js/external/jquery.min.js']:
                     with opener.open(config['base_app_url'] + asset, timeout=5) as response:
                         assert response.status == 200 and response.read(), f'Missing frontend asset: {asset}'
+                check_frontend_assets(config['base_app_url'])
                 session = api('/api/user/login', dict(username='smoke-admin', password=password))['session_id']
                 for _ in range(100):
                     if api('/api/app/status').get('master'):

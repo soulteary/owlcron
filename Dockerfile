@@ -4,7 +4,9 @@ COPY htdocs-deps/package*.json htdocs-deps/
 RUN npm ci --prefix htdocs-deps
 COPY htdocs-deps/ htdocs-deps/
 COPY htdocs/ htdocs/
-RUN npm run build --prefix htdocs-deps
+RUN npm run build --prefix htdocs-deps \
+    && mkdir -p /out/htdocs \
+    && cp -aL htdocs/. /out/htdocs/
 
 FROM golang:1.27.3-trixie AS build
 WORKDIR /src
@@ -25,7 +27,7 @@ RUN apt-get update \
 WORKDIR /opt/owlcron
 COPY --from=build /out/owlcron-engine ./owlcron-engine
 COPY --from=build /out/echo-plugin ./bin/echo-plugin/echo-plugin
-COPY --from=frontend /src/htdocs/ ./htdocs/
+COPY --from=frontend /out/htdocs/ ./htdocs/
 COPY deploy/container-config.json /etc/owlcron/config.json
 COPY LICENSE THIRD_PARTY_NOTICES.md /usr/share/licenses/owlcron/
 COPY licenses/ /usr/share/licenses/owlcron/third-party/

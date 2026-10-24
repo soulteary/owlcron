@@ -45,6 +45,7 @@ jobs:
             sleep 1
           done
           curl --fail --silent http://127.0.0.1:3012/api/app/ping | python3 -c 'import json,sys; assert json.load(sys.stdin)["code"] == 0'
+          python3 tests/check_frontend_assets.py http://127.0.0.1:3012
           test "$(docker exec owlcron-ci id -u)" = 10001
           docker restart -t 90 owlcron-ci
           for _attempt in $(seq 1 60); do
