@@ -1,0 +1,56 @@
+name: Browser smoke
+on:
+  pull_request:
+    paths: ['htdocs/**', 'htdocs-deps/**', '**/*.go', 'go.mod', 'go.sum', 'Makefile', 'tests/browser/**', 'licenses/browser/**', 'licenses/browser-inventory.json', '.github/workflows/browser.yml']
+  push:
+    branches: [main]
+    paths: ['htdocs/**', 'htdocs-deps/**', '**/*.go', 'go.mod', 'go.sum', 'Makefile', 'tests/browser/**', 'licenses/browser/**', 'licenses/browser-inventory.json', '.github/workflows/browser.yml']
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  chromium:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      GOTOOLCHAIN: local
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.x'
+          cache-dependency-path: go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            htdocs-deps/package-lock.json
+            tests/browser/package-lock.json
+      - run: npm ci --prefix htdocs-deps
+      - run: npm ci --prefix tests/browser
+      - run: npm run licenses --prefix tests/browser
+      - run: npm audit --prefix tests/browser --audit-level=moderate
+      - name: Cache Chromium
+        id: chromium-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-chromium-${{ hashFiles('tests/browser/package-lock.json') }}
+      - name: Install Chromium and its system dependencies
+        working-directory: tests/browser
+        run: npx playwright install --with-deps --only-shell chromium
+      - run: make build frontend
+      - run: npm test --prefix tests/browser
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: chromium-smoke-failure
+          path: tests/browser/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
