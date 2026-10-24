@@ -9,6 +9,7 @@ import net from 'node:net';
 import {setTimeout as delay} from 'node:timers/promises';
 import {chromium} from 'playwright';
 import {checkAdminPages} from './admin-pages.mjs';
+import {checkSingleNodePages} from './single-node-pages.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const work = mkdtempSync(path.join(tmpdir(), 'owlcron-browser-'));
@@ -166,8 +167,9 @@ try {
     const chart = Chart.getChart('c_graph_hist_cpu');
     return [chart.options.scales.x.ticks.color, chart.options.scales.y.grid.color, chart.options.plugins.legend.labels.color];
   }), ['#555555','rgba(0,0,0,0.1)','#555555']);
+  await checkSingleNodePages(page, responseFor, {base, session:login.session_id, poll, completedID:id, work});
   assert.deepEqual(errors, [], 'Browser JavaScript errors');
-  console.log('Browser smoke passed: account help, profile, six admin pages and CRUD, event chain preservation, execution, history, logs, charts and themes');
+  console.log('Browser smoke passed: account/profile, six admin pages/CRUD, event configuration, rerun/abort/retry/chains, readonly access, history/logs/charts/themes');
 } catch (error) {
   if (errors.length) console.error(errors.join('\n'));
   if (page) {
