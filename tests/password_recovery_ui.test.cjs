@@ -43,7 +43,7 @@ test('deactivation discards all pending account actions',()=>{
 test('bootstrap strips verification and reset tokens before loading assets',()=>{
  const html=fs.readFileSync(path.join(__dirname,'../htdocs/index-dev.html'),'utf8');const script=html.match(/<script>([\s\S]*?)<\/script>/)[1];
  for(const purpose of ['reset','verify']) {
-  const token='a'.repeat(64), context={URLSearchParams,window:{},location:{hash:'#Login?'+purpose+'=1&u=user1&token='+token,pathname:'/cron/',search:''},history:{replaceState(_a,_b,url){context.url=url;}}};
+  const token='a'.repeat(64), context={URLSearchParams,window:{addEventListener(){}},location:{hash:'#Login?'+purpose+'=1&u=user1&token='+token,pathname:'/cron/',search:''},history:{replaceState(_a,_b,url){context.url=url;}}};
   vm.runInNewContext(script,context);assert.equal(context.window.owlcronAccountAction.purpose,purpose);assert.equal(context.window.owlcronAccountAction.token,token);assert.equal(context.url,'/cron/#Login?'+purpose+'=1');
  }
  assert.ok(html.indexOf('<script>')<html.indexOf('<link'));

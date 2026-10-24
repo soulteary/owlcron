@@ -41,3 +41,19 @@ test('profile saves omit cached email when verification manages the address', ()
   if (!enabled) assert.equal(sent.email,'pending@example.test');
  }
 });
+
+
+test('verification fragments are scrubbed on same-document navigation', () => {
+ const html=fs.readFileSync(path.join(__dirname,'../htdocs/index-dev.html'),'utf8');
+ const script=html.match(/<script>([\s\S]*?)<\/script>/)[1];
+ let listener;
+ const context={URLSearchParams,location:{hash:'#Home',pathname:'/cron/',search:''},window:{Nav:{loc:'Home'},addEventListener(name,fn,capture){assert.equal(name,'hashchange');assert.equal(capture,true);listener=fn;}},history:{replaceState(_a,_b,url){context.url=url;context.location.hash=url.slice(url.indexOf('#'));}}};
+ vm.runInNewContext(script,context);
+ for(const token of ['a'.repeat(64),'b'.repeat(64)]) {
+  context.location.hash='#Login?verify=1&u=user1&token='+token;listener();
+  assert.equal(context.location.hash,'#Login?verify=1');
+  assert.equal(context.window.owlcronAccountAction.token,token);
+  assert.equal(context.window.Nav.loc,'account-action');
+ }
+ listener();assert.equal(context.window.owlcronAccountAction.token,'b'.repeat(64));
+});

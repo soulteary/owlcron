@@ -5,13 +5,18 @@
 	<meta name="referrer" content="no-referrer">
 	<script>
 	(function () {
-		var parts = location.hash.split('?');
-		if (parts[0] !== '#Login') return;
-		var values = new URLSearchParams(parts.slice(1).join('?'));
-		var purpose = values.get('verify') === '1' ? 'verify' : (values.get('reset') === '1' ? 'reset' : null);
-		if (!purpose) return;
-		window.owlcronAccountAction = { purpose: purpose, userID: values.get('u'), token: values.get('token') };
-		history.replaceState(null, '', location.pathname + location.search + '#Login?' + purpose + '=1');
+		function captureAccountAction() {
+			var parts = location.hash.split('?');
+			if (parts[0] !== '#Login') return;
+			var values = new URLSearchParams(parts.slice(1).join('?'));
+			var purpose = values.get('verify') === '1' ? 'verify' : (values.get('reset') === '1' ? 'reset' : null);
+			if (!purpose || !values.has('token')) return;
+			window.owlcronAccountAction = { purpose: purpose, userID: values.get('u'), token: values.get('token') };
+			history.replaceState(null, '', location.pathname + location.search + '#Login?' + purpose + '=1');
+			if (window.Nav) window.Nav.loc = 'account-action';
+		}
+		captureAccountAction();
+		window.addEventListener('hashchange', captureAccountAction, true);
 	})();
 	</script>
 	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
