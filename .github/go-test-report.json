@@ -1,0 +1,102 @@
+{
+  "schema_version": "1.0",
+  "tests": {
+    "total": 413,
+    "passed": 404,
+    "failed": 0,
+    "skipped": 9
+  },
+  "coverage": {
+    "covered_statements": 8139,
+    "total_statements": 12100,
+    "percentage": 67.26,
+    "threshold": 0
+  },
+  "packages": [
+    {
+      "name": ".",
+      "status": "pass",
+      "tests": 35,
+      "failed": 0,
+      "coverage": 61.6
+    },
+    {
+      "name": "api",
+      "status": "pass",
+      "tests": 67,
+      "failed": 0,
+      "coverage": 61.97
+    },
+    {
+      "name": "cli",
+      "status": "pass",
+      "tests": 6,
+      "failed": 0,
+      "coverage": 63.98
+    },
+    {
+      "name": "cmd/owlcron-migrate-check",
+      "status": "pass",
+      "tests": 2,
+      "failed": 0,
+      "coverage": 77.42
+    },
+    {
+      "name": "cmd/owlcron-script",
+      "status": "pass",
+      "tests": 3,
+      "failed": 0,
+      "coverage": 81.82
+    },
+    {
+      "name": "engine",
+      "status": "pass",
+      "tests": 222,
+      "failed": 0,
+      "coverage": 71.26
+    },
+    {
+      "name": "migration",
+      "status": "pass",
+      "tests": 8,
+      "failed": 0,
+      "coverage": 87.95
+    },
+    {
+      "name": "monitor",
+      "status": "pass",
+      "tests": 2,
+      "failed": 0,
+      "coverage": 16.81
+    },
+    {
+      "name": "plugin",
+      "status": "pass",
+      "tests": 7,
+      "failed": 0,
+      "coverage": 68.02
+    },
+    {
+      "name": "storage",
+      "status": "pass",
+      "tests": 53,
+      "failed": 0,
+      "coverage": 68.25
+    },
+    {
+      "name": "types",
+      "status": "pass",
+      "tests": 4,
+      "failed": 0,
+      "coverage": 33.33
+    },
+    {
+      "name": "websocket",
+      "status": "pass",
+      "tests": 4,
+      "failed": 0,
+      "coverage": 41.95
+    }
+  ],
+  "failures": null
+}
