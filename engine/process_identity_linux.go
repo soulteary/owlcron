@@ -4,18 +4,30 @@ package engine
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
+	"time"
 )
+
+// procfs may report ESRCH as well as ENOENT when a process disappears.
+// Preserve permission and other failures for live processes.
+func processReadError(err error) error {
+	if errors.Is(err, syscall.ESRCH) || errors.Is(err, os.ErrNotExist) {
+		return os.ErrNotExist
+	}
+	return err
+}
 
 func processStat(pid int) ([]string, error) {
 	raw, err := os.ReadFile(fmt.Sprintf("/proc/%d/stat", pid))
 	if err != nil {
-		return nil, err
+		return nil, processReadError(err)
 	}
 	// comm may contain spaces and parentheses; the last closing parenthesis
 	// precedes the fixed-layout fields beginning at state (field 3).
@@ -77,14 +89,37 @@ func processGroupMembers(group int) ([]int, error) {
 	}
 	return result, nil
 }
-func processHasRecoveryToken(pid int, token string) (bool, error) {
+func processHasRecoveryToken(pid int, token string) (owned bool, resultErr error) {
+	defer func() {
+		resultErr = processReadError(resultErr)
+		if resultErr != nil {
+			if _, err := processIdentity(pid); os.IsNotExist(err) {
+				owned = false
+				resultErr = os.ErrNotExist
+			}
+		}
+	}()
 	if pid <= 0 {
 		return false, os.ErrNotExist
 	}
 	if _, err := processIdentity(pid); err != nil {
 		return false, err
 	}
-	f, err := os.Open(filepath.Join("/proc", strconv.Itoa(pid), "environ"))
+	var f *os.File
+	var err error
+	for attempt := 0; attempt < 10; attempt++ {
+		f, err = os.Open(filepath.Join("/proc", strconv.Itoa(pid), "environ"))
+		if err == nil || !os.IsPermission(err) {
+			break
+		}
+		// Linux can revoke environ access after SIGKILL before stat reports a
+		// zombie. Recheck briefly; a persistently inaccessible live PID remains
+		// an error and can never become proof of ownership.
+		if _, identityErr := processIdentity(pid); os.IsNotExist(identityErr) {
+			return false, os.ErrNotExist
+		}
+		time.Sleep(time.Millisecond)
+	}
 	if err != nil {
 		return false, err
 	}

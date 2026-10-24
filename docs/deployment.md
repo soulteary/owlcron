@@ -97,3 +97,17 @@ Prefer a stopped, consistent snapshot for Filesystem storage. Use a consistent b
 Restore into an isolated environment and check login, jobs, history, and logs before upgrading the deployment. For rollback, retain the previous executable, static assets, plugins, and pre-upgrade snapshot. If formats change, restore the matching snapshot rather than assuming an old binary can read new data. Restore tests must not send duplicate notifications to real recipients.
 
 The project does not yet promise stable release packaging or data-migration compatibility. Validate upgrades, cross-version rollback, and remote-backend disaster recovery against the intended deployment.
+
+## Hosting under a URL prefix
+
+Set `base_path` to a path such as `/tools/cron` (no trailing slash) and
+`base_app_url` to `https://cron.example.com/tools/cron`. The proxy must preserve
+this prefix when forwarding requests. Serve the UI at `/tools/cron/`; API,
+browser WebSocket and log URLs share that prefix. Session cookies are scoped to
+that path. Path segments may contain letters, digits, underscores and hyphens.
+An empty `base_path` retains root hosting. Do not mount another application under
+the same cookie path or rely on a proxy to strip the configured prefix.
+
+The authenticated node transport remains `/cluster/ws` at the root, regardless
+of `base_path`. Restrict its access to cluster nodes; browser traffic uses the
+prefixed `/ws`. The existing TLS, origin and trusted-proxy requirements still apply.

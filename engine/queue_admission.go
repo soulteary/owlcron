@@ -232,6 +232,9 @@ func (jm *JobManager) resumePreparedQueueAdmission(admission *queueAdmission) er
 				return fmt.Errorf("queued admission exceeds category concurrency limit")
 			}
 		}
+		if err := jm.checkNodeCapacity(pending); err != nil {
+			return err
+		}
 		// One atomic list update reserves the whole multiplex batch. A failed write
 		// leaves every prepared snapshot replayable rather than stranding a subset.
 		if err := storage.UpdateList(context.Background(), jm.engine.storage, "active_jobs", func(items []interface{}) ([]interface{}, error) {

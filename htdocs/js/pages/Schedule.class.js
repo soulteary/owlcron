@@ -774,6 +774,9 @@ Class.subclass( Page.Base, "Page.Schedule", {
 		var html = '';
 		var event = this.event;
 		
+		var retention = $('#fe_ee_log_expire_days').val().trim();
+		event.log_expire_days = retention === '' ? null : Number(retention);
+		if (retention !== '' && (!Number.isInteger(event.log_expire_days) || event.log_expire_days < 0 || event.log_expire_days > 36500)) return quiet ? false : app.badField('fe_ee_log_expire_days', 'Enter 0 through 36500, or leave blank.');
 		// event title
 		html += get_form_table_row( 'Event Name', '<input type="text" id="fe_ee_title" style="width:90%" value="'+escape_text_field_value(event.title)+'" spellcheck="false"/>' );
 		html += get_form_table_caption( "Enter a title for the event, which will be displayed on the main schedule." );
@@ -799,6 +802,9 @@ Class.subclass( Page.Base, "Page.Schedule", {
 		html += get_form_table_caption( "Select a category for the event (this may limit the max concurrent jobs, etc.)" );
 		html += get_form_table_spacer();
 		
+		html += get_form_table_row('Log retention (days)', '<input type="number" id="fe_ee_log_expire_days" min="0" max="36500" step="1" value="' + (event.log_expire_days == null ? '' : event.log_expire_days) + '" placeholder="Inherit global policy" />');
+		html += get_form_table_caption('Leave blank to inherit the global policy. Zero keeps logs indefinitely. Job history retention still applies.');
+		html += get_form_table_spacer();
 		// target (server group or individual server)
 		html += get_form_table_row( 'Target', 
 			'<select id="fe_ee_target" onChange="$P().set_event_target(this.options[this.selectedIndex].value)">' + this.render_target_menu_options( event.target ) + '</select>'

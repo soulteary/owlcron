@@ -33,6 +33,7 @@ func (fb FlexBool) Bool() bool { return bool(fb) }
 
 // Event 表示一个调度事件
 type Event struct {
+	LogExpireDays    *int   `json:"log_expire_days,omitempty"`
 	Source           string `json:"source,omitempty"`
 	SourceEvent      string `json:"source_event,omitempty"`
 	SourceJob        string `json:"source_job,omitempty"`
@@ -116,6 +117,7 @@ type Timing struct {
 
 // Job 表示一个运行中的任务
 type Job struct {
+	LogExpireDays    *int   `json:"log_expire_days,omitempty"`
 	Action           string `json:"action,omitempty"`
 	Source           string `json:"source,omitempty"`
 	SourceEvent      string `json:"source_event,omitempty"`
@@ -243,6 +245,7 @@ type Category struct {
 
 // ServerGroup 表示一个服务器组
 type ServerGroup struct {
+	MaxJobs  int    `json:"max_jobs,omitempty"`
 	Created  int64  `json:"created,omitempty"`
 	Modified int64  `json:"modified,omitempty"`
 	ID       string `json:"id"`
@@ -304,6 +307,7 @@ type JobWorker struct {
 
 // Config 表示配置
 type Config struct {
+	BasePath                     string            `json:"base_path,omitempty"`
 	ClusterAllowInsecure         bool              `json:"cluster_allow_insecure,omitempty"`
 	ClusterTLSCAFile             string            `json:"cluster_tls_ca_file,omitempty"`
 	ClusterTLSCertFile           string            `json:"cluster_tls_cert_file,omitempty"`

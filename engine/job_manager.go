@@ -122,6 +122,9 @@ func (jm *JobManager) launchJobWithToken(event *types.Event, timestamp int64, to
 		return nil, fmt.Errorf("missing event")
 	}
 	event = types.CloneEvent(event)
+	if event.LogExpireDays != nil && (*event.LogExpireDays < 0 || *event.LogExpireDays > 36500) {
+		return nil, fmt.Errorf("invalid log_expire_days")
+	}
 	if event.Detached.Bool() {
 		return nil, fmt.Errorf("detached execution is not supported")
 	}
@@ -223,6 +226,10 @@ func (jm *JobManager) launchJobWithToken(event *types.Event, timestamp int64, to
 		jm.mu.Unlock()
 		return nil, fmt.Errorf("multiplex exceeds global concurrency limit")
 	}
+	if err := jm.checkNodeCapacity(jobs); err != nil {
+		jm.mu.Unlock()
+		return nil, err
+	}
 	if err := jm.stageQueueAdmission(token, jobs); err != nil {
 		jm.mu.Unlock()
 		return nil, err
@@ -256,6 +263,11 @@ func (jm *JobManager) createJob(event *types.Event, hostname string, timestamp i
 		hostname = jm.getHostname()
 	}
 	job := &types.Job{ID: jm.generateJobID(), Event: event.ID, EventTitle: event.Title, Category: event.Category, Plugin: event.Plugin, Hostname: hostname, Target: event.Target, Params: types.CloneMap(event.Params), TimeStart: float64(time.Now().UnixNano()) / 1e9, Now: timestamp, Timeout: event.Timeout, CWD: event.CWD, UID: event.UID, GID: event.GID, WebHook: event.WebHook, Retries: event.Retries, RetryDelay: event.RetryDelay, NotifySuccess: event.NotifySuccess, NotifyFail: event.NotifyFail, Detached: event.Detached.Bool(), ChainData: types.CloneMap(event.ChainData), ChainParams: types.CloneMap(event.ChainParams)}
+	days := jm.engine.config.JobLogExpireDays
+	if event.LogExpireDays != nil {
+		days = *event.LogExpireDays
+	}
+	job.LogExpireDays = &days
 	job.Source = event.Source
 	job.SourceEvent = event.SourceEvent
 	job.SourceJob = event.SourceJob
@@ -1061,7 +1073,7 @@ func (jm *JobManager) checkConcurrencyLimits(event *types.Event) error {
 func (jm *JobManager) chooseServers(event *types.Event) []string {
 	// 如果目标是 "local" 或空，返回本地服务器
 	if event.Target == "" || event.Target == "local" {
-		return []string{"local"}
+		return jm.availableServers([]string{"local"})
 	}
 
 	// 从存储加载服务器组
@@ -1093,6 +1105,10 @@ func (jm *JobManager) chooseServers(event *types.Event) []string {
 			servers = []string{event.Target}
 		}
 	}
+	if len(servers) == 0 {
+		return nil
+	}
+	servers = jm.availableServers(servers)
 	if len(servers) == 0 {
 		return nil
 	}

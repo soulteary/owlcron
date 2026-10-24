@@ -33,7 +33,7 @@ func newHTTPServer(config *types.Config, handler http.Handler) (*http.Server, er
 		Addr:              fmt.Sprintf(":%d", config.HTTPPort),
 		ReadHeaderTimeout: header, ReadTimeout: read, WriteTimeout: write, IdleTimeout: idle,
 		MaxHeaderBytes: 1 << 20,
-		Handler:        boundedAPIRequests(handler, request, stream),
+		Handler:        serveBasePath(config.BasePath, boundedAPIRequests(handler, request, stream)),
 	}, nil
 }
 
@@ -83,5 +83,30 @@ func boundedAPIRequests(handler http.Handler, timeout time.Duration, streamTimeo
 			return
 		}
 		bounded.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// Strip the public prefix before auth and deadline routing. Cluster transport
+// stays at its canonical root path and is authenticated by the node endpoint.
+func serveBasePath(prefix string, next http.Handler) http.Handler {
+	if prefix == "" {
+		return next
+	}
+	stripped := http.StripPrefix(prefix, next)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/cluster/ws" {
+			next.ServeHTTP(w, r)
+			return
+		}
+		if r.URL.Path == prefix || r.URL.Path == "/" {
+			http.Redirect(w, r, prefix+"/", http.StatusTemporaryRedirect)
+			return
+		}
+		escaped := strings.ToLower(r.URL.EscapedPath())
+		if !strings.HasPrefix(r.URL.Path, prefix+"/") || strings.Contains(escaped, "%2f") || strings.Contains(escaped, "%5c") || strings.HasPrefix(r.URL.Path, prefix+"/cluster/") {
+			http.NotFound(w, r)
+			return
+		}
+		stripped.ServeHTTP(w, r)
 	})
 }

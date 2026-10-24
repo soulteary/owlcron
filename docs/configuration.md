@@ -122,3 +122,32 @@ mTLS uses `cluster_tls_require_client_cert: true`, an explicit CA, and per-node 
 Node proofs bind roles, both challenges, time, nonce, and the current lease. Clock skew is limited to 60 seconds; keep clocks synchronized. The replay cache holds 16384 entries and fails closed when full. WebSockets are capped at 1024 connections with a fixed 10-second unauthenticated window. The current shared lease governs takeover and leader commands. Old owners, stale connection generations, and disabled nodes cannot control workers or acknowledge completion. Disconnection preserves running jobs and durable completions; reconnection authenticates again.
 
 Shared-storage write access is equivalent to cluster control. Rotate identities by coordinating public-key registration and restarting affected nodes. Only one public key per hostname is supported, so do not assume overlapping key IDs. Rotate CAs using a planned trust bundle. UDP discovery does not grant authorization.
+
+## Per-node job capacity
+
+Set `max_jobs` on a server group to limit active and reserved jobs on each matching
+node. Zero means unlimited. The strictest positive limit across matching groups
+applies even to direct-host and `local` targets. Admission reserves capacity before
+execution; queued, delayed and multiplex jobs use the same check. Existing jobs
+are not terminated when a limit is lowered. A full node is excluded from new
+selection; an event with no capacity waits only when event queuing is enabled.
+The top-level `max_jobs` continues to limit the whole cluster.
+
+## Per-event log retention
+
+Events can set `log_expire_days`: omit it or send `null` to inherit
+`job_log_expire_days`, use `0` to retain logs indefinitely, or use 1–36500 days.
+The effective value is copied into each new job. Editing an event or the global
+policy does not change jobs that already have a snapshot; older jobs without one
+still use the global policy. The event editor exposes the same choices.
+Expiration starts at job completion. History retention (`job_data_expire_days`)
+can remove the entire job, including a log otherwise kept indefinitely. Pending
+completion delivery and deletion markers retain their existing protections.
+
+## Browser theme
+
+The header theme selector supports System, Light and Dark. System follows OS
+changes; an explicit choice is stored locally in the browser under
+`owlcron.theme`. Selecting System restores automatic changes. Storage restrictions
+fall back to an in-memory preference and do not prevent login. Theme preferences
+are local UI settings, not account settings.
