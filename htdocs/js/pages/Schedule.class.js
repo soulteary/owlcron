@@ -151,14 +151,8 @@ Class.subclass( Page.Base, "Page.Schedule", {
 		var last_group = '';
 		
 		html += this.getBasicTable( this.events, cols, 'event', function(item, idx) {
-			var actions = [
-				'<span class="link" onMouseUp="$P().run_event('+idx+',event)"><b>Run</b></span>',
-				'<span class="link" onMouseUp="$P().edit_event('+idx+')"><b>Edit</b></span>',
-				'<a href="#History?sub=event_stats&id='+item.id+'"><b>Stats</b></a>',
-				'<a href="#History?sub=event_history&id='+item.id+'"><b>History</b></a>',
-				// '<span class="link" onMouseUp="$P().delete_event('+idx+')"><b>Delete</b></span>'
-			];
-			
+			var actions_html = self.get_event_row_actions(item, idx);
+
 			var cat = item.category ? find_object( app.categories, { id: item.category } ) : null;
 			var group = item.target ? find_object( app.server_groups, { id: item.target } ) : null;
 			var plugin = item.plugin ? find_object( app.plugins, { id: item.plugin } ) : null;
@@ -175,12 +169,11 @@ Class.subclass( Page.Base, "Page.Schedule", {
 				group.multiplex = 1;
 			}
 			
-			var toggle_html = '<input type="checkbox" style="cursor:pointer" onChange="$P().change_event_enabled('+idx+')" '+(item.enabled ? 'checked="checked"' : '')+'/>';
-			if (config.hide_schedule_checkboxes) toggle_html = '&nbsp;';
-			
+			var toggle_html = self.get_event_enabled_control(item, idx);
+
 			var tds = [
 				toggle_html, 
-				'<div class="td_big"><span class="link" onMouseUp="$P().edit_event('+idx+')">' + self.getNiceEvent(item, col_width) + '</span></div>',
+				'<div class="td_big">' + (app.hasPrivilege('edit_events') ? '<span class="link" onMouseUp="$P().edit_event('+idx+')">' + self.getNiceEvent(item, col_width) + '</span>' : self.getNiceEvent(item, col_width)) + '</div>',
 				self.getNiceCategory( cat, col_width ),
 				self.getNicePlugin( plugin, col_width ),
 				self.getNiceGroup( group, item.target, col_width ),
@@ -315,7 +308,23 @@ Class.subclass( Page.Base, "Page.Schedule", {
 		this.gosub_events( this.args );
 	},
 	
+	get_event_row_actions: function(item, idx) {
+		var actions = [];
+		if (app.hasPrivilege('run_events')) actions.push('<span class="link" onMouseUp="$P().run_event('+idx+',event)"><b>Run</b></span>');
+		if (app.hasPrivilege('edit_events')) actions.push('<span class="link" onMouseUp="$P().edit_event('+idx+')"><b>Edit</b></span>');
+		actions.push('<a href="#History?sub=event_stats&id='+item.id+'"><b>Stats</b></a>');
+		actions.push('<a href="#History?sub=event_history&id='+item.id+'"><b>History</b></a>');
+		return actions.join(' | ');
+	},
+
+	get_event_enabled_control: function(item, idx) {
+		if (config.hide_schedule_checkboxes) return '&nbsp;';
+		if (!app.hasPrivilege('edit_events')) return item.enabled ? 'Enabled' : 'Disabled';
+		return '<input type="checkbox" style="cursor:pointer" onChange="$P().change_event_enabled('+idx+')" '+(item.enabled ? 'checked="checked"' : '')+'/>';
+	},
+
 	change_event_enabled: function(idx) {
+		if (!app.hasPrivilege('edit_events')) return app.doError('You do not have permission to perform this event action.');
 		// toggle event on / off
 		var event = this.events[idx];
 		event.enabled = event.enabled ? 0 : 1;
@@ -333,6 +342,7 @@ Class.subclass( Page.Base, "Page.Schedule", {
 	},
 	
 	run_event: function(event_idx, e) {
+		if (!app.hasPrivilege('run_events')) return app.doError('You do not have permission to perform this event action.');
 		// run event ad-hoc style
 		var self = this;
 		var event = (event_idx == 'edit') ? this.event : this.events[event_idx];
@@ -364,6 +374,7 @@ Class.subclass( Page.Base, "Page.Schedule", {
 	},
 	
 	run_event_now: function(idx, now) {
+		if (!app.hasPrivilege('run_events')) return app.doError('You do not have permission to perform this event action.');
 		// run event ad-hoc style
 		var event = (idx == 'edit') ? this.event : this.events[idx];
 		if (!now) now = time_now();
@@ -389,6 +400,7 @@ Class.subclass( Page.Base, "Page.Schedule", {
 	},
 	
 	edit_event: function(idx) {
+		if (!app.hasPrivilege(idx == -1 ? 'create_events' : 'edit_events')) return app.doError('You do not have permission to open this event form.');
 		// edit or create new event
 		if (idx == -1) {
 			Nav.go('Schedule?sub=new_event');
@@ -401,6 +413,7 @@ Class.subclass( Page.Base, "Page.Schedule", {
 	},
 	
 	delete_event: function(idx) {
+		if (!app.hasPrivilege('delete_events')) return app.doError('You do not have permission to perform this event action.');
 		// delete selected event
 		var self = this;
 		var event = (idx == 'edit') ? this.event : this.events[idx];
@@ -455,6 +468,10 @@ Class.subclass( Page.Base, "Page.Schedule", {
 	},
 	
 	gosub_new_event: function(args) {
+		if (!app.hasPrivilege('create_events')) {
+			Nav.go('Schedule');
+			return app.doError('You do not have permission to open this event form.');
+		}
 		// create new event
 		var html = '';
 		app.setWindowTitle( "Add New Event" );
@@ -526,6 +543,7 @@ Class.subclass( Page.Base, "Page.Schedule", {
 	},
 	
 	do_new_event: function(force) {
+		if (!app.hasPrivilege('create_events')) return app.doError('You do not have permission to perform this event action.');
 		// create new event
 		app.clearError();
 		var event = this.get_event_form_json();
@@ -556,6 +574,10 @@ Class.subclass( Page.Base, "Page.Schedule", {
 	},
 	
 	gosub_edit_event: function(args) {
+		if (!app.hasPrivilege('edit_events')) {
+			Nav.go('Schedule');
+			return app.doError('You do not have permission to open this event form.');
+		}
 		// edit event subpage
 		var event = find_object( app.schedule, { id: args.id } );
 		if (!event) return app.doError("Could not locate Event with ID: " + args.id);
@@ -650,6 +672,7 @@ Class.subclass( Page.Base, "Page.Schedule", {
 	},
 	
 	do_copy_event: function() {
+		if (!app.hasPrivilege('create_events')) return app.doError('You do not have permission to perform this event action.');
 		// make copy of event and jump into new workflow
 		app.clearError();
 		
@@ -668,6 +691,7 @@ Class.subclass( Page.Base, "Page.Schedule", {
 	},
 	
 	run_event_from_edit: function(e) {
+		if (!app.hasPrivilege('run_events')) return app.doError('You do not have permission to perform this event action.');
 		// run event in its current (possibly edited, unsaved) state
 		app.clearError();
 		
@@ -680,6 +704,7 @@ Class.subclass( Page.Base, "Page.Schedule", {
 	},
 	
 	do_save_event: function() {
+		if (!app.hasPrivilege('edit_events')) return app.doError('You do not have permission to perform this event action.');
 		// save changes to existing event
 		app.clearError();
 		
@@ -711,7 +736,7 @@ Class.subclass( Page.Base, "Page.Schedule", {
 		}
 		
 		// if the event was disabled and there are running jobs, ask user to abort them
-		if (this.old_event.enabled && !event.enabled && jobs.length) {
+		if (this.old_event.enabled && !event.enabled && jobs.length && app.hasPrivilege('abort_events')) {
 			app.confirm( '<span style="color:red">Abort Jobs</span>', "There " + ((jobs.length != 1) ? 'are' : 'is') + " currently still " + jobs.length + " active " + pluralize('job', jobs.length) + " using the disabled event <b>"+event.title+"</b>.  Do you want to abort " + ((jobs.length != 1) ? 'these' : 'it') + " now?", "Abort", function(result) {
 				if (result) {
 					app.showProgress( 1.0, "Aborting " + pluralize('Job', jobs.length) + "..." );
@@ -1176,6 +1201,7 @@ Class.subclass( Page.Base, "Page.Schedule", {
 	},
 	
 	show_quick_add_cat_dialog: function() {
+		if (!app.isAdmin()) return app.doError('Only administrators can add categories.');
 		// allow user to quickly add a category
 		var self = this;
 		var html = '';
