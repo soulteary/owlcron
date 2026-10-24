@@ -1,0 +1,43 @@
+name: Container and deployment checks
+on:
+  pull_request:
+    paths: ['Dockerfile', '.dockerignore', 'deploy/**', '**/*.go', 'go.mod', 'go.sum', 'htdocs/**', 'htdocs-deps/**', 'tests/**', '.github/workflows/container.yml']
+  push:
+    paths: ['Dockerfile', '.dockerignore', 'deploy/**', '**/*.go', 'go.mod', 'go.sum', 'htdocs/**', 'htdocs-deps/**', 'tests/**', '.github/workflows/container.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  container:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check single-node deployment invariants
+        run: python3 -m unittest discover -s tests -p 'test_container_config.py'
+      - name: Build local image
+        run: docker build -t owlcron:ci .
+      - name: Verify read-only non-root startup and persistent state
+        shell: bash
+        run: |
+          set -euo pipefail
+          secret="$(openssl rand -hex 32)"
+          echo "::add-mask::$secret"
+          docker volume create owlcron-ci-state
+          trap 'docker rm -f owlcron-ci >/dev/null 2>&1 || true; docker volume rm owlcron-ci-state >/dev/null 2>&1 || true' EXIT
+          docker run --rm -e OWLCRON_SECRET_KEY="$secret" -v owlcron-ci-state:/var/lib/owlcron owlcron:ci setup
+          docker run -d --name owlcron-ci --read-only --tmpfs /tmp:rw,noexec,nosuid,size=64m --cap-drop ALL --security-opt no-new-privileges -e OWLCRON_SECRET_KEY="$secret" -v owlcron-ci-state:/var/lib/owlcron -p 127.0.0.1:3012:3012 owlcron:ci
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:3012/api/app/ping >/dev/null; then break; fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:3012/api/app/ping | python3 -c 'import json,sys; assert json.load(sys.stdin)["code"] == 0'
+          test "$(docker exec owlcron-ci id -u)" = 10001
+          docker restart -t 90 owlcron-ci
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:3012/api/app/ping >/dev/null; then break; fi
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:3012/api/app/ping | python3 -c 'import json,sys; assert json.load(sys.stdin)["code"] == 0'

@@ -133,3 +133,11 @@ still use the global policy. The event editor exposes the same choices.
 Expiration starts at job completion. History retention (`job_data_expire_days`)
 can remove the entire job, including a log otherwise kept indefinitely. Pending
 completion delivery and deletion markers retain their existing protections.
+
+## Browser theme
+
+The header theme selector supports System, Light and Dark. System follows OS
+changes; an explicit choice is stored locally in the browser under
+`owlcron.theme`. Selecting System restores automatic changes. Storage restrictions
+fall back to an in-memory preference and do not prevent login. Theme preferences
+are local UI settings, not account settings.

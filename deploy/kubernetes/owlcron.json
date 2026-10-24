@@ -1,0 +1,254 @@
+{
+  "apiVersion": "v1",
+  "kind": "List",
+  "items": [
+    {
+      "apiVersion": "v1",
+      "kind": "ConfigMap",
+      "metadata": {
+        "name": "owlcron-config"
+      },
+      "data": {
+        "config.json": "{\n  \"base_app_url\": \"http://localhost:3012\",\n  \"http_port\": 3012,\n  \"hostname\": \"owlcron-single\",\n  \"storage_engine\": \"Filesystem\",\n  \"storage_base_dir\": \"/var/lib/owlcron/data\",\n  \"log_dir\": \"/var/lib/owlcron/logs\",\n  \"queue_dir\": \"/var/lib/owlcron/queue\",\n  \"job_log_expire_days\": 30,\n  \"job_data_expire_days\": 90,\n  \"scheduler_startup_grace\": 10\n}\n"
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "name": "owlcron-state"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "10Gi"
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "name": "owlcron",
+        "labels": {
+          "app.kubernetes.io/name": "owlcron"
+        }
+      },
+      "spec": {
+        "replicas": 1,
+        "strategy": {
+          "type": "Recreate"
+        },
+        "selector": {
+          "matchLabels": {
+            "app.kubernetes.io/name": "owlcron"
+          }
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app.kubernetes.io/name": "owlcron"
+            }
+          },
+          "spec": {
+            "automountServiceAccountToken": false,
+            "terminationGracePeriodSeconds": 90,
+            "securityContext": {
+              "runAsNonRoot": true,
+              "runAsUser": 10001,
+              "runAsGroup": 10001,
+              "fsGroup": 10001,
+              "seccompProfile": {
+                "type": "RuntimeDefault"
+              }
+            },
+            "initContainers": [
+              {
+                "name": "initialize-storage",
+                "image": "owlcron:local",
+                "imagePullPolicy": "IfNotPresent",
+                "securityContext": {
+                  "allowPrivilegeEscalation": false,
+                  "readOnlyRootFilesystem": true,
+                  "capabilities": {
+                    "drop": [
+                      "ALL"
+                    ]
+                  }
+                },
+                "env": [
+                  {
+                    "name": "OWLCRON_SECRET_KEY",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "owlcron-secrets",
+                        "key": "secret-key"
+                      }
+                    }
+                  }
+                ],
+                "volumeMounts": [
+                  {
+                    "name": "state",
+                    "mountPath": "/var/lib/owlcron"
+                  },
+                  {
+                    "name": "config",
+                    "mountPath": "/etc/owlcron",
+                    "readOnly": true
+                  },
+                  {
+                    "name": "tmp",
+                    "mountPath": "/tmp"
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "100m",
+                    "memory": "128Mi"
+                  },
+                  "limits": {
+                    "cpu": "1",
+                    "memory": "512Mi"
+                  }
+                },
+                "args": [
+                  "setup"
+                ]
+              }
+            ],
+            "containers": [
+              {
+                "name": "owlcron",
+                "image": "owlcron:local",
+                "imagePullPolicy": "IfNotPresent",
+                "securityContext": {
+                  "allowPrivilegeEscalation": false,
+                  "readOnlyRootFilesystem": true,
+                  "capabilities": {
+                    "drop": [
+                      "ALL"
+                    ]
+                  }
+                },
+                "env": [
+                  {
+                    "name": "OWLCRON_SECRET_KEY",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "owlcron-secrets",
+                        "key": "secret-key"
+                      }
+                    }
+                  }
+                ],
+                "volumeMounts": [
+                  {
+                    "name": "state",
+                    "mountPath": "/var/lib/owlcron"
+                  },
+                  {
+                    "name": "config",
+                    "mountPath": "/etc/owlcron",
+                    "readOnly": true
+                  },
+                  {
+                    "name": "tmp",
+                    "mountPath": "/tmp"
+                  }
+                ],
+                "resources": {
+                  "requests": {
+                    "cpu": "100m",
+                    "memory": "128Mi"
+                  },
+                  "limits": {
+                    "cpu": "1",
+                    "memory": "512Mi"
+                  }
+                },
+                "ports": [
+                  {
+                    "name": "http",
+                    "containerPort": 3012
+                  }
+                ],
+                "startupProbe": {
+                  "httpGet": {
+                    "path": "/api/app/ping",
+                    "port": "http"
+                  },
+                  "timeoutSeconds": 3,
+                  "periodSeconds": 10,
+                  "failureThreshold": 30
+                },
+                "readinessProbe": {
+                  "httpGet": {
+                    "path": "/api/app/ping",
+                    "port": "http"
+                  },
+                  "timeoutSeconds": 3,
+                  "periodSeconds": 10,
+                  "failureThreshold": 3
+                },
+                "livenessProbe": {
+                  "httpGet": {
+                    "path": "/api/app/ping",
+                    "port": "http"
+                  },
+                  "timeoutSeconds": 3,
+                  "periodSeconds": 10,
+                  "failureThreshold": 6
+                }
+              }
+            ],
+            "volumes": [
+              {
+                "name": "state",
+                "persistentVolumeClaim": {
+                  "claimName": "owlcron-state"
+                }
+              },
+              {
+                "name": "config",
+                "configMap": {
+                  "name": "owlcron-config"
+                }
+              },
+              {
+                "name": "tmp",
+                "emptyDir": {
+                  "sizeLimit": "64Mi"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "v1",
+      "kind": "Service",
+      "metadata": {
+        "name": "owlcron"
+      },
+      "spec": {
+        "type": "ClusterIP",
+        "selector": {
+          "app.kubernetes.io/name": "owlcron"
+        },
+        "ports": [
+          {
+            "name": "http",
+            "port": 3012,
+            "targetPort": "http"
+          }
+        ]
+      }
+    }
+  ]
+}
