@@ -3,17 +3,30 @@
 English | [简体中文](README.zh-CN.md)
 
 This archive contains `owlcron-engine`, `owlcron-script`, the Echo Plugin,
-frontend assets, example configuration, build metadata, and third-party licenses.
+frontend assets, example configuration, build metadata, bilingual
+[release notes](docs/release-notes.md), and third-party licenses.
 Run commands from this directory so the daemon can find the frontend and plugin.
 
 ```sh
-./owlcron-engine version
-./owlcron-engine --config config.json setup
-OWLCRON_ADMIN_USERNAME=admin OWLCRON_ADMIN_PASSWORD='choose-a-strong-password' ./owlcron-engine --config config.json
+cp config.json config.local.json
+chmod 600 config.local.json
 ```
 
-The password above is a placeholder: use a generated password and a protected
-secret mechanism for deployment. Keep the writable data and logs private, back up
+Edit `config.local.json`: set `secret_key` to a new random secret of at
+least 32 bytes, disable discovery with `udp_broadcast_port: -1` for a standalone
+node, and choose persistent data, log and queue directories owned by the service
+account. Protect the configuration with mode 600. Then initialize and start:
+
+```sh
+./owlcron-engine version
+./owlcron-engine --config config.local.json setup
+./owlcron-engine --config config.local.json
+```
+
+On first startup with empty storage, read the generated administrator credentials
+from `bootstrap-admin.json` in the configured storage directory using a trusted
+terminal. After verifying login, remove this file. Never put real passwords in
+shell arguments or command history. Keep the writable data and logs private, back up
 before upgrades, and expose the service only behind restricted access and HTTPS.
 The example configuration is not a hardened production configuration.
 

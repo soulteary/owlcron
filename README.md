@@ -60,6 +60,7 @@ they can receive password-reset links. See [account email and password recovery]
 
 ## Documentation
 
+- [Candidate release notes](docs/release-notes.md): scope, validation and known boundaries for `v0.1.0-rc.1024`.
 - [Documentation index](docs/README.md): guides for deployment, running jobs, operations, and development.
 - [Cronicle migration preflight](docs/migration.md) and [compatibility](docs/compatibility.md): check data and behavior differences before migration.
 - [Contributing](CONTRIBUTING.md) and [testing](docs/testing.md): development workflow, check commands, and quality reports.

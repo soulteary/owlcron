@@ -17,6 +17,9 @@ Python 3.9 或以上版本及 make。
 
 ## 首版范围
 
+当前候选版本为 `v0.1.0-rc.1024`，详见中英文[发行说明](release-notes.md)。
+准备压缩包不代表发布版本。
+
 首版面向单节点部署，保留熟悉的 Cronicle 页面和操作流程。运行一个独立的
 OwlCron 节点，验证自己的任务和权限，并核对[兼容边界](compatibility.md)。
 集群发现、故障转移和远程派发仍为实验能力，不属于初始兼容范围。
@@ -78,6 +81,36 @@ API、持久化数据和配置仍可能变化；应备份并验证升级及回�
 4. 检查草稿说明和附件，验证目标部署及恢复流程，准备好后手动发布草稿。
    不要移动已经发布的标签。
 
-影响打包的 PR 和手动运行只验证 `v0.0.0-dev` 产物，不创建发行草稿。
+影响打包的 PR 验证 `v0.0.0-dev` 产物；手动运行可以选择压缩包版本，不创建发行草稿。
 只有创建草稿的任务具有仓库写权限，构建和验证任务仅有读取权限。工作流暂不
 添加签名、SBOM 或来源证明，也不保证压缩包逐字节可复现。
+
+## 准备候选包但不发布
+
+提交计划包含的修改后，在本机构建并验证候选包：
+
+```sh
+make release VERSION=v0.1.0-rc.1024
+python3 tools/verify_release.py dist/*.tar.gz
+```
+
+在装有 Nginx 和 OpenSSL 的 Linux 主机上，对同一个压缩包执行部署和合成迁移验收：
+
+```sh
+go build -trimpath -o owlcron-migrate-check ./cmd/owlcron-migrate-check
+python3 tools/verify_release.py dist/*.tar.gz --deployment-checker ./owlcron-migrate-check
+```
+
+准备受支持的 Linux amd64 包时，对已审核的分支或目标提交所在分支手动运行
+**Release / Build and Package**，将 `version` 设置为 `v0.1.0-rc.1024`。
+所有检查通过后下载 `linux-amd64-release` Actions 产物。手动运行不会执行具有发行
+写权限的任务，不会创建标签或 GitHub Release。核对该次运行的源码提交与
+`BUILD.json` 一致，不要用分支后来移动到的提交替代已测试提交。
+
+发行工作流执行上述两项检查，包括根路径和 `/tools/cron` 下的 Nginx 验收，并在
+没有构建工具的独立容器中重复基本的解压运行验收。将日志和产物摘要保存在工作流
+记录或项目目录之外。发布时还应要求最终合并源码提交的 CI 通过；内容改变后应重新构建。
+
+发布前，部署负责人仍需检查真实域名、证书链、代理和防火墙规则、文件系统权限、
+业务脚本、本地时区及已启用的 SMTP 服务。合成演练不能证明现有 Cronicle 实例
+迁移成功，也不代表允许进行生产切换。

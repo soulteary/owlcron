@@ -1,7 +1,7 @@
 name: Release / Build and Package
 on:
   pull_request:
-    paths: ['htdocs-deps/**', 'tools/bun-lock.mjs', 'tests/check_licenses.py', 'tools/package_release.py', 'tools/verify_release.py', 'tools/release/**', 'tests/test_release_package.py', 'tests/release_acceptance.py', 'tests/check_frontend_assets.py', '**/*.go', 'config.json', 'htdocs/**', 'go.mod', 'go.sum', 'Makefile', '.github/workflows/release.yml']
+    paths: ['htdocs-deps/**', 'tools/bun-lock.mjs', 'tests/check_licenses.py', 'tools/package_release.py', 'tools/verify_release.py', 'tools/release/**', 'docs/release-notes.md', 'docs/zh-CN/release-notes.md', 'tests/test_release_package.py', 'tests/release_acceptance.py', 'tests/release_deployment.py', 'tests/check_frontend_assets.py', 'migration/testdata/**', '**/*.go', 'config.json', 'htdocs/**', 'go.mod', 'go.sum', 'Makefile', '.github/workflows/release.yml']
   push:
     tags: ['v*']
   workflow_dispatch:
