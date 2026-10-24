@@ -111,3 +111,5 @@ the same cookie path or rely on a proxy to strip the configured prefix.
 The authenticated node transport remains `/cluster/ws` at the root, regardless
 of `base_path`. Restrict its access to cluster nodes; browser traffic uses the
 prefixed `/ws`. The existing TLS, origin and trusted-proxy requirements still apply.
+
+See [operations and metrics](operations.md) for authenticated collection and incident response.

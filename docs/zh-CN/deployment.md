@@ -131,3 +131,5 @@ SameSite=Lax。启用 Secure Cookie 后不要继续通过 HTTP 登录。
 空值保持根路径部署；不要让其他应用共享同一 Cookie 路径。
 节点认证通道仍使用根路径 `/cluster/ws`，应限制为集群节点可达。
 已有 TLS、同源检查和可信代理要求不变。
+
+指标采集与故障处理请参阅[运维与指标](operations.md)。
