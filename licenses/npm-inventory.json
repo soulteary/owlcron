@@ -11,9 +11,9 @@
   },
   {
     "name": "async",
-    "version": "2.6.4",
+    "version": "3.2.6",
     "license": "MIT",
-    "notices": "licenses/npm/async@2.6.4",
+    "notices": "licenses/npm/async@3.2.6",
     "files": [
       "LICENSE",
       "README.md"
@@ -237,6 +237,16 @@
     "notices": "licenses/npm/pixl-tools@2.0.5",
     "files": [
       "LICENSE.md",
+      "README.md"
+    ]
+  },
+  {
+    "name": "async",
+    "version": "2.6.4",
+    "license": "MIT",
+    "notices": "licenses/npm/async@2.6.4",
+    "files": [
+      "LICENSE",
       "README.md"
     ]
   },
