@@ -121,9 +121,9 @@ func Check(input io.Reader, config io.Reader) (*Report, error) {
 	for _, name := range lists {
 		key := "global/" + name
 		var list struct {
-			First  int    `json:"first_page"`
-			Last   int    `json:"last_page"`
-			Length int    `json:"length"`
+			First  *int   `json:"first_page"`
+			Last   *int   `json:"last_page"`
+			Length *int   `json:"length"`
 			Type   string `json:"type"`
 		}
 		raw, ok := records[key]
@@ -131,15 +131,17 @@ func Check(input io.Reader, config io.Reader) (*Report, error) {
 			return nil, fmt.Errorf("missing required list %s", name)
 		}
 		consumed[key] = true
-		var fields map[string]json.RawMessage
-		_ = json.Unmarshal(raw, &fields)
-		if json.Unmarshal(raw, &list) != nil || fields["first_page"] == nil || fields["last_page"] == nil || fields["length"] == nil || list.Type != "list" || list.Last < list.First || list.Length < 0 || uint64(list.Last)-uint64(list.First) >= uint64(len(records)) {
+		if json.Unmarshal(raw, &list) != nil || list.First == nil || list.Last == nil || list.Length == nil || list.Type != "list" {
+			return nil, fmt.Errorf("invalid list header %s", name)
+		}
+		first, last, length := *list.First, *list.Last, *list.Length
+		if last < first || length < 0 || uint64(last)-uint64(first) >= uint64(len(records)) {
 			return nil, fmt.Errorf("invalid list header %s", name)
 		}
 		// Lists can grow toward negative page numbers. The unsigned span
 		// check above also rejects signed overflow from malicious headers.
-		for offset := 0; offset <= int(uint64(list.Last)-uint64(list.First)); offset++ {
-			page := list.First + offset
+		for offset := 0; offset <= int(uint64(last)-uint64(first)); offset++ {
+			page := first + offset
 			pageKey := key + "/" + strconv.Itoa(page)
 			data, ok := records[pageKey]
 			if !ok {
@@ -161,10 +163,10 @@ func Check(input io.Reader, config io.Reader) (*Report, error) {
 			}
 			entries[name] = append(entries[name], value.Items...)
 		}
-		if len(entries[name]) != list.Length {
+		if len(entries[name]) != length {
 			return nil, fmt.Errorf("item count mismatch in list %s", name)
 		}
-		report.Counts[name] = list.Length
+		report.Counts[name] = length
 	}
 	for key := range records {
 		if !consumed[key] && !strings.HasPrefix(key, "users/") {
