@@ -17,6 +17,20 @@ permissions:
 
 jobs:
   process-recovery:
+    name: process-recovery-${{ matrix.suite }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: sigkill
+            run: '^TestProcessSIGKILL'
+            skip: '^$'
+          - suite: cluster
+            run: '^TestProcessCluster'
+            skip: '^TestProcessCluster(LoadedConvergence|Soak)$'
+          - suite: cluster-load
+            run: '^TestProcessCluster(LoadedConvergence|Soak)$'
+            skip: '^$'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -28,7 +42,10 @@ jobs:
           go-version-file: go.mod
           cache-dependency-path: go.sum
       - name: Repeat independent-process failure matrix
-        run: make process-integration-repeat
+        env:
+          RUN_PATTERN: ${{ matrix.run }}
+          SKIP_PATTERN: ${{ matrix.skip }}
+        run: go test -race . -run "$RUN_PATTERN" -skip "$SKIP_PATTERN" -count=3 -timeout=600s
 
   linux-remote-recovery:
     runs-on: ubuntu-24.04
