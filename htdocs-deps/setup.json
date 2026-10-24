@@ -5,7 +5,8 @@
 			[ "symlinkCompress", "htdocs-deps/node_modules/jquery/dist/jquery.min.map", "htdocs/js/external/" ],
 			[ "symlinkCompress", "htdocs-deps/node_modules/zxcvbn/dist/zxcvbn.js", "htdocs/js/external/" ],
 			[ "symlinkCompress", "htdocs-deps/node_modules/zxcvbn/dist/zxcvbn.js.map", "htdocs/js/external/" ],
-			[ "symlinkCompress", "htdocs-deps/node_modules/chart.js/dist/Chart.min.js", "htdocs/js/external/" ],
+			[ "symlinkCompress", "htdocs-deps/node_modules/chart.js/dist/chart.umd.min.js", "htdocs/js/external/" ],
+			[ "symlinkCompress", "htdocs-deps/node_modules/chartjs-adapter-moment/dist/chartjs-adapter-moment.min.js", "htdocs/js/external/" ],
 
 			[ "symlinkCompress", "htdocs-deps/node_modules/font-awesome/css/font-awesome.min.css", "htdocs/css/" ],
 			[ "symlinkCompress", "htdocs-deps/node_modules/font-awesome/css/font-awesome.css.map", "htdocs/css/" ],

@@ -387,57 +387,58 @@ Class.subclass( Page.Base, "Page.History", {
 					duration: 0
 				},
 				responsive: true,
-				responsiveAnimationDuration: 0,
+				elements: { line: { tension: 0.4 } },
 				maintainAspectRatio: false,
-				legend: {
-					display: true,
-					position: 'bottom',
-					labels: {
-						fontStyle: 'bold',
-						padding: 15
+				plugins: {
+					legend: {
+						display: true,
+						position: 'bottom',
+						labels: {
+							font: { weight: 'bold' },
+							padding: 15
+						}
+					},
+					title:{
+						display: false,
+						text: ""
+					},
+					tooltip: {
+						mode: 'nearest',
+						intersect: false,
+						callbacks: {
+							label: function(tooltip) {
+								var value = short_float(tooltip.parsed.y);
+								if (value >= 60) value = get_text_from_seconds( Math.floor(value), 1, 0 ).replace(/&nbsp\;/ig, ' ');
+								else value = '' + value + " sec";
+								return " " + datasets[tooltip.datasetIndex].label + ": " + value;
+							}
+						}
 					}
 				},
-				title:{
-					display: false,
-					text: ""
-				},
 				scales: {
-					xAxes: [{
+					x: {
 						type: "time",
 						display: true,
 						time: {
-							parser: 'MM/DD/YYYY HH:mm',
 							round: 'minute',
 							tooltipFormat: 'll hh:mm a'
 						},
-						scaleLabel: {
+						title: {
 							display: false,
-							labelString: 'Date'
+							text: 'Date'
 						}
-					}, ],
-					yAxes: [{
+					},
+					y: {
+						beginAtZero: true,
 						ticks: {
-							beginAtZero: true,
 							callback: function(value, index, values) {
 								if (value < 0) return '';
 								return '' + get_text_from_seconds_round_custom(value, true);
 							}
 						},
-						scaleLabel: {
+						title: {
 							display: true,
-							// labelString: 'value'
-						}
-					}]
-				},
-				tooltips: {
-					mode: 'nearest',
-					intersect: false,
-					callbacks: {
-						label: function(tooltip, data) {
-							var value = short_float(tooltip.yLabel);
-							if (value >= 60) value = get_text_from_seconds( Math.floor(value), 1, 0 ).replace(/&nbsp\;/ig, ' ');
-							else value = '' + value + " sec";
-							return " " + datasets[tooltip.datasetIndex].label + ": " + value;
+							// text: 'value'
 						}
 					}
 				}
@@ -448,7 +449,6 @@ Class.subclass( Page.Base, "Page.History", {
 	render_cpu_line_chart: function() {
 		// event cpu usage over time
 		var rows = this.rows;
-		var color = Chart.helpers.color;
 		
 		var col_avg = [];
 		var col_max = [];
@@ -483,7 +483,8 @@ Class.subclass( Page.Base, "Page.History", {
 			{
 				label: "CPU Avg",
 				borderColor: '#3f7ed5',
-				backgroundColor: color('#3f7ed5').alpha(0.5).rgbString(),
+				backgroundColor: 'rgba(63, 126, 213, 0.5)',
+				fill: true,
 				data: col_avg
 			}
 		];
@@ -496,53 +497,54 @@ Class.subclass( Page.Base, "Page.History", {
 					duration: 0
 				},
 				responsive: true,
-				responsiveAnimationDuration: 0,
+				elements: { line: { tension: 0.4 } },
 				maintainAspectRatio: false,
-				legend: {
-					display: true,
-					position: 'bottom',
-					labels: {
-						fontStyle: 'bold',
-						padding: 15
+				plugins: {
+					legend: {
+						display: true,
+						position: 'bottom',
+						labels: {
+							font: { weight: 'bold' },
+							padding: 15
+						}
+					},
+					title:{
+						display: false,
+						text: ""
+					},
+					tooltip: {
+						mode: 'index',
+						intersect: false,
+						callbacks: {
+							label: function(tooltip) {
+								return " " + datasets[tooltip.datasetIndex].label + ": " + short_float(tooltip.parsed.y) + '%';
+							}
+						}
 					}
 				},
-				title:{
-					display: false,
-					text: ""
-				},
 				scales: {
-					xAxes: [{
+					x: {
 						type: "time",
 						display: true,
 						time: {
-							parser: 'MM/DD/YYYY HH:mm',
 							round: 'minute',
 							tooltipFormat: 'll hh:mm a'
 						},
-						scaleLabel: {
+						title: {
 							display: false,
-							labelString: 'Date'
+							text: 'Date'
 						}
-					}, ],
-					yAxes: [{
+					},
+					y: {
+						beginAtZero: true,
 						ticks: {
-							beginAtZero: true,
 							callback: function(value, index, values) {
 								return '' + Math.round(value) + '%';
 							}
 						},
-						scaleLabel: {
+						title: {
 							display: true,
-							// labelString: 'value'
-						}
-					}]
-				},
-				tooltips: {
-					mode: 'index',
-					intersect: false,
-					callbacks: {
-						label: function(tooltip, data) {
-							return " " + datasets[tooltip.datasetIndex].label + ": " + short_float(tooltip.yLabel) + '%';
+							// text: 'value'
 						}
 					}
 				}
@@ -553,7 +555,6 @@ Class.subclass( Page.Base, "Page.History", {
 	render_mem_line_chart: function() {
 		// event mem usage over time
 		var rows = this.rows;
-		var color = Chart.helpers.color;
 		
 		var col_avg = [];
 		var col_max = [];
@@ -588,7 +589,8 @@ Class.subclass( Page.Base, "Page.History", {
 			{
 				label: "Mem Avg",
 				borderColor: '#279321',
-				backgroundColor: color('#279321').alpha(0.5).rgbString(),
+				backgroundColor: 'rgba(39, 147, 33, 0.5)',
+				fill: true,
 				data: col_avg
 			}
 		];
@@ -601,53 +603,54 @@ Class.subclass( Page.Base, "Page.History", {
 					duration: 0
 				},
 				responsive: true,
-				responsiveAnimationDuration: 0,
+				elements: { line: { tension: 0.4 } },
 				maintainAspectRatio: false,
-				legend: {
-					display: true,
-					position: 'bottom',
-					labels: {
-						fontStyle: 'bold',
-						padding: 15
+				plugins: {
+					legend: {
+						display: true,
+						position: 'bottom',
+						labels: {
+							font: { weight: 'bold' },
+							padding: 15
+						}
+					},
+					title:{
+						display: false,
+						text: ""
+					},
+					tooltip: {
+						mode: 'index',
+						intersect: false,
+						callbacks: {
+							label: function(tooltip) {
+								return " " + datasets[tooltip.datasetIndex].label + ": " + get_text_from_bytes(tooltip.parsed.y);
+							}
+						}
 					}
 				},
-				title:{
-					display: false,
-					text: ""
-				},
 				scales: {
-					xAxes: [{
+					x: {
 						type: "time",
 						display: true,
 						time: {
-							parser: 'MM/DD/YYYY HH:mm',
 							round: 'minute',
 							tooltipFormat: 'll hh:mm a'
 						},
-						scaleLabel: {
+						title: {
 							display: false,
-							labelString: 'Date'
+							text: 'Date'
 						}
-					}, ],
-					yAxes: [{
+					},
+					y: {
+						beginAtZero: true,
 						ticks: {
-							beginAtZero: true,
 							callback: function(value, index, values) {
 								return '' + get_text_from_bytes(value, 1);
 							}
 						},
-						scaleLabel: {
+						title: {
 							display: true,
-							// labelString: 'value'
-						}
-					}]
-				},
-				tooltips: {
-					mode: 'index',
-					intersect: false,
-					callbacks: {
-						label: function(tooltip, data) {
-							return " " + datasets[tooltip.datasetIndex].label + ": " + get_text_from_bytes(tooltip.yLabel);
+							// text: 'value'
 						}
 					}
 				}

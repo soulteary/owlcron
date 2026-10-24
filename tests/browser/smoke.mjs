@@ -73,8 +73,8 @@ try {
   await page.locator('#fe_ee_target').selectOption('all');
   await page.locator('#fe_ee_plugin').selectOption('echoplug');
   await page.locator('#fe_ee_pp_message').fill('OWLCRON_BROWSER_SMOKE_OK');
-  await page.locator('#fe_ee_pp_repeat').fill('1');
-  await page.locator('#fe_ee_pp_delay_ms').fill('0');
+  await page.locator('#fe_ee_pp_repeat').fill('6');
+  await page.locator('#fe_ee_pp_delay_ms').fill('1000');
   await responseFor('app/create_event', () => page.locator('.button').filter({hasText:'Create Event'}).click());
   await page.waitForURL(/#Schedule$/);
   await page.goto(base + '/#Schedule?sub=edit_event&id=browser_smoke');
@@ -87,6 +87,13 @@ try {
   const result = await responseFor('app/run_event', () => page.locator('.button').filter({hasText:/^Run Now$/}).click());
   const id = result.ids[0];
   assert.ok(id, 'Manual run did not create a job');
+  await page.waitForFunction(id => !!app.activeJobs[id], id);
+  await page.evaluate(id => Nav.go('#JobDetails?id=' + id), id);
+  await page.locator('#c_live_progress').waitFor();
+  assert.deepEqual(await page.evaluate(() => ['c_live_progress', 'c_live_cpu', 'c_live_mem'].map(id => {
+    const chart = Chart.getChart(id);
+    return {type:chart.config.type, legend:chart.options.plugins.legend.display, points:chart.data.datasets[0].data.length};
+  })), Array.from({length:3}, () => ({type:'doughnut',legend:false,points:2})));
   await poll(async () => {
     const status = await (await fetch(base + '/api/app/get_job_status', {method:'POST', signal:AbortSignal.timeout(2000),
       headers:{'Content-Type':'application/json','X-Session-ID':login.session_id}, body:JSON.stringify({id})})).json();
@@ -98,8 +105,46 @@ try {
   const row = page.locator('#d_history_table tr').filter({hasText:'Browser smoke edited'});
   await row.getByRole('link', {name:new RegExp(id)}).click();
   await page.locator('#i_arch_job_log').filter({hasText:'OWLCRON_BROWSER_SMOKE_OK'}).waitFor();
+  assert.deepEqual(await page.evaluate(() => ['c_arch_perf', 'c_arch_cpu', 'c_arch_mem'].map(id => {
+    const chart = Chart.getChart(id);
+    return {type:chart.config.type, legend:chart.options.plugins.legend.display};
+  })), [{type:'pie',legend:false},{type:'doughnut',legend:false},{type:'doughnut',legend:false}]);
+  await page.goto(base + '/#History?sub=event_stats&id=browser_smoke');
+  await page.locator('#c_graph_hist_perf').waitFor();
+  const chartState = await page.evaluate(() => ['c_graph_hist_perf', 'c_graph_hist_cpu', 'c_graph_hist_mem'].map(id => {
+    const chart = Chart.getChart(id);
+    const value = chart.data.datasets[0].data[0];
+    chart.tooltip.setActiveElements([{datasetIndex:0,index:0}], {x:100,y:100});
+    chart.update('none');
+    return {type:chart.config.type,x:chart.scales.x.type,zero:chart.options.scales.y.beginAtZero,
+      finite:Number.isFinite(value.x) && Number.isFinite(value.y),
+      rendered:chart.width > 0 && chart.height > 0 && chart.getDatasetMeta(0).data.length > 0,
+      tooltip:chart.tooltip.body.flatMap(item => item.lines).join(' '),
+      title:chart.tooltip.title.join(' ')};
+  }));
+  for (const state of chartState) {
+    assert.equal(state.type, 'line');
+    assert.equal(state.x, 'time');
+    assert.equal(state.zero, true);
+    assert.equal(state.finite, true);
+    assert.equal(state.rendered, true);
+    assert.ok(state.title && !state.title.includes('Invalid'), 'Date adapter must format the tooltip title');
+    assert.ok(state.tooltip && !/undefined|NaN/.test(state.tooltip), 'Tooltip must use parsed Chart.js values');
+  }
+  assert.match(chartState[0].tooltip, /sec/);
+  assert.match(chartState[1].tooltip, /%/);
+  await page.locator('#theme-preference').selectOption('dark');
+  assert.deepEqual(await page.evaluate(() => {
+    const chart = Chart.getChart('c_graph_hist_cpu');
+    return [chart.options.scales.x.ticks.color, chart.options.scales.y.grid.color, chart.options.plugins.legend.labels.color];
+  }), ['#d4dae3','#38404d','#d4dae3']);
+  await page.locator('#theme-preference').selectOption('light');
+  assert.deepEqual(await page.evaluate(() => {
+    const chart = Chart.getChart('c_graph_hist_cpu');
+    return [chart.options.scales.x.ticks.color, chart.options.scales.y.grid.color, chart.options.plugins.legend.labels.color];
+  }), ['#555555','rgba(0,0,0,0.1)','#555555']);
   assert.deepEqual(errors, [], 'Browser JavaScript errors');
-  console.log('Browser smoke passed: bootstrap login, persistent theme, create/edit/run event, history and job log');
+  console.log('Browser smoke passed: bootstrap login, persistent theme, create/edit/run event, history, job log, live/archive charts, time axes, tooltips and chart themes');
 } catch (error) {
   if (page) {
     const artifacts = path.join(root, 'tests/browser/test-results');

@@ -496,15 +496,17 @@ Class.subclass( Page.Base, "Page.JobDetails", {
 			},
 			options: {
 				responsive: true,
-				responsiveAnimationDuration: 0,
+				transitions: { resize: { animation: { duration: 0 } } },
 				maintainAspectRatio: false,
-				legend: {
-					display: false,
-					position: 'right',
-				},
-				title: {
-					display: false,
-					text: ''
+				plugins: {
+					legend: {
+						display: false,
+						position: 'right',
+					},
+					title: {
+						display: false,
+						text: ''
+					},
 				},
 				animation: {
 					animateScale: true,
@@ -556,15 +558,17 @@ Class.subclass( Page.Base, "Page.JobDetails", {
 			options: {
 				events: [],
 				responsive: true,
-				responsiveAnimationDuration: 0,
+				transitions: { resize: { animation: { duration: 0 } } },
 				maintainAspectRatio: false,
-				legend: {
-					display: false,
-					position: 'right',
-				},
-				title: {
-					display: false,
-					text: ''
+				plugins: {
+					legend: {
+						display: false,
+						position: 'right',
+					},
+					title: {
+						display: false,
+						text: ''
+					},
 				},
 				animation: {
 					animateScale: true,
@@ -622,15 +626,17 @@ Class.subclass( Page.Base, "Page.JobDetails", {
 			options: {
 				events: [],
 				responsive: true,
-				responsiveAnimationDuration: 0,
+				transitions: { resize: { animation: { duration: 0 } } },
 				maintainAspectRatio: false,
-				legend: {
-					display: false,
-					position: 'right',
-				},
-				title: {
-					display: false,
-					text: ''
+				plugins: {
+					legend: {
+						display: false,
+						position: 'right',
+					},
+					title: {
+						display: false,
+						text: ''
+					},
 				},
 				animation: {
 					animateScale: true,
@@ -970,15 +976,17 @@ Class.subclass( Page.Base, "Page.JobDetails", {
 			options: {
 				events: [],
 				responsive: true,
-				responsiveAnimationDuration: 0,
+				transitions: { resize: { animation: { duration: 0 } } },
 				maintainAspectRatio: false,
-				legend: {
-					display: false,
-					position: 'right',
-				},
-				title: {
-					display: false,
-					text: ''
+				plugins: {
+					legend: {
+						display: false,
+						position: 'right',
+					},
+					title: {
+						display: false,
+						text: ''
+					},
 				},
 				animation: {
 					animateScale: true,
@@ -1019,15 +1027,17 @@ Class.subclass( Page.Base, "Page.JobDetails", {
 			options: {
 				events: [],
 				responsive: true,
-				responsiveAnimationDuration: 0,
+				transitions: { resize: { animation: { duration: 0 } } },
 				maintainAspectRatio: false,
-				legend: {
-					display: false,
-					position: 'right',
-				},
-				title: {
-					display: false,
-					text: ''
+				plugins: {
+					legend: {
+						display: false,
+						position: 'right',
+					},
+					title: {
+						display: false,
+						text: ''
+					},
 				},
 				animation: {
 					animateScale: true,
@@ -1068,15 +1078,17 @@ Class.subclass( Page.Base, "Page.JobDetails", {
 			options: {
 				events: [],
 				responsive: true,
-				responsiveAnimationDuration: 0,
+				transitions: { resize: { animation: { duration: 0 } } },
 				maintainAspectRatio: false,
-				legend: {
-					display: false,
-					position: 'right',
-				},
-				title: {
-					display: false,
-					text: ''
+				plugins: {
+					legend: {
+						display: false,
+						position: 'right',
+					},
+					title: {
+						display: false,
+						text: ''
+					},
 				},
 				animation: {
 					animateScale: true,

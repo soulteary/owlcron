@@ -13,21 +13,18 @@
   if (select) select.value = preference;
   if (window.Chart) {
    var color = dark ? '#d4dae3' : '#555555', grid = dark ? '#38404d' : 'rgba(0,0,0,0.1)';
-   Chart.defaults.global.defaultFontColor = color;
-   if (Chart.defaults.scale) {
-    if (Chart.defaults.scale.ticks) Chart.defaults.scale.ticks.fontColor = color;
-    if (Chart.defaults.scale.gridLines) Chart.defaults.scale.gridLines.color = grid;
-   }
+   Chart.defaults.color = color;
+   Chart.defaults.scale.ticks.color = color;
+   Chart.defaults.scale.grid.color = grid;
    Object.keys(Chart.instances || {}).forEach(function (id) {
     var chart = Chart.instances[id], options = chart.options;
-    if (options.legend && options.legend.labels) options.legend.labels.fontColor = color;
-    if (options.scales) ['xAxes', 'yAxes'].forEach(function (axis) {
-     (options.scales[axis] || []).forEach(function (scale) {
-      if (scale.ticks) scale.ticks.fontColor = color;
-      if (scale.gridLines) scale.gridLines.color = grid;
-     });
+    if (options.plugins && options.plugins.legend) options.plugins.legend.labels.color = color;
+    if (options.scales) Object.keys(options.scales).forEach(function (axis) {
+     var scale = options.scales[axis];
+     scale.ticks.color = color;
+     scale.grid.color = grid;
     });
-    chart.update(0);
+    chart.update('none');
    });
   }
  }
