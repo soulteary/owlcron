@@ -316,9 +316,9 @@
   },
   {
     "name": "zxcvbn",
-    "version": "3.5.0",
+    "version": "4.4.2",
     "license": "MIT",
-    "notices": "licenses/npm/zxcvbn@3.5.0",
+    "notices": "licenses/npm/zxcvbn@4.4.2",
     "files": [
       "LICENSE.txt",
       "README.md"
