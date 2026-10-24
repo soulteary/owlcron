@@ -84,7 +84,7 @@ func accountTokenDigest(token string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-func (e *Engine) issueAccountAction(ctx context.Context, id, purpose, email string) error {
+func (e *Engine) issueAccountAction(ctx context.Context, id, purpose, email, expectedRevision string) error {
 	if !e.accountEmailAvailable() {
 		return ErrAccountEmailDisabled
 	}
@@ -106,6 +106,9 @@ func (e *Engine) issueAccountAction(ctx context.Context, id, purpose, email stri
 		cooldown = 60
 	}
 	err := e.mutateAccountAction(ctx, id, func(user *types.User) error {
+		if expectedRevision != "" && expectedRevision != PasswordRevision(user) {
+			return ErrAccountActionInvalid
+		}
 		if purpose == resetPasswordAction && (user.Email != email || user.VerifiedEmail != email) {
 			return ErrAccountActionInvalid
 		}
@@ -128,7 +131,16 @@ func (e *Engine) issueAccountAction(ctx context.Context, id, purpose, email stri
 }
 
 func (e *Engine) IssueEmailVerification(ctx context.Context, userID, email string) error {
-	return e.issueAccountAction(ctx, userID, verifyEmailAction, email)
+	return e.issueAccountAction(ctx, userID, verifyEmailAction, email, "")
+}
+
+// IssueEmailVerificationForRevision binds the authenticated request to the
+// credential checked by the caller, fencing a concurrent password change.
+func (e *Engine) IssueEmailVerificationForRevision(ctx context.Context, userID, email, passwordRevision string) error {
+	if passwordRevision == "" {
+		return ErrAccountActionInvalid
+	}
+	return e.issueAccountAction(ctx, userID, verifyEmailAction, email, passwordRevision)
 }
 
 // RequestPasswordRecovery intentionally does not distinguish missing, disabled,
@@ -147,7 +159,7 @@ func (e *Engine) RequestPasswordRecovery(ctx context.Context, username, email st
 	if !user.Enabled || user.Email != email || user.VerifiedEmail != email || !validAccountAddress(email) {
 		return nil
 	}
-	err = e.issueAccountAction(ctx, user.ID, resetPasswordAction, email)
+	err = e.issueAccountAction(ctx, user.ID, resetPasswordAction, email, "")
 	if errors.Is(err, ErrAccountActionInvalid) || errors.Is(err, ErrAccountEmailCooldown) {
 		return nil
 	}
@@ -205,6 +217,9 @@ func (e *Engine) ConsumePasswordRecovery(ctx context.Context, userID, token, new
 	if !e.accountEmailAvailable() {
 		return ErrAccountEmailDisabled
 	}
+	if !authIDPattern.MatchString(userID) {
+		return ErrAccountActionInvalid
+	}
 	if len(newPassword) < 12 || len(newPassword) > 72 {
 		return errors.New("password must contain 12 to 72 bytes")
 	}
@@ -241,7 +256,7 @@ func (e *Engine) prepareAccountEmail(ctx context.Context, n *Notification) (Emai
 		return invalid()
 	}
 	var ref accountEmailReference
-	if json.Unmarshal(n.Payload, &ref) != nil {
+	if json.Unmarshal(n.Payload, &ref) != nil || !authIDPattern.MatchString(ref.UserID) {
 		return invalid()
 	}
 	user, err := e.LoadUserFromStorage(ref.UserID)

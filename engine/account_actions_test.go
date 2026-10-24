@@ -334,3 +334,32 @@ func TestAccountRecoveryConcurrentConsumption(t *testing.T) {
 		t.Fatalf("successful password resets %d", successes.Load())
 	}
 }
+
+func TestAccountRecoveryRejectsInvalidIdentity(t *testing.T) {
+	e, _ := accountActionTestEngine(t)
+	for _, id := range []string{"", "../admin", "user/../../admin"} {
+		if err := e.ConsumePasswordRecovery(context.Background(), id, strings.Repeat("0", 64), "a-strong-password"); !errors.Is(err, ErrAccountActionInvalid) {
+			t.Fatalf("invalid identity accepted: %q: %v", id, err)
+		}
+	}
+}
+
+func TestVerificationIssuanceFencesPasswordChange(t *testing.T) {
+	e, user := accountActionTestEngine(t)
+	checkedRevision := PasswordRevision(user)
+	replacement := *user
+	replacement.Password = "a-concurrent-password-reset"
+	if err := e.ChangeUserInStorage(user, &replacement); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.IssueEmailVerificationForRevision(context.Background(), user.ID, "new@example.test", checkedRevision); !errors.Is(err, ErrAccountActionInvalid) {
+		t.Fatalf("stale password proof issued link: %v", err)
+	}
+	rows, _ := e.notifications.List(context.Background(), "", 10)
+	if len(rows) != 0 {
+		t.Fatal("stale proof queued mail")
+	}
+	if err := e.IssueEmailVerificationForRevision(context.Background(), user.ID, "new@example.test", PasswordRevision(&replacement)); err != nil {
+		t.Fatal(err)
+	}
+}
