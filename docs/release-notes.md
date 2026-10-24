@@ -6,8 +6,8 @@ English | [简体中文](zh-CN/release-notes.md)
 
 This is the first release candidate for evaluating OwlCron as a single-node
 alternative to Cronicle with familiar pages and selected compatible workflows.
-The candidate is being prepared; these notes do not announce a published
-release. The supported binary distribution is Linux amd64.
+This prerelease is intended for evaluation and controlled deployments.
+The supported binary distribution is Linux amd64.
 
 ### Included workflows
 
