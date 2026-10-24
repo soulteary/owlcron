@@ -63,21 +63,7 @@ func TestProcessDaemonChild(t *testing.T) {
 	}()
 	os.Args = []string{os.Args[0], "-config", path}
 	flag.CommandLine = flag.NewFlagSet("owlcron-process", flag.ExitOnError)
-	file := os.NewFile(3, "process-http-listener")
-	listener, err := net.FileListener(file)
-	file.Close()
-	if err != nil {
-		t.Fatalf("receive reserved HTTP listener: %v", err)
-	}
-	defer listener.Close()
-	if err := runWithHTTPListener(func(network, address string) (net.Listener, error) {
-		if network != "tcp" || address != fmt.Sprintf(":%d", listener.Addr().(*net.TCPAddr).Port) {
-			return nil, fmt.Errorf("unexpected HTTP listener request: %s %s", network, address)
-		}
-		return listener, nil
-	}); err != nil {
-		t.Fatal(err)
-	}
+	main()
 }
 
 type processFixture struct {
@@ -87,7 +73,6 @@ type processFixture struct {
 	ChildTimeout                 time.Duration
 	processMu                    sync.Mutex
 	currentProcess               *daemonProcess
-	reservedListener             *net.TCPListener
 	remoteMu                     sync.Mutex
 	remoteStore                  storage.Storage
 }
@@ -98,17 +83,74 @@ func newProcessFixture(t *testing.T) *processFixture {
 		t.Skip("independent-process acceptance")
 	}
 	dir := t.TempDir()
-	listener, err := net.ListenTCP("tcp", &net.TCPAddr{IP: net.ParseIP("127.0.0.1")})
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { listener.Close() })
-	port := listener.Addr().(*net.TCPAddr).Port
-	f := &processFixture{reservedListener: listener, Dir: dir, ConfigPath: filepath.Join(dir, "config.json"), APIKey: "process-acceptance-api-key", URL: fmt.Sprintf("http://127.0.0.1:%d", port), Client: &http.Client{Timeout: 3 * time.Second}}
+	port := processFreePort(t)
+	f := &processFixture{Dir: dir, ConfigPath: filepath.Join(dir, "config.json"), APIKey: "process-acceptance-api-key", URL: fmt.Sprintf("http://127.0.0.1:%d", port), Client: &http.Client{Timeout: 3 * time.Second}}
 	f.Config = &types.Config{HTTPPort: port, Hostname: "node-" + filepath.Base(dir), BaseAppURL: f.URL, StorageEngine: "Filesystem", StorageBaseDir: filepath.Join(dir, "data"), LogDir: filepath.Join(dir, "logs"), QueueDir: filepath.Join(dir, "queue"), SecretKey: "process-acceptance-secret-0123456789abcdef", ClusterAllowInsecure: true, UDPBroadcastPort: -1, SchedulerStartupGrace: 0, MasterPingFreq: 1, MasterPingTimeout: 3}
 	f.Put(t, "api_keys:"+f.APIKey, &types.APIKey{ID: f.APIKey, Key: f.APIKey, Enabled: true, Privileges: types.Privileges{"admin": true}})
 	return f
 }
+
+// Test servers must not use the kernel's ephemeral client-port range. A closed
+// :0 probe can otherwise be reused by a peer connection before daemon startup.
+var processPorts = struct {
+	sync.Mutex
+	once        sync.Once
+	next        int
+	first, last int
+	err         error
+	used        map[int]bool
+}{next: 10000, used: make(map[int]bool)}
+
+func processFreePort(t *testing.T) int {
+	t.Helper()
+	processPorts.once.Do(func() {
+		var raw []byte
+		switch runtime.GOOS {
+		case "linux":
+			raw, processPorts.err = os.ReadFile("/proc/sys/net/ipv4/ip_local_port_range")
+		case "darwin":
+			raw, processPorts.err = exec.Command("/usr/sbin/sysctl", "-n", "net.inet.ip.portrange.first", "net.inet.ip.portrange.last").Output()
+		default:
+			processPorts.err = fmt.Errorf("unsupported process-test platform: %s", runtime.GOOS)
+		}
+		if processPorts.err == nil {
+			_, processPorts.err = fmt.Sscan(string(raw), &processPorts.first, &processPorts.last)
+		}
+		if processPorts.err == nil && (processPorts.first < 1 || processPorts.last > 65535 || processPorts.first > processPorts.last) {
+			processPorts.err = fmt.Errorf("invalid ephemeral port range %d..%d", processPorts.first, processPorts.last)
+		}
+	})
+	if processPorts.err != nil {
+		t.Fatalf("read ephemeral client-port range: %v", processPorts.err)
+	}
+	processPorts.Lock()
+	defer processPorts.Unlock()
+	for attempts := 0; attempts < 65536-1024; attempts++ {
+		port := processPorts.next
+		processPorts.next++
+		if processPorts.next > 65535 {
+			processPorts.next = 1024
+		}
+		if processPorts.used[port] || (port >= processPorts.first && port <= processPorts.last) {
+			continue
+		}
+		listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+		if err != nil {
+			continue
+		}
+		listener.Close()
+		processPorts.used[port] = true
+		t.Cleanup(func() {
+			processPorts.Lock()
+			delete(processPorts.used, port)
+			processPorts.Unlock()
+		})
+		return port
+	}
+	t.Fatal("no unused process-test port outside the ephemeral client range")
+	return 0
+}
+
 func (f *processFixture) Store(t *testing.T) storage.Storage {
 	t.Helper()
 	f.remoteMu.Lock()
@@ -224,24 +266,7 @@ func (f *processFixture) Start(t *testing.T) *daemonProcess {
 		}
 		childTimeout = f.ChildTimeout
 	}
-	listener := f.reservedListener
-	f.reservedListener = nil
-	if listener == nil {
-		// Restarts bind the same advertised address after the old daemon exits.
-		listener, e = net.ListenTCP("tcp", &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: f.Config.HTTPPort})
-		if e != nil {
-			t.Fatal(e)
-		}
-	}
-	file, e := listener.File()
-	if e != nil {
-		listener.Close()
-		t.Fatal(e)
-	}
-	// Keep the socket bound until Start has transferred its duplicate to the
-	// child, then release all parent copies before any readiness/fault checks.
 	cmd := exec.Command(exe, "-test.run=^TestProcessDaemonChild$", "-test.timeout="+childTimeout.String())
-	cmd.ExtraFiles = []*os.File{file}
 	// Do not inherit application secrets, CLI child switches, or test-only knobs.
 	for _, v := range os.Environ() {
 		k := strings.SplitN(v, "=", 2)[0]
@@ -255,10 +280,7 @@ func (f *processFixture) Start(t *testing.T) *daemonProcess {
 	p := &daemonProcess{cmd: cmd, done: make(chan struct{}), log: &boundedProcessLog{}}
 	cmd.Stdout = p.log
 	cmd.Stderr = p.log
-	e = cmd.Start()
-	file.Close()
-	listener.Close()
-	if e != nil {
+	if e = cmd.Start(); e != nil {
 		t.Fatal(e)
 	}
 	f.processMu.Lock()
@@ -633,24 +655,29 @@ func TestProcessTCPGateConcurrentCutAndResume(t *testing.T) {
 	}
 }
 
-// A connect-and-close free-port probe cannot guarantee ownership while fixture
-// configuration and peer connections are prepared. Keep the actual socket.
-func TestProcessFixtureReservesPortUntilStartup(t *testing.T) {
-	f := newProcessFixture(t)
-	address := fmt.Sprintf("127.0.0.1:%d", f.Config.HTTPPort)
-	if other, err := net.Listen("tcp", address); err == nil {
-		other.Close()
-		t.Fatal("fixture released its HTTP port before daemon startup")
+func TestProcessPortsStayOutsideClientRange(t *testing.T) {
+	ports := make(chan int, 32)
+	var wg sync.WaitGroup
+	for range 32 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			ports <- processFreePort(t)
+		}()
 	}
-	p := f.Start(t)
-	if f.Request(t, "/api/app/status", nil)["code"] != float64(0) {
-		t.Fatal("daemon did not serve the inherited listener")
+	wg.Wait()
+	close(ports)
+	seen := map[int]bool{}
+	for port := range ports {
+		if seen[port] {
+			t.Fatalf("concurrent fixtures selected the same port: %d", port)
+		}
+		seen[port] = true
+		if port >= processPorts.first && port <= processPorts.last {
+			t.Fatalf("server port %d is inside the ephemeral client range", port)
+		}
 	}
-	p.Kill(t)
-	other, err := net.Listen("tcp", address)
-	if err != nil {
-		t.Fatalf("parent retained the listener after the daemon exited: %v", err)
+	if len(seen) != 32 {
+		t.Fatalf("reserved %d distinct ports, want 32", len(seen))
 	}
-	other.Close()
-	f.Start(t)
 }

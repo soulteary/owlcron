@@ -31,12 +31,6 @@ func main() {
 }
 
 func run() error {
-	return runWithHTTPListener(net.Listen)
-}
-
-// Keep listener acquisition separate so process tests can transfer an already
-// bound socket without releasing its port before the child owns it.
-func runWithHTTPListener(listen func(string, string) (net.Listener, error)) error {
 	configFile := flag.String("config", "config.json", "Configuration file path")
 	debug := flag.Bool("debug", false, "Enable debug mode")
 	flag.Parse()
@@ -73,7 +67,7 @@ func runWithHTTPListener(listen func(string, string) (net.Listener, error)) erro
 	}
 
 	// Reserve the listener before startup can dispatch plugins.
-	listener, err := listen("tcp", fmt.Sprintf(":%d", config.HTTPPort))
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", config.HTTPPort))
 	if err != nil {
 		_ = eng.Shutdown()
 		return fmt.Errorf("bind HTTP port: %w", err)
