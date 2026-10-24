@@ -26,6 +26,8 @@ go build -o owlcron-migrate-check ./cmd/owlcron-migrate-check
 
 `item` 是按分页顺序还原的源列表位置，从 1 开始。计数和报告顺序固定，不输出源 ID、标题、命令、秘密或配置值。结构错误仅定位列表或行号，不回显原始内容。虽然报告不含这些值，导出和可选配置文件仍应作为敏感文件处理。
 
+成功链（`chain`）和失败链（`chain_error`）会按照运行时支持的字符串或数组形式，检查目标是否存在于导出的事件列表。缺失目标分别产生 `missing_chain` 或 `missing_chain_error`，不输出目标 ID。这仅校验引用，不执行链式任务，也不验证运行时行为。
+
 Cronicle 内联 `shell-plugin.js` 需要改为审核后的固定脚本文件和 `owlcron-script` 插件配置。自定义插件须核实运行时、命令解析、uid/gid、环境变量及逐行 JSON 完成协议。工具不会执行命令，不能验证业务行为。参阅[脚本文件](script-files.md)和[兼容性](compatibility.md)。
 
 ## 完成迁移

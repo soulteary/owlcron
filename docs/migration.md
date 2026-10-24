@@ -26,6 +26,8 @@ go build -o owlcron-migrate-check ./cmd/owlcron-migrate-check
 
 `item` is the one-based position in the reconstructed source list, in page order. Counts and findings are deterministic; reports do not contain source IDs, titles, commands, secrets or configuration values. Structural errors identify a list or line number without echoing its contents. Treat exports and optional configuration files as sensitive even though report output excludes their values.
 
+Success (`chain`) and failure (`chain_error`) targets are checked against the exported schedule, using the runtime's string and array forms. Missing targets produce `missing_chain` or `missing_chain_error` findings without exposing target IDs. This checks references only; it does not execute chains or verify their runtime behavior.
+
 Cronicle's inline `shell-plugin.js` needs conversion to reviewed, fixed script files and an `owlcron-script` plugin configuration. Custom plugins require verification of their runtime, command parsing, uid/gid, environment and JSON-line completion contract. The checker never executes their commands and cannot prove their business behavior. See [script files](script-files.md) and [compatibility](compatibility.md).
 
 ## Complete the migration deliberately

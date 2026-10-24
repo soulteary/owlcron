@@ -179,3 +179,78 @@ func TestCheckRejectsNullListHeaderNumbers(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckChainReferences(t *testing.T) {
+	for _, field := range []struct{ name, code string }{
+		{"chain", "missing_chain"},
+		{"chain_error", "missing_chain_error"},
+	} {
+		for _, test := range []struct {
+			name, value string
+			missing     bool
+		}{
+			{"existing string", `"manual"`, false},
+			{"existing array", `["manual","daily"]`, false},
+			{"missing string", `"PRIVATE_MISSING_EVENT"`, true},
+			{"mixed array", `["manual","PRIVATE_MISSING_EVENT","ANOTHER_PRIVATE_EVENT"]`, true},
+			{"empty string", `""`, false},
+			{"empty array", `[]`, false},
+		} {
+			t.Run(field.name+"/"+test.name, func(t *testing.T) {
+				data := strings.Replace(fixture(t), `"id":"daily",`, `"id":"daily","`+field.name+`":`+test.value+`,`, 1)
+				report, err := Check(strings.NewReader(data), nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				count := 0
+				for _, finding := range report.Findings {
+					if finding.Code == field.code {
+						count++
+						if finding.Section != "schedule" || finding.Item != 1 || finding.Status != "unsupported" {
+							t.Fatalf("incorrect reference finding: %+v", finding)
+						}
+					}
+				}
+				want := 0
+				if test.missing {
+					want = 1
+				}
+				if count != want {
+					t.Fatalf("got %d reference findings, want %d: %+v", count, want, report.Findings)
+				}
+				encoded, _ := json.Marshal(report)
+				if bytes.Contains(encoded, []byte("PRIVATE")) {
+					t.Fatal("report exposed a chain target")
+				}
+				if !report.ReadOnly || !hasCode(report, "scheduling_subset") {
+					t.Fatal("reference check changed read-only or scheduling-subset semantics")
+				}
+			})
+		}
+	}
+}
+
+func TestCheckChainReferenceFindingsAreDeterministic(t *testing.T) {
+	data := strings.Replace(fixture(t), `"id":"daily",`, `"id":"daily","chain":["PRIVATE_FIRST","manual","PRIVATE_SECOND"],"chain_error":"PRIVATE_THIRD",`, 1)
+	first, err := Check(strings.NewReader(data), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasCode(first, "missing_chain") || !hasCode(first, "missing_chain_error") {
+		t.Fatalf("missing independent success/failure findings: %+v", first.Findings)
+	}
+	data = strings.Replace(data, `["PRIVATE_FIRST","manual","PRIVATE_SECOND"]`, `["PRIVATE_SECOND","PRIVATE_FIRST","manual"]`, 1)
+	lines := strings.Split(strings.TrimSpace(data), "\n")
+	for i, j := 2, len(lines)-1; i < j; i, j = i+1, j-1 {
+		lines[i], lines[j] = lines[j], lines[i]
+	}
+	second, err := Check(strings.NewReader(strings.Join(lines, "\n")), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	before, _ := json.Marshal(first)
+	after, _ := json.Marshal(second)
+	if !bytes.Equal(before, after) {
+		t.Fatal("record or chain target ordering changed reference findings")
+	}
+}
