@@ -11,9 +11,9 @@
   },
   {
     "name": "async",
-    "version": "2.6.4",
+    "version": "3.2.6",
     "license": "MIT",
-    "notices": "licenses/npm/async@2.6.4",
+    "notices": "licenses/npm/async@3.2.6",
     "files": [
       "LICENSE",
       "README.md"
@@ -241,6 +241,16 @@
     ]
   },
   {
+    "name": "async",
+    "version": "2.6.4",
+    "license": "MIT",
+    "notices": "licenses/npm/async@2.6.4",
+    "files": [
+      "LICENSE",
+      "README.md"
+    ]
+  },
+  {
     "name": "pixl-webapp",
     "version": "2.0.3",
     "license": "MIT",
@@ -316,9 +326,9 @@
   },
   {
     "name": "zxcvbn",
-    "version": "3.5.0",
+    "version": "4.4.2",
     "license": "MIT",
-    "notices": "licenses/npm/zxcvbn@3.5.0",
+    "notices": "licenses/npm/zxcvbn@4.4.2",
     "files": [
       "LICENSE.txt",
       "README.md"

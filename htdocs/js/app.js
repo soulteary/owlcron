@@ -656,7 +656,10 @@ app.extend({
 	
 	get_password_warning: function() {
 		// return string of text used for bad password dialog
-		var est_length = app.last_password_strength.crack_time_display;
+		var strength = app.last_password_strength;
+		var est_length = strength.crack_times_display ?
+			strength.crack_times_display.offline_slow_hashing_1e4_per_second :
+			strength.crack_time_display;
 		if (est_length == 'instant') est_length = 'instantly';
 		else est_length = 'in about ' + est_length;
 		
