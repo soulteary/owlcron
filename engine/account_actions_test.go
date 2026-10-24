@@ -10,8 +10,89 @@ import (
 	"testing"
 	"time"
 
+	"github.com/soulteary/owlcron/storage"
 	"github.com/soulteary/owlcron/types"
 )
+
+type accountIndexFailureStorage struct {
+	storage.Storage
+	fail bool
+}
+
+func (s *accountIndexFailureStorage) Update(ctx context.Context, key string, fn func([]byte) ([]byte, error)) error {
+	if s.fail && key == "users" {
+		return errors.New("injected user index failure")
+	}
+	return s.Storage.(storage.AtomicStorage).Update(ctx, key, fn)
+}
+
+func TestAccountActionsRemainSuccessfulAfterCommittedIndexFailure(t *testing.T) {
+	for _, purpose := range []string{verifyEmailAction, resetPasswordAction} {
+		t.Run(purpose, func(t *testing.T) {
+			e, user := accountActionTestEngine(t)
+			store := &accountIndexFailureStorage{Storage: e.storage, fail: true}
+			e.storage = store
+			ctx := context.Background()
+			var err error
+			if purpose == verifyEmailAction {
+				err = e.IssueEmailVerification(ctx, user.ID, "new@example.test")
+			} else {
+				err = e.RequestPasswordRecovery(ctx, user.Username, user.Email)
+			}
+			if err != nil {
+				t.Fatalf("committed request reported failure: %v", err)
+			}
+			token := actionToken(t, e, user.ID, purpose)
+			if purpose == verifyEmailAction {
+				err = e.ConsumeEmailVerification(ctx, user.ID, token)
+			} else {
+				err = e.ConsumePasswordRecovery(ctx, user.ID, token, "a-strong-new-password")
+			}
+			if err != nil {
+				t.Fatalf("committed account change reported failure: %v", err)
+			}
+			got, err := e.LoadUserByUsernameFromStorage(user.Username)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(got.AccountActions) != 0 {
+				t.Fatal("stale index restored a consumed action")
+			}
+			if purpose == verifyEmailAction && (got.Email != "new@example.test" || got.VerifiedEmail != got.Email) {
+				t.Fatal("stale index hid the verified email")
+			}
+			if purpose == resetPasswordAction && !e.VerifyUserPassword(got, "a-strong-new-password") {
+				t.Fatal("stale index hid the new password")
+			}
+			// Replaying the committed action must fail even while the index is stale.
+			if purpose == verifyEmailAction {
+				err = e.ConsumeEmailVerification(ctx, user.ID, token)
+			} else {
+				err = e.ConsumePasswordRecovery(ctx, user.ID, token, "another-strong-password")
+			}
+			if !errors.Is(err, ErrAccountActionInvalid) {
+				t.Fatalf("replay accepted: %v", err)
+			}
+			// An ordinary later mutation refreshes the existing discovery entry.
+			store.fail = false
+			if err := e.mutateAccountAction(ctx, user.ID, func(*types.User) error { return nil }); err != nil {
+				t.Fatal(err)
+			}
+			items, err := store.ListGet(ctx, "users", 0, 10000)
+			if err != nil || len(items) != 1 {
+				t.Fatalf("index unavailable: %v", err)
+			}
+			raw, _ := json.Marshal(items[0])
+			var indexed types.User
+			if err := json.Unmarshal(raw, &indexed); err != nil {
+				t.Fatal(err)
+			}
+			if indexed.Password != got.Password || indexed.Email != got.Email || len(indexed.AccountActions) != 0 {
+				t.Fatal("index was not refreshed")
+			}
+		})
+	}
+}
 
 func accountActionTestEngine(t *testing.T) (*Engine, *types.User) {
 	t.Helper()
