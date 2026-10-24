@@ -387,7 +387,7 @@ Class.subclass( Page.Base, "Page.JobDetails", {
 		html += '<div class="subtitle" style="margin-top:15px;">';
 			html += 'Job Event Log';
 			if (job.log_file_size) html += ' (' + get_text_from_bytes(job.log_file_size, 1) + ')';
-			html += '<div class="subtitle_widget" style="margin-left:2px;"><a href="/api/app/get_job_log?id=' + job.id + '&t=' + token + '" target="_blank"><i class="fa fa-external-link">&nbsp;</i><b>View First Log Page</b></a></div>';
+			html += '<div class="subtitle_widget" style="margin-left:2px;"><a href="' + (app.base_path || '') + '/api/app/get_job_log?id=' + job.id + '&t=' + token + '" target="_blank"><i class="fa fa-external-link">&nbsp;</i><b>View First Log Page</b></a></div>';
 			html += '<div class="subtitle_widget"><a href="javascript:void(0)" onClick="$P().do_download_log()"><i class="fa fa-download">&nbsp;</i><b>Download Log</b></a></div>';
 			html += '<div class="clear"></div>';
 		html += '</div>';
@@ -664,7 +664,7 @@ Class.subclass( Page.Base, "Page.JobDetails", {
   var session = app.getPref('session_id'), headers = session ? {'X-Session-ID': session} : {};
   if (!window.showSaveFilePicker) {
    app.api.post('app/get_log_watch_auth', {id: id}, function(resp) {
-    window.location.href = '/api/app/get_job_log?id=' + encodeURIComponent(id) + '&t=' + encodeURIComponent(resp.token) + '&stream=1&download=1';
+    window.location.href = (app.base_path || '') + '/api/app/get_job_log?id=' + encodeURIComponent(id) + '&t=' + encodeURIComponent(resp.token) + '&stream=1&download=1';
    });
    return;
   }
@@ -673,7 +673,7 @@ Class.subclass( Page.Base, "Page.JobDetails", {
    var file = await window.showSaveFilePicker({suggestedName: id + '.log'});
    writer = await file.createWritable();
    while (true) {
-    var response = await fetch('/api/app/get_job_log?id=' + encodeURIComponent(id) + '&t=' + encodeURIComponent(session ? '' : token) + '&offset=' + offset + '&limit=1048576', {headers: headers});
+    var response = await fetch((app.base_path || '') + '/api/app/get_job_log?id=' + encodeURIComponent(id) + '&t=' + encodeURIComponent(session ? '' : token) + '&offset=' + offset + '&limit=1048576', {headers: headers});
     if (!response.ok || !response.headers.has('X-Log-Next-Offset')) throw new Error('Log download failed');
     var next = Number(response.headers.get('X-Log-Next-Offset'));
     await writer.write(await response.arrayBuffer());
@@ -1248,16 +1248,8 @@ Class.subclass( Page.Base, "Page.JobDetails", {
 	
 	setup_live_log_links: function(job, token) {
 		// now that we have the token, we can add the live log view / downlaod links
-		var remote_api_url = app.proto + job.hostname + ':' + app.port + config.base_api_uri;
-		if (config.custom_live_log_socket_url) {
-			// custom websocket URL for single-master systems behind an LB
-			remote_api_url = config.custom_live_log_socket_url + config.base_api_uri;
-		}
-		else if (!config.web_socket_use_hostnames && app.servers && app.servers[job.hostname] && app.servers[job.hostname].ip) {
-			// use ip if available, may work better in some setups
-			remote_api_url = app.proto + app.servers[job.hostname].ip + ':' + app.port + config.base_api_uri;
-		}
-		
+		var remote_api_url = (app.base_path || '') + '/api';
+
 		$('#d_live_job_view_link').html( 
 			'<a href="' + remote_api_url + '/app/get_live_job_log?id=' + job.id + '&t=' + token + '" target="_blank"><i class="fa fa-external-link">&nbsp;</i><b>View First Log Page</b></a>'
 		);

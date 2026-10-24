@@ -305,6 +305,7 @@ type JobWorker struct {
 
 // Config 表示配置
 type Config struct {
+	BasePath                     string            `json:"base_path,omitempty"`
 	ClusterAllowInsecure         bool              `json:"cluster_allow_insecure,omitempty"`
 	ClusterTLSCAFile             string            `json:"cluster_tls_ca_file,omitempty"`
 	ClusterTLSCertFile           string            `json:"cluster_tls_cert_file,omitempty"`
