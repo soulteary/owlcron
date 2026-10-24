@@ -454,3 +454,27 @@ func TestScopedStateDoesNotMutateSchedulerState(t *testing.T) {
 		}
 	}
 }
+
+func TestAccountEmailChangeClearsVerification(t *testing.T) {
+	eng := securityEngine(t)
+	original := &types.User{ID: "verified-user", Username: "verified-user", Email: "old@example.test", VerifiedEmail: "old@example.test", Enabled: true, Password: "existing-password-hash"}
+	if err := eng.SaveUserToStorage(original); err != nil {
+		t.Fatal(err)
+	}
+	expected, err := eng.LoadUserFromStorage(original.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	replacement := *expected
+	replacement.Email = "new@example.test"
+	if err = eng.ChangeUserInStorage(expected, &replacement); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := eng.LoadUserFromStorage(original.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.VerifiedEmail != "" || loaded.Email != replacement.Email || loaded.Password != original.Password || !loaded.Enabled {
+		t.Fatal("email edit did not clear only verification state")
+	}
+}

@@ -149,3 +149,13 @@ changes; an explicit choice is stored locally in the browser under
 `owlcron.theme`. Selecting System restores automatic changes. Storage restrictions
 fall back to an in-memory preference and do not prevent login. Theme preferences
 are local UI settings, not account settings.
+
+## Account email policy
+
+Account email is opt-in: `account_email_enabled` defaults to `false`. Enabling it requires an explicit `smtp_hostname`, a valid single `email_from` address and a trusted absolute HTTPS `base_app_url`. The URL must contain no credentials, query or fragment, and its path must match `base_path`. Only local testing may set `account_email_allow_insecure: true` to allow HTTP. This does not disable SMTP certificate verification.
+
+Zero or omitted limits select these defaults: `account_token_ttl_seconds: 1800` (allowed nonzero values 60–86400), `account_email_cooldown_seconds: 60`, `account_email_rate_limit: 5`, `account_email_ip_rate_limit: 20`, and `account_email_rate_window_seconds: 3600`. Cooldown/window values are capped at 86400 seconds; request limits are capped at 100000. Negative values are rejected.
+
+Existing email addresses are initially unverified. Verification applies only to the exact current address and is cleared when that address changes. This policy foundation alone does not provide verification or reset endpoints. Public registration remains disabled; administrators continue to create accounts and can reset passwords.
+
+Account emails require SMTP TLS as well as HTTPS links. The explicit `account_email_allow_insecure` override also permits `smtp_tls_mode: "none"` for a local test relay; use it only in isolated local testing, never production. TLS modes still verify certificates when TLS is enabled.

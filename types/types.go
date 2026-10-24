@@ -307,30 +307,37 @@ type JobWorker struct {
 
 // Config 表示配置
 type Config struct {
-	BasePath                     string            `json:"base_path,omitempty"`
-	ClusterAllowInsecure         bool              `json:"cluster_allow_insecure,omitempty"`
-	ClusterTLSCAFile             string            `json:"cluster_tls_ca_file,omitempty"`
-	ClusterTLSCertFile           string            `json:"cluster_tls_cert_file,omitempty"`
-	ClusterTLSKeyFile            string            `json:"cluster_tls_key_file,omitempty"`
-	ClusterTLSRequireClientCert  bool              `json:"cluster_tls_require_client_cert,omitempty"`
-	NodeAuthPrivateKey           string            `json:"node_auth_private_key,omitempty"`
-	NodeAuthKeyFile              string            `json:"node_auth_key_file,omitempty"`
-	NodeAuthPeers                map[string]string `json:"node_auth_peers,omitempty"`
-	HTTPStreamTimeoutSeconds     int               `json:"http_stream_timeout_seconds,omitempty"`
-	TrustedProxyCIDRs            []string          `json:"trusted_proxy_cidrs,omitempty"`
-	SessionCookieSecure          bool              `json:"session_cookie_secure,omitempty"`
-	LoginRateLimit               int               `json:"login_rate_limit,omitempty"`
-	LoginAccountRateLimit        int               `json:"login_account_rate_limit,omitempty"`
-	LoginRateWindowSeconds       int               `json:"login_rate_window_seconds,omitempty"`
-	LoginMaxConcurrent           int               `json:"login_max_concurrent,omitempty"`
-	LoginLimiterMaxEntries       int               `json:"login_limiter_max_entries,omitempty"`
-	HTTPReadHeaderTimeoutSeconds int               `json:"http_read_header_timeout_seconds,omitempty"`
-	HTTPReadTimeoutSeconds       int               `json:"http_read_timeout_seconds,omitempty"`
-	HTTPWriteTimeoutSeconds      int               `json:"http_write_timeout_seconds,omitempty"`
-	HTTPIdleTimeoutSeconds       int               `json:"http_idle_timeout_seconds,omitempty"`
-	HTTPRequestTimeoutSeconds    int               `json:"http_request_timeout_seconds,omitempty"`
-	JobLogHardMaxSize            int64             `json:"job_log_hard_max_size,omitempty"`
-	LogUploadConcurrency         int               `json:"log_upload_concurrency,omitempty"`
+	AccountEmailEnabled           bool              `json:"account_email_enabled,omitempty"`
+	AccountEmailAllowInsecure     bool              `json:"account_email_allow_insecure,omitempty"`
+	AccountTokenTTLSeconds        int               `json:"account_token_ttl_seconds,omitempty"`
+	AccountEmailCooldownSeconds   int               `json:"account_email_cooldown_seconds,omitempty"`
+	AccountEmailRateLimit         int               `json:"account_email_rate_limit,omitempty"`
+	AccountEmailIPRateLimit       int               `json:"account_email_ip_rate_limit,omitempty"`
+	AccountEmailRateWindowSeconds int               `json:"account_email_rate_window_seconds,omitempty"`
+	BasePath                      string            `json:"base_path,omitempty"`
+	ClusterAllowInsecure          bool              `json:"cluster_allow_insecure,omitempty"`
+	ClusterTLSCAFile              string            `json:"cluster_tls_ca_file,omitempty"`
+	ClusterTLSCertFile            string            `json:"cluster_tls_cert_file,omitempty"`
+	ClusterTLSKeyFile             string            `json:"cluster_tls_key_file,omitempty"`
+	ClusterTLSRequireClientCert   bool              `json:"cluster_tls_require_client_cert,omitempty"`
+	NodeAuthPrivateKey            string            `json:"node_auth_private_key,omitempty"`
+	NodeAuthKeyFile               string            `json:"node_auth_key_file,omitempty"`
+	NodeAuthPeers                 map[string]string `json:"node_auth_peers,omitempty"`
+	HTTPStreamTimeoutSeconds      int               `json:"http_stream_timeout_seconds,omitempty"`
+	TrustedProxyCIDRs             []string          `json:"trusted_proxy_cidrs,omitempty"`
+	SessionCookieSecure           bool              `json:"session_cookie_secure,omitempty"`
+	LoginRateLimit                int               `json:"login_rate_limit,omitempty"`
+	LoginAccountRateLimit         int               `json:"login_account_rate_limit,omitempty"`
+	LoginRateWindowSeconds        int               `json:"login_rate_window_seconds,omitempty"`
+	LoginMaxConcurrent            int               `json:"login_max_concurrent,omitempty"`
+	LoginLimiterMaxEntries        int               `json:"login_limiter_max_entries,omitempty"`
+	HTTPReadHeaderTimeoutSeconds  int               `json:"http_read_header_timeout_seconds,omitempty"`
+	HTTPReadTimeoutSeconds        int               `json:"http_read_timeout_seconds,omitempty"`
+	HTTPWriteTimeoutSeconds       int               `json:"http_write_timeout_seconds,omitempty"`
+	HTTPIdleTimeoutSeconds        int               `json:"http_idle_timeout_seconds,omitempty"`
+	HTTPRequestTimeoutSeconds     int               `json:"http_request_timeout_seconds,omitempty"`
+	JobLogHardMaxSize             int64             `json:"job_log_hard_max_size,omitempty"`
+	LogUploadConcurrency          int               `json:"log_upload_concurrency,omitempty"`
 	// Retention is opt-in: zero days preserves existing data indefinitely.
 	JobDataExpireDays         int               `json:"job_data_expire_days,omitempty"`
 	JobLogExpireDays          int               `json:"job_log_expire_days,omitempty"`
