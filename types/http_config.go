@@ -45,5 +45,5 @@ func ValidateHTTPConfig(c *Config) error {
 			return errors.New("invalid trusted proxy CIDR")
 		}
 	}
-	return nil
+	return ValidateAccountEmailConfig(c)
 }
