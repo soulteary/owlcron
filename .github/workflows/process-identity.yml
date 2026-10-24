@@ -1,4 +1,4 @@
-name: Linux process identity regression
+name: CI / Linux Process Identity
 on:
   push:
     branches: [main]
