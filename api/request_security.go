@@ -79,7 +79,7 @@ func (s *Server) secureCookie(r *http.Request) bool {
 }
 
 func (s *Server) setSessionCookie(w http.ResponseWriter, r *http.Request, value string) {
-	cookie := &http.Cookie{Name: "session_id", Value: value, Path: "/", HttpOnly: true,
+	cookie := &http.Cookie{Name: "session_id", Value: value, Path: s.engine.GetConfig().BasePath + "/", HttpOnly: true,
 		SameSite: http.SameSiteLaxMode, Secure: s.secureCookie(r)}
 	if value == "" {
 		cookie.MaxAge = -1

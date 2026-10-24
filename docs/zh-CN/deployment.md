@@ -121,3 +121,13 @@ SameSite=Lax。启用 Secure Cookie 后不要继续通过 HTTP 登录。
 
 首次开源尚未形成稳定发行包和数据迁移兼容承诺。正式升级流程、跨版本回滚和
 远程后端灾备仍需按目标部署环境验收。
+
+## URL 子路径部署
+
+配置 `base_path: "/tools/cron"`（末尾无斜线），并将 `base_app_url` 设为
+`https://cron.example.com/tools/cron`。反向代理转发时保留此前缀。
+界面入口为 `/tools/cron/`，API、浏览器 WebSocket 和日志地址共享前缀，
+会话 Cookie 也限定在此前缀。路径段仅支持字母、数字、下划线和连字符。
+空值保持根路径部署；不要让其他应用共享同一 Cookie 路径。
+节点认证通道仍使用根路径 `/cluster/ws`，应限制为集群节点可达。
+已有 TLS、同源检查和可信代理要求不变。

@@ -7,6 +7,7 @@ if (!window.app) throw new Error("App Framework is not present.");
 app.extend({
 	
 	name: '',
+	base_path: window.owlcronBasePath || '',
 	preload_images: ['loading.gif'],
 	activeJobs: {},
 	eventQueue: {},
@@ -26,7 +27,7 @@ app.extend({
 		// receive config from server
 		if (resp.code) {
 			app.showProgress( 1.0, "Waiting for master server..." );
-			setTimeout( function() { load_script( '/api/app/config' ); }, 1000 );
+			setTimeout( function() { load_script( app.base_path + '/api/app/config' ); }, 1000 );
 			return;
 		}
 		delete resp.code;
@@ -83,7 +84,7 @@ app.extend({
 		for (var idx = 0, len = this.preload_images.length; idx < len; idx++) {
 			var filename = '' + this.preload_images[idx];
 			var img = new Image();
-			img.src = '/images/'+filename;
+			img.src = this.base_path + '/images/'+filename;
 		}
 		
 		// populate prefs for first time user
@@ -211,7 +212,7 @@ app.extend({
 	doExternalLogin: function() {
 		// login using external user management system
 		// Force API to hit current page hostname vs. master server, so login redirect URL reflects it
-		app.api.post( '/api/user/external_login', { cookie: document.cookie }, function(resp) {
+		app.api.post( app.base_path + '/api/user/external_login', { cookie: document.cookie }, function(resp) {
 			if (resp.user) {
 				Debug.trace("User Session Resume: " + resp.username + ": " + resp.session_id);
 				app.hideProgress();
@@ -247,7 +248,7 @@ app.extend({
 		var self = this;
 		
 		var wsProto = (location.protocol === 'https:') ? 'wss://' : 'ws://';
-		var wsUrl = wsProto + location.host + '/ws';
+		var wsUrl = wsProto + location.host + this.base_path + '/ws';
 		Debug.trace("WebSocket Connect: " + wsUrl);
 		
 		if (this.socket) {

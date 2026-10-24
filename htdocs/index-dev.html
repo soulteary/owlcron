@@ -6,7 +6,7 @@
 	<title>Loading...</title>
 	<meta name="description" content="A simple distributed task scheduler and runner.">
 	<meta name="author" content="OwlCron contributors; based on work by Joseph Huckaby">
-	<link rel="shortcut icon" href="/favicon.ico">
+	<link rel="shortcut icon" href="favicon.ico">
 	
 	<!-- BUILD: COMBINE_STYLE_START -->
 	<link rel="stylesheet" href="css/base.css">
@@ -86,6 +86,7 @@
 	<script src="js/external/Chart.min.js"></script>
 	<script src="js/external/jstz.min.js"></script>
 	
+	<script>window.owlcronBasePath = new URL(".", location.href).pathname.replace(/\/$/, "");</script>
 	<!-- BUILD: COMBINE_SCRIPT_START -->
 	<script src="js/common/md5.js"></script>
 	<script src="js/common/oop.js"></script>
@@ -113,7 +114,7 @@
 	<script src="js/pages/admin/APIKeys.js"></script>
 	<!-- BUILD: COMBINE_SCRIPT_END -->
 	
-	<script src="/api/app/config"></script>
+	<script src="api/app/config"></script>
 
 </body>
 </html>

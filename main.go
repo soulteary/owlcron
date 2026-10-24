@@ -234,7 +234,7 @@ func applyDefaults(config *types.Config) {
 		if config.ClusterTLSCertFile != "" {
 			scheme = "https"
 		}
-		config.BaseAppURL = fmt.Sprintf("%s://localhost:%d", scheme, config.HTTPPort)
+		config.BaseAppURL = fmt.Sprintf("%s://localhost:%d%s", scheme, config.HTTPPort, config.BasePath)
 	}
 	if config.MasterPingFreq == 0 {
 		config.MasterPingFreq = 20
