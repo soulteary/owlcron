@@ -6,7 +6,7 @@ Use OwlCron initially for development, evaluation, and controlled environments. 
 
 ## Installation and startup
 
-Use Go 1.27.3 or a later security patch in the same series, Bun 1.4.2, Python 3, and make. CI validates Go 1.27 only; prefer its latest security patch. The module recommends Go 1.27.3, which older Go installations can select when automatic toolchain download is enabled.
+Source builds require Go, Bun, Python, and make; see [versions and releases](releases.md#supported-toolchain-and-platforms) for supported versions and platforms.
 
 Install the pinned Bun toolchain with `curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.2"`, then verify `bun --version`. Frontend and browser dependencies use separate committed `bun.lock` files; always use `--frozen-lockfile` for reproducible installation. `bunfig.toml` keeps the hoisted layout required by static asset paths and license validation. Node.js and npm are not required for these build and test commands.
 
@@ -99,6 +99,8 @@ Prefer a stopped, consistent snapshot for Filesystem storage. Use a consistent b
 Restore into an isolated environment and check login, jobs, history, and logs before upgrading the deployment. For rollback, retain the previous executable, static assets, plugins, and pre-upgrade snapshot. If formats change, restore the matching snapshot rather than assuming an old binary can read new data. Restore tests must not send duplicate notifications to real recipients.
 
 The [release workflow and version policy](releases.md) define verified archive contents and the supported build matrix. Data-migration compatibility is not yet guaranteed. Validate upgrades, cross-version rollback, and remote-backend disaster recovery against the intended deployment.
+
+Run `export`, `import`, and `storage-migrate` only after stopping all nodes to obtain a consistent snapshot; see `./owlcron-engine help` for arguments. Backups include canonical records, history, logs, cursors, queues, and tombstones, but exclude initial plaintext passwords and transient leadership leases/generations. Import overwrites matching keys without deleting extra destination records, so prefer an empty namespace. Failed remote per-key restores can retry the same backup.
 
 The CLI streams backup records to the existing `owlcron-storage-v1` format instead of retaining the full export in memory. File exports are written to a private temporary file, synced, and renamed only after completion; errors before the rename preserve the previous destination. A directory-sync failure after the rename reports unconfirmed durability; the new file may already be visible. The key list and largest individual record still consume memory. Standard-output exports can be partial on failure, so check the exit status before using them. Streaming does not make a live backend snapshot consistent.
 

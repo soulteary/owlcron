@@ -31,9 +31,7 @@ Event loading traverses all pages and preserves the previous in-memory snapshot 
 
 After a forced daemon termination, restart recovery verifies execution tokens and kernel process identity, reclaims verified process groups, and marks interrupted jobs failed. It does not resume or repeat plugins. `OWLCRON_JOB_TOKEN` is reserved. An unverifiable live legacy PID prevents startup and requires operator review; never kill a process based only on a reused PID. Preserve OS identity and process-inspection permissions across restarts. Plugins that deliberately detach or remove the marker are outside this recovery contract; detached execution is unsupported.
 
-Failed completion writes retain the synchronized local spool for retries and restart recovery. Workers delete their completion outbox only after reliable leader acknowledgment. Persisted local logs can be recovered, but buffered tails are not guaranteed. External commands and notifications are not exactly once: use job IDs or business keys for plugin idempotency and stable message identifiers for recipient deduplication.
-
-Run `export`, `import`, and `storage-migrate` only after stopping all nodes to obtain a consistent snapshot; see `./owlcron-engine help` for arguments. Backups include canonical records, history, logs, cursors, queues, and tombstones, but exclude initial plaintext passwords and transient leadership leases/generations. Import overwrites matching keys without deleting extra destination records, so prefer an empty namespace. Failed remote per-key restores can retry the same backup.
+See [architecture](architecture.md) for completion commits, worker acknowledgments, and log recovery. Persist `log_dir` and `queue_dir`; buffered log tails are not guaranteed to survive. Use job IDs or business keys for plugin idempotency and stable message identifiers for recipient deduplication. See [deployment](deployment.md#backups-upgrades-and-rollback) for backup and import procedures.
 
 ### Retention and log limits
 

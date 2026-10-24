@@ -7,11 +7,6 @@ OwlCron is a task scheduler written in Go, designed to replace [Cronicle](https:
 The project is experimental. Review the [known limitations](docs/limitations.md), including sustained cluster convergence, remote dispatch acknowledgment, and production capacity, before deploying it.
 
 
-## Go quality reports
-
-Go quality reports run on tags, published releases, and manual dispatches. They run tests with the race detector and coverage, check the independent example plugin, and generate Go Report Card results. Download reports and raw test evidence from the workflow artifacts (retained for 14 days). Stable reports are committed only when the tested commit still matches the default branch; otherwise they remain artifacts. The existing CI continues to check pull requests.
-
-[Go quality reports](https://github.com/soulteary/owlcron/actions/workflows/go-quality-reports.yml)
 
 ![OwlCron](.github/assets/owlcron-banner.png)
 
@@ -43,29 +38,10 @@ The HTTP service listens on all interfaces. `base_app_url` does not restrict the
 
 ## Documentation
 
-- [Deployment](docs/deployment.md): installation, HTTPS, permissions, backups, and upgrades.
-- [Configuration](docs/configuration.md): storage, retention, notifications, and node identity.
-- [Cronicle compatibility](docs/compatibility.md): supported behavior and migration differences.
-- [Architecture](docs/architecture.md): scheduling, persistence, completion acknowledgment, and recovery.
-- [Testing](docs/testing.md): local checks, CI, and fault acceptance tests.
-- [Known limitations](docs/limitations.md): constraints to consider before deployment.
-- [Contributing](CONTRIBUTING.md) and [security policy](SECURITY.md).
-
-The [documentation index](docs/README.md) links to both language editions.
-
-## Development checks
-
-Run these commands from the repository root:
-
-```sh
-bun install --cwd htdocs-deps --frozen-lockfile
-make frontend build
-make fmt-check vet test frontend-test licenses-check docs-check smoke
-```
-
-Run `make race` for race detection. See [testing](docs/testing.md) for Docker-based fault scenarios. The example plugin is a separate Go module; changes to it also require checks in `bin/echo-plugin`.
-
-The optional [real-browser smoke test](tests/browser/README.md) covers login, event editing and execution, history, logs, and theme persistence in Chromium.
+- [Documentation index](docs/README.md): guides for deployment, running jobs, operations, and development.
+- [Cronicle migration preflight](docs/migration.md) and [compatibility](docs/compatibility.md): check data and behavior differences before migration.
+- [Contributing](CONTRIBUTING.md) and [testing](docs/testing.md): development workflow, check commands, and quality reports.
+- [Security policy](SECURITY.md): reporting security issues.
 
 ## License
 
