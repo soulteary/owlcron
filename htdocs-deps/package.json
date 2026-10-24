@@ -1,0 +1,25 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "node build.js dist",
+    "build:dev": "node build.js dev"
+  },
+  "dependencies": {
+    "async": "2.6.4",
+    "chart.js": "2.9.4",
+    "font-awesome": "4.7.0",
+    "jquery": "3.5.0",
+    "jstimezonedetect": "1.0.6",
+    "mdi": "1.9.33",
+    "moment": "2.31.0",
+    "moment-timezone": "0.5.35",
+    "pixl-class": "^1.0.2",
+    "pixl-tools": "2.0.5",
+    "pixl-webapp": "^2.0.3",
+    "socket.io-client": "4.8.4",
+    "uglify-js": "3.14.3",
+    "zxcvbn": "3.5.0"
+  },
+  "name": "owlcron-frontend",
+  "license": "MIT"
+}
