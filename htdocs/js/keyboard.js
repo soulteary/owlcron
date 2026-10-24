@@ -19,6 +19,27 @@
 		});
 	}
 
+	function enhanceScrollRegions() {
+		Array.prototype.forEach.call(document.querySelectorAll('table.data_table, .pagination'), function(node) {
+			if (node.scrollWidth > node.clientWidth + 1 && (node.dataset.keyboardScroll || (!node.hasAttribute('tabindex') && !node.hasAttribute('role')))) {
+				node.setAttribute('tabindex', '0');
+				node.setAttribute('role', 'region');
+				if (!node.hasAttribute('aria-label')) {
+					node.setAttribute('aria-label', node.tagName === 'TABLE' ? 'Data table, scroll horizontally' : 'Pagination, scroll horizontally');
+					node.dataset.keyboardScrollLabel = 'true';
+				}
+				node.dataset.keyboardScroll = 'true';
+			}
+			else if (node.dataset.keyboardScroll) {
+				node.removeAttribute('tabindex');
+				node.removeAttribute('role');
+				if (node.dataset.keyboardScrollLabel) node.removeAttribute('aria-label');
+				delete node.dataset.keyboardScrollLabel;
+				delete node.dataset.keyboardScroll;
+			}
+		});
+	}
+
 	function visible(node) {
 		return !node.disabled && node.getAttribute('aria-disabled') !== 'true' &&
 			node.tabIndex >= 0 && node.getClientRects().length > 0;
@@ -50,6 +71,8 @@
 	var hide = Dialog.hide;
 	Dialog.hide = function() {
 		var wasActive = this.active;
+		var closing = document.getElementById('dialog_container');
+		if (wasActive && closing) closing.inert = true;
 		var result = hide.apply(this, arguments);
 		if (wasActive && returnFocus && returnFocus.isConnected) returnFocus.focus();
 		if (wasActive) returnFocus = null;
@@ -94,12 +117,15 @@
 
 	function init() {
 		enhance(document);
+		enhanceScrollRegions();
+		window.addEventListener('resize', enhanceScrollRegions);
 		new MutationObserver(function(records) {
 			records.forEach(function(record) {
 				Array.prototype.forEach.call(record.addedNodes, function(node) {
 					if (node.nodeType === 1) enhance(node);
 				});
 			});
+			enhanceScrollRegions();
 		}).observe(document.body, {childList:true, subtree:true});
 	}
 	if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, {once:true});

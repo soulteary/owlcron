@@ -5,12 +5,13 @@ const vm=require('node:vm');
 const path=require('node:path');
 
 function fixture() {
- let keydown, observer, dialog=null, active;
+ let keydown, observer, resize, dialog=null, active;
+ const regions=[];
  const events=[];
  const matches=(n,s)=>s.includes('onmouseup') ? n.hasAttribute('onmouseup')||n.hasAttribute('onclick')||/^tab_/.test(n.attrs.id||'') : s==='input, select, textarea, [contenteditable="true"]' ? /INPUT|TEXTAREA|SELECT/.test(n.tagName)||n.attrs.contenteditable==='true' : s==='button, a[href]' ? n.tagName==='BUTTON'||(n.tagName==='A'&&n.hasAttribute('href')) : false;
  function element(tag='DIV',attrs={},children=[]) {
-  const n={tagName:tag,attrs:{...attrs},children,textContent:'Action',nodeType:1,isConnected:true,disabled:false,title:'',
-   hasAttribute(k){return k in this.attrs;},getAttribute(k){return this.attrs[k]??null;},setAttribute(k,v){this.attrs[k]=v;},
+  const n={tagName:tag,attrs:{...attrs},dataset:{},children,textContent:'Action',nodeType:1,isConnected:true,disabled:false,title:'',
+   hasAttribute(k){return k in this.attrs;},getAttribute(k){return this.attrs[k]??null;},setAttribute(k,v){this.attrs[k]=v;},removeAttribute(k){delete this.attrs[k];},
    get tabIndex(){return this.attrs.tabindex!==undefined?Number(this.attrs.tabindex):/^(A|INPUT|SELECT|TEXTAREA|BUTTON)$/.test(tag)?0:-1;},
    matches(s){return matches(this,s);},closest(s){return this.matches(s)?this:null;},getClientRects(){return this.hidden?[]:[{}];},
    contains(other){return other===this||this.children.includes(other);},querySelector(){return null;},
@@ -20,12 +21,12 @@ function fixture() {
  }
  const trigger=element('DIV',{onmouseup:'open'});active=trigger;
  const document={body:{},readyState:'complete',get activeElement(){return active;},
-  querySelectorAll(){return [trigger];},getElementById(){return dialog;},addEventListener(type,fn){if(type==='keydown')keydown=fn;}};
+  querySelectorAll(s){return s==='table.data_table, .pagination'?regions:[trigger];},getElementById(){return dialog;},addEventListener(type,fn){if(type==='keydown')keydown=fn;}};
  const Dialog={active:false,clickBlock:false,show(){dialog=element('DIV',{},this.next||[]);this.active=true;},hide(){this.active=false;dialog=null;}};
  const app={confirm_click(value){events.push({confirm:value});Dialog.hide();}};
- vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../htdocs/js/keyboard.js'),'utf8'),{document,window:{},Dialog,app,
+ vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../htdocs/js/keyboard.js'),'utf8'),{document,window:{addEventListener(type,fn){resize=fn;}},Dialog,app,
   MouseEvent:class{constructor(type){this.type=type;}},MutationObserver:class{constructor(fn){observer=fn;}observe(){}}});
- return {element,trigger,events,Dialog,document, get dialog(){return dialog;},
+ return {element,trigger,events,Dialog,document,regions,resize(){resize();}, get dialog(){return dialog;},
   add(n){observer([{addedNodes:[n]}]);},key(target,key,extra={}){const e={target,key,preventDefault(){this.prevented=true;},stopImmediatePropagation(){this.stopped=true;},stopPropagation(){this.bubbleStopped=true;},...extra};keydown(e);return e;}};
 }
 
@@ -79,4 +80,11 @@ test('event script editor allows Tab to leave the textarea',()=>{
   const e=f.key(n,'Enter');assert.equal(e.bubbleStopped,true);assert.equal(e.prevented,undefined);
  }
  assert.equal(f.events.length,0);
+});
+
+test('overflow regions are keyboard reachable only while overflowing and retain existing labels',()=>{
+ const f=fixture(),table=f.element('TABLE',{'aria-label':'Jobs'});
+ table.clientWidth=300;table.scrollWidth=700;f.regions.push(table);f.resize();
+ assert.equal(table.tabIndex,0);assert.equal(table.attrs.role,'region');assert.equal(table.attrs['aria-label'],'Jobs');
+ table.scrollWidth=300;f.resize();assert.equal(table.tabIndex,-1);assert.equal(table.attrs['aria-label'],'Jobs');
 });
