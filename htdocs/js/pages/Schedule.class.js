@@ -179,7 +179,7 @@ Class.subclass( Page.Base, "Page.Schedule", {
 				self.getNiceGroup( group, item.target, col_width ),
 				summarize_event_timing( item.timing, item.timezone ),
 				'<span id="ss_' + item.id + '" onMouseUp="$P().jump_to_last_job('+idx+')">' + status_html + '</span>',
-				actions.join('&nbsp;|&nbsp;')
+				actions_html
 			];
 			
 			if (!item.enabled) tds.className = 'disabled';
