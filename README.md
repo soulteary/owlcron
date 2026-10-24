@@ -6,6 +6,13 @@ OwlCron is a task scheduler written in Go, designed to replace [Cronicle](https:
 
 The project is experimental. Review the [known limitations](docs/limitations.md), including sustained cluster convergence, remote dispatch acknowledgment, and production capacity, before deploying it.
 
+
+## Go quality reports
+
+Go quality reports run on tags, published releases, and manual dispatches. They run tests with the race detector and coverage, check the independent example plugin, and generate Go Report Card results. Download reports and raw test evidence from the workflow artifacts (retained for 14 days). Stable reports are committed only when the tested commit still matches the default branch; otherwise they remain artifacts. The existing CI continues to check pull requests.
+
+[Go quality reports](https://github.com/soulteary/owlcron/actions/workflows/go-quality-reports.yml)
+
 ## Quick start
 
 Install Go, Bun 1.4.2, Python 3, and make. The module recommends Go 1.27.3; see the [deployment requirements](docs/deployment.md) before choosing another toolchain.

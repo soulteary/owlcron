@@ -61,3 +61,9 @@ make fmt-check vet test frontend-test licenses-check docs-check smoke
 ## 许可证
 
 OwlCron 原创代码采用 [MIT License](LICENSE)。继承的 Cronicle 代码保留原作者版权和 MIT 许可。第三方代码与字体遵循各自许可证，详见[第三方声明](THIRD_PARTY_NOTICES.zh-CN.md)及 `licenses/`。
+
+## Go quality reports
+
+Go 质量报告在推送标签、发布 Release 或手动触发时运行，包含竞态检测、覆盖率、独立示例插件检查和 Go Report Card。报告及原始测试记录可从工作流产物下载，保留 14 天。仅当被测提交仍与默认分支一致时才回写稳定报告，否则仅保存为产物。现有 CI 继续检查 PR。
+
+[Go quality reports](https://github.com/soulteary/owlcron/actions/workflows/go-quality-reports.yml)
