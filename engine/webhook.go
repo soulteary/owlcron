@@ -137,12 +137,7 @@ func (whm *WebHookManager) DeliverWebHook(ctx context.Context, payload WebHookPa
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	if err := whm.ValidateWebHookURL(ctx, payload.URL); err != nil {
-		var denied *webHookPolicyError
-		return &NotificationDeliveryError{Err: err, Permanent: errors.As(err, &denied)}
-	}
-	parsed, _ := parseWebHookURL(payload.URL)
-	if parsed.Scheme == "http" {
-		ctx = context.WithValue(ctx, webHookHTTPContextKey{}, true)
+		return &NotificationDeliveryError{Err: err, Permanent: isWebHookPolicyDenied(err)}
 	}
 	if !json.Valid(payload.Body) {
 		return &NotificationDeliveryError{Err: errors.New("invalid webhook JSON"), Permanent: true}
@@ -166,8 +161,7 @@ func (whm *WebHookManager) DeliverWebHook(ctx context.Context, payload WebHookPa
 	}
 	resp, err := whm.client.Do(req)
 	if err != nil {
-		var denied *webHookPolicyError
-		return &NotificationDeliveryError{Err: errors.New("webhook transport failed"), Permanent: errors.As(err, &denied)}
+		return &NotificationDeliveryError{Err: errors.New("webhook transport failed"), Permanent: isWebHookPolicyDenied(err)}
 	}
 	defer resp.Body.Close()
 	// Bound both transferred response bytes and the request lifetime, including slow bodies.

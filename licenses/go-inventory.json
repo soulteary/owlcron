@@ -50,6 +50,16 @@
     ]
   },
   {
+    "module": "github.com/soulteary/http-kit/v2",
+    "version": "v2.0.3-0.20261024164327-7b390f25a5e8",
+    "notices": "licenses/go/github.com__soulteary__http-kit__v2@v2.0.3-0.20261024164327-7b390f25a5e8",
+    "files": [
+      "LICENSE",
+      "LICENSE-OWLCRON",
+      "NOTICE"
+    ]
+  },
+  {
     "module": "go.uber.org/zap",
     "version": "v1.28.0",
     "notices": "licenses/go/go.uber.org__zap@v1.28.0",
