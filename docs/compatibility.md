@@ -48,3 +48,16 @@ See [configuration](configuration.md), [deployment](deployment.md), and [known l
 - WebHooks default to public HTTPS destinations. Private-network or HTTP exceptions require explicit configuration. DNS answers and dialed addresses are checked; environment proxies and redirects are disallowed. Separate HMAC-SHA256 signing secrets and protected key files are supported. Notifications and diagnostics redact sensitive fields.
 - Login and Basic Auth share process-local IP/account rate limits and a password-verification concurrency cap, not a cluster-wide limit. Forwarded headers are trusted only from configured proxies. Cookies apply consistent Secure, HttpOnly, and SameSite policies.
 - Ordinary HTTP APIs and streaming logs have separate deadlines. WebSockets use their own lifecycle. Cross-origin write checks remain enabled; the original option to disable that protection is not reproduced.
+
+### Delegated category API administration
+
+Administrators may grant `create_categories`, `update_categories` and
+`delete_categories` separately to users or API keys. These rights do not grant
+user, plugin, server or API-key administration. With `cat_limit`, every mutation
+must name an explicit category ID allowed by its `cat_<id>` privilege, including
+creation. Query parameters cannot override the body ID for authorization.
+Without `cat_limit`, category rights apply to all categories. Existing IDs cannot
+be recreated, and categories assigned to events cannot be deleted. The browser's
+administration area remains administrator-only; delegated clients use the APIs
+(`/api/app/create_category`, `update_category`, `delete_category`, optionally
+suffixed with `/v1`). The administrator's user/API-key forms expose these rights.
