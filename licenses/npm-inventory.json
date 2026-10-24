@@ -164,7 +164,7 @@
   },
   {
     "name": "mdi",
-    "version": "1.9.33",
+    "version": "2.2.43",
     "license": [
       {
         "type": "OFL-1.1",
@@ -175,7 +175,7 @@
         "url": "http://opensource.org/licenses/mit-license.html"
       }
     ],
-    "notices": "licenses/npm/mdi@1.9.33",
+    "notices": "licenses/npm/mdi@2.2.43",
     "files": [
       "README.md",
       "license.md"
