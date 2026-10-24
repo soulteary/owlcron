@@ -1,0 +1,68 @@
+name: Go process fault acceptance
+
+on:
+  pull_request:
+    paths: ['**/*.go', 'go.mod', 'go.sum', 'Makefile', 'tests/**', '.github/workflows/**']
+  push:
+    paths: ['**/*.go', 'go.mod', 'go.sum', 'Makefile', 'tests/**', '.github/workflows/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  process-recovery:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+      - name: Static checks
+        run: make vet
+      - name: Repeat independent-process failure matrix
+        run: make process-integration-repeat
+      - name: Full race regression
+        run: make race
+
+  linux-remote-recovery:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Linux processes and real remote-storage failure matrix
+        env:
+          OWLCRON_ACCEPTANCE_RESULTS: /tmp/owlcron-linux-evidence
+        run: make linux-acceptance
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linux-remote-recovery-evidence
+          path: /tmp/owlcron-linux-evidence
+          if-no-files-found: warn
+
+  linux-load-recovery:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Bounded capacity, failover RTO and sustained failure profiles
+        env:
+          OWLCRON_LOAD_RESULTS: /tmp/owlcron-load-evidence
+          OWLCRON_SOAK_DURATION: 3m
+          OWLCRON_PROCESS_SOAK_DURATION: 3m
+        run: make linux-load-acceptance
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linux-load-recovery-evidence
+          path: /tmp/owlcron-load-evidence
+          if-no-files-found: warn

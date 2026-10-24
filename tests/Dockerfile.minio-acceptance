@@ -1,0 +1,11 @@
+FROM golang:1.27.3-trixie AS build
+WORKDIR /src
+# Fixed upstream source and archive digest; no compatibility-server substitution.
+RUN curl --fail --location --retry 3 https://codeload.github.com/minio/minio/tar.gz/refs/tags/RELEASE.2025-04-22T22-12-26Z -o /tmp/minio.tar.gz \
+    && echo '1a63209927b9d1fb239b2a776b7b01d1902eff19379a108f4bc7005edcc0968c  /tmp/minio.tar.gz' | sha256sum -c - \
+    && tar -xzf /tmp/minio.tar.gz --strip-components=1 -C /src
+RUN CGO_ENABLED=0 go build -p=2 -o /minio .
+
+FROM debian:trixie-slim
+COPY --from=build /minio /usr/local/bin/minio
+ENTRYPOINT ["/usr/local/bin/minio"]
