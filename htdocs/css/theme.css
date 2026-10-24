@@ -1,0 +1,26 @@
+/* Theme colors are scoped so light mode retains the original layout. */
+#theme-control { float: right; margin: 10px 12px; }
+#theme-control label { margin-right: 6px; }
+#theme-preference { padding: 3px 6px; }
+#theme-preference:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+body.dark-theme { --theme-bg: #15191f; --theme-panel: #20262f; --theme-input: #141a22; --theme-text: #d4dae3; --theme-border: #424c59; --theme-link: #82b9ff; background: var(--theme-bg); color: var(--theme-text); }
+body.dark-theme .main, body.dark-theme .dialog_content, body.dark-theme .dialog_buttons,
+body.dark-theme .data_table td, body.dark-theme fieldset { background: var(--theme-panel); color: var(--theme-text); border-color: var(--theme-border); }
+body.dark-theme #d_header, body.dark-theme .tab_bar, body.dark-theme .dialog_title,
+body.dark-theme .data_table th { background: var(--theme-input); color: var(--theme-text); border-color: var(--theme-border); }
+body.dark-theme .tab.active, body.dark-theme .button { background: var(--theme-panel); color: var(--theme-text); border-color: var(--theme-border); }
+body.dark-theme .tab.inactive { background: var(--theme-bg); color: var(--theme-text); }
+body.dark-theme input, body.dark-theme select, body.dark-theme textarea { background: var(--theme-input); color: var(--theme-text); border-color: var(--theme-border); }
+body.dark-theme a, body.dark-theme .link { color: var(--theme-link); }
+body.dark-theme h1, body.dark-theme h2, body.dark-theme h3, body.dark-theme .subtitle,
+body.dark-theme .table_label, body.dark-theme legend, body.dark-theme #d_footer,
+body.dark-theme #d_header_title, body.dark-theme .timing_details_content,
+body.dark-theme pre.log_chunk { color: var(--theme-text); }
+body.dark-theme .data_table tr:hover td { background: var(--theme-input); }
+body.dark-theme #d_scroll_time { background: var(--theme-panel); color: var(--theme-text); }
+body.dark-theme .dialog_overlay { background: rgba(0,0,0,0.65); }
+/* Older page templates include these literal inline backgrounds. */
+body.dark-theme [style*="background:white"], body.dark-theme [style*="background: white"],
+body.dark-theme [style*="background-color:white"], body.dark-theme [style*="background-color: white"] { background: var(--theme-panel) !important; }
+body.dark-theme div[style*="color:#888"], body.dark-theme div[style*="color: #888"],
+body.dark-theme div[style*="color:#777"], body.dark-theme div[style*="color: #777"] { color: var(--theme-text) !important; }

@@ -122,3 +122,11 @@ mTLS uses `cluster_tls_require_client_cert: true`, an explicit CA, and per-node 
 Node proofs bind roles, both challenges, time, nonce, and the current lease. Clock skew is limited to 60 seconds; keep clocks synchronized. The replay cache holds 16384 entries and fails closed when full. WebSockets are capped at 1024 connections with a fixed 10-second unauthenticated window. The current shared lease governs takeover and leader commands. Old owners, stale connection generations, and disabled nodes cannot control workers or acknowledge completion. Disconnection preserves running jobs and durable completions; reconnection authenticates again.
 
 Shared-storage write access is equivalent to cluster control. Rotate identities by coordinating public-key registration and restarting affected nodes. Only one public key per hostname is supported, so do not assume overlapping key IDs. Rotate CAs using a planned trust bundle. UDP discovery does not grant authorization.
+
+## Browser theme
+
+The header theme selector supports System, Light and Dark. System follows OS
+changes; an explicit choice is stored locally in the browser under
+`owlcron.theme`. Selecting System restores automatic changes. Storage restrictions
+fall back to an in-memory preference and do not prevent login. Theme preferences
+are local UI settings, not account settings.

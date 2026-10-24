@@ -123,3 +123,9 @@ mTLS 使用 `cluster_tls_require_client_cert: true`，要求显式 CA 和每节�
 
 共享存储写权限等同于集群控制权。身份轮换需协调更新公钥登记并重启相关节点；目前每 hostname 只支持一把公钥，不应假设新旧 key ID 能重叠。CA 轮换使用规划好的信任 bundle。UDP 发现不提供身份授权。
 
+
+## 浏览器主题
+
+页眉支持 System、Light、Dark 三种主题。System 跟随系统变化，手动选择保存在
+浏览器本地的 `owlcron.theme`，重新选择 System 可恢复自动模式。浏览器禁止存储
+时使用内存中的偏好，不影响登录。主题属于本地界面设置，不是账号设置。
