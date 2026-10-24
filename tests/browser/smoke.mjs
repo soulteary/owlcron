@@ -7,7 +7,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import net from 'node:net';
 import {setTimeout as delay} from 'node:timers/promises';
-import {chromium} from 'playwright';
+import {browserName, launchBrowser} from './browser.mjs';
 import {checkAdminPages} from './admin-pages.mjs';
 import {checkSingleNodePages} from './single-node-pages.mjs';
 import {checkCompactLogin, checkResponsivePages} from './responsive-pages.mjs';
@@ -55,7 +55,7 @@ try {
     OWLCRON_ADMIN_USERNAME:'browser-admin', OWLCRON_ADMIN_PASSWORD:password}, stdio:['ignore',log,log]});
   await poll(async () => (await fetch(base + '/api/app/ping', {signal:AbortSignal.timeout(2000)})).ok, 'startup');
   await poll(async () => (await (await fetch(base + '/api/app/status', {signal:AbortSignal.timeout(2000)})).json()).master, 'leadership');
-  browser = await chromium.launch({headless:true, ...(process.env.OWLCRON_BROWSER_EXECUTABLE ? {executablePath:process.env.OWLCRON_BROWSER_EXECUTABLE} : {})});
+  browser = await launchBrowser();
   page = await browser.newPage({viewport:{width:1440,height:1100}});
   page.setDefaultTimeout(15000);
   page.on('pageerror', error => errors.push(error.stack || error.message));
@@ -69,9 +69,11 @@ try {
   await page.locator('#fe_login_password').fill(password);
   const login = await responseFor('user/login', () => page.locator('.button:visible').filter({hasText:'Login'}).click());
   await page.locator('#fe_login_username').waitFor({state:'hidden'});
+  await page.locator('#d_home_upcoming_events:not(.loading)').waitFor();
   await page.locator('#theme-preference').selectOption('dark');
   assert.match(await page.locator('body').getAttribute('class'), /dark-theme/);
   await page.reload();
+  await page.locator('#d_home_upcoming_events:not(.loading)').waitFor();
   assert.match(await page.locator('body').getAttribute('class'), /dark-theme/);
   await page.locator('#theme-preference').selectOption('light');
   assert.doesNotMatch(await page.locator('body').getAttribute('class') || '', /dark-theme/);
@@ -83,6 +85,7 @@ try {
   assert.equal(await page.locator('#fe_ma_fullname').inputValue(), 'Browser Admin');
   await page.goto(base + '/#Home');
   await page.locator('#d_home_header_stats').waitFor();
+  await page.locator('#d_home_upcoming_events:not(.loading)').waitFor();
   await checkAdminPages(page, responseFor);
   await page.goto(base + '/#Schedule?sub=new_event');
   await page.locator('#fe_ee_title').fill('[browser_smoke] Browser smoke');
@@ -179,13 +182,13 @@ try {
   await checkResponsivePages(page, base, id);
   await checkKeyboardPages(page, base, login.session_id);
   assert.deepEqual(errors, [], 'Browser JavaScript errors');
-  console.log('Browser smoke passed: account/profile, six admin pages/CRUD, event configuration, rerun/abort/retry/chains, readonly access, history/logs/charts/themes');
+  console.log(browserName + ' browser smoke passed: account/profile, six admin pages/CRUD, event configuration, rerun/abort/retry/chains, readonly access, history/logs/charts/themes');
 } catch (error) {
   if (errors.length) console.error(errors.join('\n'));
   if (page) {
     const artifacts = path.join(root, 'tests/browser/test-results');
     mkdirSync(artifacts, {recursive:true});
-    await page.screenshot({path:path.join(artifacts,'failure.png'),fullPage:true}).catch(() => {});
+    await page.screenshot({path:path.join(artifacts,browserName + '-failure.png'),fullPage:true}).catch(() => {});
   }
   // Redact bootstrap credentials before exposing daemon diagnostics.
   const diagnostics = readFileSync(path.join(work, 'daemon.log'),'utf8').replaceAll(password,'[redacted]').replaceAll(secret,'[redacted]');

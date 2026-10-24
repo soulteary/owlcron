@@ -104,7 +104,7 @@ runs the [browser acceptance tests](../tests/browser/README.md): general UI smok
 checks plus the isolated SMTP/account-email flow. The latter exercises email
 verification and password recovery, link privacy, token replay rejection and
 session revocation. Run both locally with the commands in the browser guide;
-they require local ports and Chromium, but no external SMTP service.
+they require local ports and a pinned Playwright browser, but no external SMTP service.
 
 Workflow display names are grouped under `CI /`, `Reports /`, and `Release /`; filenames stay unchanged so existing links remain valid. The README badges follow test status, Go Report Card, release and license order. The Go Tests badge shows the main branch build-and-test workflow status, not a coverage percentage. The Go Report Card badge uses the public assessment service and may differ in freshness from the workflow-generated report. Generated coverage and quality badges are saved as `.github/coverage.svg` and `.github/goreportcard.svg`; before the first successful writeback, inspect the workflow artifacts.
 
@@ -140,8 +140,16 @@ regressions separately cover timezone/DST matching, catch-up, concurrency,
 abort-without-retry, timeout updates and persisted job history after restart
 (`engine/scheduler_cluster_test.go` and `engine/job_integration_test.go`).
 Before a candidate release, also run the full Go suite and the clean release
-package installation check. Manually inspect narrow-screen layout, keyboard
-navigation, long logs and notifications; verify scheduled execution in the
-operator's actual timezone. Cluster fault tests are a separate capability gate
-and do not expand the single-node compatibility promise. Chromium success does
-not establish full Cronicle API/plugin compatibility or cross-browser coverage.
+package installation check. The browser CI matrix runs Chromium, Firefox and
+WebKit independently, including the isolated account-mail flow. It verifies
+login and the main/admin pages at 320, 375 and 768 CSS pixels, local table
+scrolling and date/time dialogs. Physical keyboard tests cover Tab/Shift+Tab,
+Enter/Space, modifier shortcuts, script-editor exit, dialog cancellation and
+focus restoration.
+
+Before publishing, manually review long-log readability and notification content,
+and verify scheduled execution in the operator's actual timezone. Real mobile
+devices, screen readers and every Chrome/Edge/Safari release are not covered by
+this engine matrix. Cluster fault tests remain a separate capability gate and
+do not expand the single-node compatibility promise or establish full Cronicle
+API/plugin compatibility.

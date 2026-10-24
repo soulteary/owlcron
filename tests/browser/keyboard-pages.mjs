@@ -1,18 +1,32 @@
 import assert from 'node:assert/strict';
 
+// macOS WebKit uses Option+Tab to include native buttons and links.
+const tabKey = process.platform === 'darwin' && process.env.OWLCRON_BROWSER === 'webkit' ? 'Alt+Tab' : 'Tab';
+
 // Use physical key events, never invoke handlers or focus the destination control.
 async function tabTo(page, target) {
+  await page.bringToFront();
   await target.waitFor();
-  for (let n = 0; n < 100; n++) {
-    if (await target.evaluate(element => element === document.activeElement)) return;
-    await page.keyboard.press('Tab');
+  const sequence = [];
+  // Start independent page scenarios at the document, not a focus position
+  // retained from the previous route or Firefox's browser chrome. The target
+  // is still reached exclusively by Tab; modal tests keep their current focus.
+  if (!await page.locator('#dialog_container:visible').count()) {
+    await page.evaluate(() => { document.body.tabIndex = -1; document.body.focus(); });
   }
-  throw new Error('Control is not reachable with Tab: ' + await target.getAttribute('id'));
+  for (let n = 0; n < 200; n++) {
+    if (await target.evaluate(element => element === document.activeElement)) return;
+    if (n < 20) sequence.push(await page.evaluate(() => document.activeElement.id || document.activeElement.tagName));
+    await page.keyboard.press(tabKey);
+  }
+  const targetState = await target.evaluate(element => ({id:element.id, role:element.getAttribute('role'), tabIndex:element.tabIndex}));
+  throw new Error('Control is not reachable with Tab: ' + JSON.stringify({target:targetState, sequence}));
 }
 
 export async function checkKeyboardPages(page, base, session) {
   await page.goto(base + '/#Home');
   await page.locator('#d_home_header_stats').waitFor();
+  await page.locator('#d_home_upcoming_events:not(.loading)').waitFor();
   const schedule = page.locator('#tab_Schedule');
   await tabTo(page, schedule);
   await page.keyboard.press('Enter');
@@ -32,7 +46,7 @@ export async function checkKeyboardPages(page, base, session) {
   await page.locator('#fe_ee_plugin').selectOption('keyboard_textarea');
   const script = page.locator('#fe_ee_pp_script');
   await script.fill('printf hello');
-  await page.keyboard.press('Tab');
+  await page.keyboard.press(tabKey);
   assert.equal(await script.evaluate(element => element === document.activeElement), false, 'Tab must leave a script editor');
   assert.equal(await script.inputValue(), 'printf hello');
 
@@ -65,6 +79,7 @@ export async function checkKeyboardPages(page, base, session) {
   // Enter must activate the focused Cancel, not the framework's default confirm.
   await page.goto(base + '/#Home');
   await page.locator('#d_home_header_stats').waitFor();
+  await page.locator('#d_home_upcoming_events:not(.loading)').waitFor();
   const toggle = page.locator('#d_tab_master');
   await tabTo(page, toggle);
   const previous = await toggle.textContent();
@@ -84,7 +99,7 @@ export async function checkKeyboardPages(page, base, session) {
   await dialog.waitFor();
   // A complete cycle, including backwards navigation, cannot escape the modal.
   for (let n = 0; n < 6; n++) {
-    await page.keyboard.press(n % 2 ? 'Shift+Tab' : 'Tab');
+    await page.keyboard.press(n % 2 ? 'Shift+' + tabKey : tabKey);
     assert.equal(await dialog.evaluate(element => element.contains(document.activeElement)), true);
   }
   await page.keyboard.press('Escape');
