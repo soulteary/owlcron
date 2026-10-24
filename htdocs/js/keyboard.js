@@ -23,7 +23,10 @@
 		Array.prototype.forEach.call(document.querySelectorAll('table.data_table, .pagination'), function(node) {
 			if (node.scrollWidth > node.clientWidth + 1 && (node.dataset.keyboardScroll || (!node.hasAttribute('tabindex') && !node.hasAttribute('role')))) {
 				node.setAttribute('tabindex', '0');
-				node.setAttribute('role', 'region');
+				if (node.tagName !== 'TABLE' && !node.hasAttribute('role')) {
+					node.setAttribute('role', 'region');
+					node.dataset.keyboardScrollRole = 'true';
+				}
 				if (!node.hasAttribute('aria-label')) {
 					node.setAttribute('aria-label', node.tagName === 'TABLE' ? 'Data table, scroll horizontally' : 'Pagination, scroll horizontally');
 					node.dataset.keyboardScrollLabel = 'true';
@@ -32,7 +35,8 @@
 			}
 			else if (node.dataset.keyboardScroll) {
 				node.removeAttribute('tabindex');
-				node.removeAttribute('role');
+				if (node.dataset.keyboardScrollRole) node.removeAttribute('role');
+				delete node.dataset.keyboardScrollRole;
 				if (node.dataset.keyboardScrollLabel) node.removeAttribute('aria-label');
 				delete node.dataset.keyboardScrollLabel;
 				delete node.dataset.keyboardScroll;

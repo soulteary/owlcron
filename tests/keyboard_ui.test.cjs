@@ -85,6 +85,16 @@ test('event script editor allows Tab to leave the textarea',()=>{
 test('overflow regions are keyboard reachable only while overflowing and retain existing labels',()=>{
  const f=fixture(),table=f.element('TABLE',{'aria-label':'Jobs'});
  table.clientWidth=300;table.scrollWidth=700;f.regions.push(table);f.resize();
- assert.equal(table.tabIndex,0);assert.equal(table.attrs.role,'region');assert.equal(table.attrs['aria-label'],'Jobs');
+ assert.equal(table.tabIndex,0);assert.equal(table.hasAttribute('role'),false, 'native table semantics must remain available');assert.equal(table.attrs['aria-label'],'Jobs');
  table.scrollWidth=300;f.resize();assert.equal(table.tabIndex,-1);assert.equal(table.attrs['aria-label'],'Jobs');
+});
+
+test('pagination scroll regions own only the temporary focus attributes',()=>{
+ const f=fixture(),pagination=f.element('DIV'),existing=f.element('DIV',{role:'navigation',tabindex:'0','aria-label':'Pages'});
+ pagination.clientWidth=200;pagination.scrollWidth=400;existing.clientWidth=200;existing.scrollWidth=400;
+ f.regions.push(pagination,existing);f.resize();
+ assert.equal(pagination.attrs.role,'region');assert.equal(pagination.tabIndex,0);assert.equal(existing.attrs.role,'navigation');
+ pagination.scrollWidth=200;existing.scrollWidth=200;f.resize();
+ assert.equal(pagination.hasAttribute('role'),false);assert.equal(pagination.hasAttribute('aria-label'),false);assert.equal(pagination.hasAttribute('tabindex'),false);
+ assert.equal(existing.attrs.role,'navigation');assert.equal(existing.attrs.tabindex,'0');assert.equal(existing.attrs['aria-label'],'Pages');
 });
