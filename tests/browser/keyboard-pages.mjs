@@ -5,7 +5,9 @@ const tabKey = process.platform === 'darwin' && process.env.OWLCRON_BROWSER === 
 
 // Use physical key events, never invoke handlers or focus the destination control.
 async function tabTo(page, target) {
+  await page.bringToFront();
   await target.waitFor();
+  const sequence = [];
   // Start independent page scenarios at the document, not a focus position
   // retained from the previous route or Firefox's browser chrome. The target
   // is still reached exclusively by Tab; modal tests keep their current focus.
@@ -14,9 +16,11 @@ async function tabTo(page, target) {
   }
   for (let n = 0; n < 200; n++) {
     if (await target.evaluate(element => element === document.activeElement)) return;
+    if (n < 20) sequence.push(await page.evaluate(() => document.activeElement.id || document.activeElement.tagName));
     await page.keyboard.press(tabKey);
   }
-  throw new Error('Control is not reachable with Tab: ' + await target.getAttribute('id'));
+  const targetState = await target.evaluate(element => ({id:element.id, role:element.getAttribute('role'), tabIndex:element.tabIndex}));
+  throw new Error('Control is not reachable with Tab: ' + JSON.stringify({target:targetState, sequence}));
 }
 
 export async function checkKeyboardPages(page, base, session) {
