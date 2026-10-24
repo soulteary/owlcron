@@ -79,7 +79,7 @@ Resources, mounts, backends, data volume, and log/notification load affect resul
 
 [Routine CI](../.github/workflows/ci.yml) checks Go 1.27, Node.js 22, builds, unit tests, installation smoke tests, licenses, and vulnerabilities. [Fault acceptance](../.github/workflows/process-acceptance.yml) covers process and Linux fault scenarios.
 
-CI runs on pull requests and pushes to `main`; feature-branch pushes do not start a second copy of the same checks. New commits cancel superseded runs. Dependency and Docker layer caches reduce repeated downloads and builds; tests still execute on cache hits.
+CI runs on pull requests and pushes to `main`; feature-branch pushes do not start a second copy of the same checks. New commits cancel superseded runs. Dependency and Docker layer caches reduce repeated downloads and builds; tests still execute on cache hits. The Linux fault matrix triggers for Go code, its dependencies, the Makefile, acceptance/load harnesses, and its own workflow. Frontend-only tests and container configuration checks use their relevant CI workflows without rerunning unrelated Linux fault scenarios.
 
 Load acceptance runs six parallel stages: full Linux race regression, repeated cluster recovery, capacity with and without the race detector, single-node soak, and cluster soak. Every stage validates fresh evidence, and the final job requires all six stages and their expected records. Resource limits, repeat counts, and both three-minute soak windows remain unchanged. The full race suite and vet run once in the regression stage. Process recovery is split into SIGKILL, cluster, and loaded-cluster groups; every selected test still runs three times. Remote-service faults remain a separate job.
 

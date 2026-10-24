@@ -2,10 +2,10 @@ name: Go process fault acceptance
 
 on:
   pull_request:
-    paths: ['**/*.go', 'go.mod', 'go.sum', 'Makefile', 'tests/**', '.github/workflows/**']
+    paths: ['**/*.go', 'go.mod', 'go.sum', 'Makefile', 'tests/*acceptance*', 'tests/*load*', '.github/workflows/process-acceptance.yml']
   push:
     branches: [main]
-    paths: ['**/*.go', 'go.mod', 'go.sum', 'Makefile', 'tests/**', '.github/workflows/**']
+    paths: ['**/*.go', 'go.mod', 'go.sum', 'Makefile', 'tests/*acceptance*', 'tests/*load*', '.github/workflows/process-acceptance.yml']
   workflow_dispatch:
 
 # Push and PR events for one branch share a group; newer runs replace old ones.
