@@ -147,6 +147,8 @@ func (e *Engine) replayNotificationSpool(ctx context.Context) error {
 
 func (e *Engine) deliverNotification(ctx context.Context, n *Notification) error {
 	switch n.Kind {
+	case "account_email":
+		return e.deliverAccountEmail(ctx, n)
 	case "email":
 		var p EmailPayload
 		if err := json.Unmarshal(n.Payload, &p); err != nil {

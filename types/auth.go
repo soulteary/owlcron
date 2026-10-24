@@ -30,18 +30,30 @@ func (p *Privileges) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// AccountAction contains bindings for a one-time account link, never its raw token.
+type AccountAction struct {
+	RequestID        string `json:"request_id"`
+	Email            string `json:"email"`
+	OriginalEmail    string `json:"original_email"`
+	PasswordRevision string `json:"password_revision"`
+	Expires          int64  `json:"expires"`
+	Digest           string `json:"digest"`
+}
+
 // User 表示一个用户
 type User struct {
-	ID            string                 `json:"id"`
-	Username      string                 `json:"username"`
-	Email         string                 `json:"email"`
-	VerifiedEmail string                 `json:"verified_email,omitempty"`
-	Password      string                 `json:"password,omitempty"`
-	Enabled       bool                   `json:"enabled"`
-	Privileges    Privileges             `json:"privileges"`
-	Created       int64                  `json:"created"`
-	Modified      int64                  `json:"modified"`
-	Data          map[string]interface{} `json:"data,omitempty"`
+	AccountActions          map[string]AccountAction `json:"account_actions,omitempty"`
+	AccountEmailRequestedAt int64                    `json:"account_email_requested_at,omitempty"`
+	ID                      string                   `json:"id"`
+	Username                string                   `json:"username"`
+	Email                   string                   `json:"email"`
+	VerifiedEmail           string                   `json:"verified_email,omitempty"`
+	Password                string                   `json:"password,omitempty"`
+	Enabled                 bool                     `json:"enabled"`
+	Privileges              Privileges               `json:"privileges"`
+	Created                 int64                    `json:"created"`
+	Modified                int64                    `json:"modified"`
+	Data                    map[string]interface{}   `json:"data,omitempty"`
 }
 
 // SafeMap returns a copy of the user without the password, suitable for API responses.
