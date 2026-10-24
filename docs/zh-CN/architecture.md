@@ -8,7 +8,7 @@
 
 Go 模块位于仓库根目录，工具链要求以 [go.mod](../../go.mod) 为准。服务端提供调度、插件执行、HTTP API、WebSocket 和存储访问；浏览器界面构建为静态资源。服务运行不依赖原版 Cronicle 进程，业务插件所需的 shell、Node.js、Python 等运行时由部署方提供。
 
-本项目以 Go 服务替代 Cronicle 为目标，对 Cronicle 的事件、插件和任务概念提供一定兼容，以支持迁移；存储与集群采用本项目自己的实现。支持范围和迁移要求见 [兼容性文档](compatibility.md)，项目介绍和构建步骤见 [README.md](../../README.zh-CN.md)。
+支持的 Cronicle 行为和迁移要求见[兼容性文档](compatibility.md)。
 
 主要职责如下：
 

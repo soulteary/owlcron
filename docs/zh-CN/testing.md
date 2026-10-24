@@ -92,3 +92,11 @@ PR 使用 `go test -short` 运行单元测试，并保留静态检查、安全�
 工作流文件定义检查方式，实际状态以对应提交的 GitHub Actions 运行记录为准。记录测试结果时注明提交、工具链、资源、后端、命令、退出码和跳过项。
 
 本机日志、失败堆栈、扫描结果和性能数据应放在仓库外，或保留为 CI 附件。仓库中的测试脚本和缺陷回归用例需要保留；会影响用户决策的限制维护在产品文档中，不随临时报告一起移除。
+
+## Go 质量报告
+
+Go 质量报告在推送标签、发布 Release 或手动触发时运行，包含竞态检测、覆盖率、独立示例插件检查和 Go Report Card。报告及原始测试记录可从工作流产物下载，保留 14 天。仅当被测提交仍与默认分支一致时才回写稳定报告，否则仅保存为产物。现有 CI 继续检查 PR。
+
+[Go quality reports](https://github.com/soulteary/owlcron/actions/workflows/go-quality-reports.yml)
+
+可选的[真实浏览器冒烟测试](../../tests/browser/README.zh-CN.md)在 Chromium 中覆盖登录、事件编辑和执行、历史、日志及主题偏好持久化。
