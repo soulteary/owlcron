@@ -36,6 +36,32 @@ export async function checkKeyboardPages(page, base, session) {
   assert.equal(await script.evaluate(element => element === document.activeElement), false, 'Tab must leave a script editor');
   assert.equal(await script.inputValue(), 'printf hello');
 
+  await page.goto(base + '/#Schedule');
+  await page.locator('#fe_sch_keywords').waitFor();
+  const run = page.locator('#page_Schedule .link:visible').filter({hasText:/^Run$/}).first();
+  await tabTo(page, run);
+  await page.keyboard.press('Shift+Enter');
+  await page.locator('#dialog_container .dt_fs').first().waitFor();
+  assert.equal(await page.locator('#dialog_container .dt_fs').count(), 5);
+  await page.keyboard.press('Escape');
+  await page.locator('#dialog_container').waitFor({state:'hidden'});
+
+  await page.goto(base + '/#Schedule?sub=edit_event&id=browser_smoke');
+  await page.locator('#fe_ee_catch_up').check();
+  const eventClock = page.locator('#fe_ee_rc_time');
+  const resetClock = page.locator('#s_ee_rc_reset');
+  assert.equal(await eventClock.isDisabled(), true);
+  assert.equal(await resetClock.isVisible(), false);
+  await page.locator('#fe_ee_rc_enabled').check();
+  await tabTo(page, eventClock);
+  await page.keyboard.press('Enter');
+  await page.locator('#dialog_container #fe_dt_year').waitFor();
+  await page.keyboard.press('Escape');
+  await page.locator('#dialog_container').waitFor({state:'hidden'});
+  assert.equal(await eventClock.evaluate(element => element === document.activeElement), true);
+  await page.locator('#fe_ee_rc_enabled').uncheck();
+  assert.equal(await resetClock.isVisible(), false);
+
   // Enter must activate the focused Cancel, not the framework's default confirm.
   await page.goto(base + '/#Home');
   await page.locator('#d_home_header_stats').waitFor();
