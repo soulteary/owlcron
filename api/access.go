@@ -11,8 +11,8 @@ import (
 	"github.com/soulteary/owlcron/types"
 )
 
-// requestParameters leaves the original body intact for the endpoint handler.
-func requestParameters(r *http.Request) (map[string]interface{}, error) {
+// requestBodyParameters leaves the original body intact for the endpoint handler.
+func requestBodyParameters(r *http.Request) (map[string]interface{}, error) {
 	params := make(map[string]interface{})
 	if r.Body != nil && r.Method != http.MethodGet && r.Method != http.MethodHead {
 		raw, err := io.ReadAll(io.LimitReader(r.Body, 1024*1024+1))
@@ -25,15 +25,104 @@ func requestParameters(r *http.Request) (map[string]interface{}, error) {
 			return nil, fmt.Errorf("request body too large")
 		}
 		if len(bytes.TrimSpace(raw)) > 0 {
-			if err := json.Unmarshal(raw, &params); err != nil {
-				return nil, fmt.Errorf("invalid JSON request")
+			var err error
+			params, err = decodeRequestParameters(raw)
+			if err != nil {
+				return nil, err
 			}
 		}
 	}
+	return params, nil
+}
+
+func requestParameters(r *http.Request) (map[string]interface{}, error) {
+	params, err := requestBodyParameters(r)
+	if err != nil {
+		return nil, err
+	}
 	for key, values := range r.URL.Query() {
+		if err := validateParameterName(key); err != nil {
+			return nil, err
+		}
 		if len(values) > 0 {
+			for _, value := range values[1:] {
+				if value != values[0] {
+					return nil, fmt.Errorf("conflicting query parameter: %s", key)
+				}
+			}
+			if bodyValue, exists := params[key]; exists {
+				// Keep JSON types for handlers that consume this map. Only equal
+				// scalars can also be represented unambiguously in a query string.
+				var scalar string
+				switch value := bodyValue.(type) {
+				case string:
+					scalar = value
+				case bool, float64:
+					scalar = fmt.Sprint(value)
+				default:
+					return nil, fmt.Errorf("conflicting request parameter: %s", key)
+				}
+				if scalar != values[0] {
+					return nil, fmt.Errorf("conflicting request parameter: %s", key)
+				}
+				continue
+			}
 			params[key] = values[0]
 		}
+	}
+	return params, nil
+}
+
+// Struct decoding accepts case-insensitive field names, whereas map lookups do
+// not. Scope selectors must use their documented spelling in both sources.
+func validateParameterName(key string) error {
+	for _, selector := range []string{"id", "ids", "category", "target"} {
+		if key != selector && strings.EqualFold(key, selector) {
+			return fmt.Errorf("request parameter must be spelled %s", selector)
+		}
+	}
+	return nil
+}
+
+func decodeRequestParameters(raw []byte) (map[string]interface{}, error) {
+	// Older clients encode an absent POST payload as null. It has no fields;
+	// direct-body mutations still authorize against this empty body, never
+	// against selectors introduced only by the query string.
+	if bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
+		return make(map[string]interface{}), nil
+	}
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	token, err := decoder.Token()
+	if err != nil || token != json.Delim('{') {
+		return nil, fmt.Errorf("request body must be a JSON object")
+	}
+	params := make(map[string]interface{})
+	for decoder.More() {
+		token, err := decoder.Token()
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON request")
+		}
+		key, ok := token.(string)
+		if !ok {
+			return nil, fmt.Errorf("invalid JSON request")
+		}
+		if err := validateParameterName(key); err != nil {
+			return nil, err
+		}
+		if _, exists := params[key]; exists {
+			return nil, fmt.Errorf("duplicate JSON parameter: %s", key)
+		}
+		var value interface{}
+		if err := decoder.Decode(&value); err != nil {
+			return nil, fmt.Errorf("invalid JSON request")
+		}
+		params[key] = value
+	}
+	if _, err := decoder.Token(); err != nil {
+		return nil, fmt.Errorf("invalid JSON request")
+	}
+	if _, err := decoder.Token(); err != io.EOF {
+		return nil, fmt.Errorf("invalid JSON request")
 	}
 	return params, nil
 }
@@ -131,6 +220,17 @@ func (s *Server) authorize(path string, next http.Handler) http.Handler {
 		if err != nil {
 			s.sendError(w, 1, err.Error())
 			return
+		}
+		// These endpoints decode JSON directly. Query-only selectors must not
+		// authorize a different object than the body the endpoint executes.
+		switch name {
+		case "create_event", "delete_event", "abort_event", "abort_job",
+			"create_category", "update_category", "delete_category":
+			params, err = requestBodyParameters(r)
+			if err != nil {
+				s.sendError(w, 1, err.Error())
+				return
+			}
 		}
 		if auth != nil {
 			if err := s.authorizeObjects(path, auth, params); err != nil {

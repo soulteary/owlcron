@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/soulteary/owlcron/storage"
@@ -50,6 +51,10 @@ type Engine struct {
 	roleMu                    sync.Mutex
 	lifecycleMu               sync.Mutex
 	started                   bool
+	ready                     atomic.Bool
+	draining                  atomic.Bool
+	readinessMu               sync.Mutex
+	readinessProbe            *readinessProbe
 	startedAt                 int64
 	starting                  bool
 	stateOwner                bool
@@ -292,12 +297,15 @@ func (e *Engine) Startup() error {
 	e.starting = false
 	e.mu.Unlock()
 	e.started = true
+	e.ready.Store(true)
 	e.loopWG.Add(1)
 	go func() { defer e.loopWG.Done(); e.mainLoop() }()
 	return nil
 }
 
 func (e *Engine) Shutdown() error {
+	e.draining.Store(true)
+	e.ready.Store(false)
 	e.shutdownOnce.Do(func() {
 		e.lifecycleMu.Lock()
 		defer e.lifecycleMu.Unlock()

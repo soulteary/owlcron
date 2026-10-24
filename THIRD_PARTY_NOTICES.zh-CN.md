@@ -30,3 +30,10 @@ OwlCron 原创代码采用 MIT 许可证，见 [LICENSE](LICENSE)。第三方代
 修改 `go.mod`、`package-lock.json` 或随附资源时，应同步刷新版本清单和上游声明。发布压缩包及容器分发时，应包含 `LICENSE`、`THIRD_PARTY_NOTICES.md` 和 `licenses/`；压缩或合并资源时保留版权头。
 
 当前清单覆盖仓库声明的 Go 模块和安装的 npm 依赖树，不覆盖部署方自行选择的外部插件或服务；这些组件需要单独维护声明。中文说明不替代 `licenses/` 中的上游许可原文。
+
+## 浏览器测试工具
+
+`tests/browser` 的独立开发工具不会进入运行时镜像。确切版本和上游许可见
+[licenses/browser-inventory.json](licenses/browser-inventory.json)，许可和声明
+副本保存在 `licenses/browser`。Playwright 安装的 Chromium 是独立测试前提，
+保留其随附的许可声明。

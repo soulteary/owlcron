@@ -29,3 +29,12 @@ class DeploymentTests(unittest.TestCase):
         self.assertIn('startupProbe', pod['containers'][0])
         self.assertIn('readinessProbe', pod['containers'][0])
         self.assertIn('livenessProbe', pod['containers'][0])
+
+    def test_health_probes_distinguish_readiness_from_liveness(self):
+        items = json.loads((ROOT / 'deploy/kubernetes/owlcron.json').read_text())['items']
+        workload = next(item for item in items if item['kind'] == 'Deployment')
+        container = workload['spec']['template']['spec']['containers'][0]
+        for name in ('startupProbe', 'readinessProbe'):
+            self.assertEqual(container[name]['httpGet']['path'], '/api/app/ready')
+            self.assertGreater(container[name]['timeoutSeconds'], 2)
+        self.assertEqual(container['livenessProbe']['httpGet']['path'], '/api/app/ping')

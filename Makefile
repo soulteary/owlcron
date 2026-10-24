@@ -1,4 +1,4 @@
-.PHONY: build test race vet frontend frontend-test integration process-integration process-integration-repeat linux-acceptance remote-storage-faults remote-process-integration linux-load-acceptance capacity-acceptance soak-acceptance cluster-load-acceptance fmt-check licenses-check licenses-update docs-check smoke
+.PHONY: build test race vet frontend frontend-test integration process-integration process-integration-repeat linux-acceptance remote-storage-faults remote-process-integration linux-load-acceptance capacity-acceptance soak-acceptance cluster-load-acceptance fmt-check licenses-check licenses-update docs-check smoke release
 
 docs-check:
 	python3 tests/check_docs.py
@@ -16,10 +16,21 @@ licenses-update:
 smoke:
 	python3 tests/smoke_install.py
 
+GO_BUILD_FLAGS ?=
+LDFLAGS ?=
+DIST_DIR ?= dist
+# Treat release values as data; never expand them through the recipe shell.
+unexport VERSION DIST_DIR
+
 build:
-	go build -o owlcron-engine .
-	go build -o owlcron-script ./cmd/owlcron-script
-	cd bin/echo-plugin && go build -o echo-plugin .
+	go build $(GO_BUILD_FLAGS) -ldflags "$(LDFLAGS)" -o owlcron-engine .
+	go build $(GO_BUILD_FLAGS) -o owlcron-script ./cmd/owlcron-script
+	cd bin/echo-plugin && go build $(GO_BUILD_FLAGS) -o echo-plugin .
+
+release: export OWLCRON_RELEASE_VERSION := $(value VERSION)
+release: export OWLCRON_RELEASE_OUTPUT := $(value DIST_DIR)
+release:
+	python3 tools/package_release.py
 
 test:
 	go test ./... -count=1 -timeout=360s

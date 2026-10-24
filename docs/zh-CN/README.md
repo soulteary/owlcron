@@ -6,6 +6,7 @@
 
 - [部署](deployment.md)：安装、凭据、HTTPS、备份和升级。
 - [配置](configuration.md)：存储、日志、保留策略、通知和集群身份。
+- [迁移预检](migration.md)：只读检查 Cronicle 导出。
 - [兼容性](compatibility.md)：Cronicle 兼容范围及迁移到 OwlCron 的要求。
 - [架构](architecture.md)：模块职责、持久化与恢复。
 - [测试](testing.md)：开发检查、CI 和故障场景。
@@ -16,3 +17,6 @@
 
 - [容器与 Kubernetes](containers.md)
 - [运行脚本文件](script-files.md)
+- [版本和发行](releases.md)：支持的工具链、发行包验证和草稿发布流程。
+
+- [运维与指标](operations.md)：采集、告警和恢复流程。
