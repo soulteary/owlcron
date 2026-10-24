@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 // Frontend Build Script for OwlCron Engine
 // Adapted from Cronicle's bin/build.js

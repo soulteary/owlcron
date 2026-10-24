@@ -31,7 +31,7 @@ https://github.com/soulteary/owlcron/security/advisories/new
 
 ## 依赖检查
 
-CI 对锁定 npm 依赖执行 `npm audit`，对主模块和示例插件执行 `govulncheck`。
+CI 对锁定 npm 依赖执行 `bun audit`，对主模块和示例插件执行 `govulncheck`。
 检查结果只覆盖扫描时的已知公告，不代表不存在未知漏洞。依赖升级后应重新
 构建前端、运行安装冒烟测试，并用 `make licenses-update licenses-check` 更新许可材料。
 

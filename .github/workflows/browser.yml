@@ -1,10 +1,10 @@
 name: Browser smoke
 on:
   pull_request:
-    paths: ['htdocs/**', 'htdocs-deps/**', '**/*.go', 'go.mod', 'go.sum', 'Makefile', 'tests/browser/**', 'licenses/browser/**', 'licenses/browser-inventory.json', '.github/workflows/browser.yml']
+    paths: ['htdocs/**', 'htdocs-deps/**', '**/*.go', 'go.mod', 'go.sum', 'Makefile', 'tools/bun-lock.mjs', 'tests/browser/**', 'licenses/browser/**', 'licenses/browser-inventory.json', '.github/workflows/browser.yml']
   push:
     branches: [main]
-    paths: ['htdocs/**', 'htdocs-deps/**', '**/*.go', 'go.mod', 'go.sum', 'Makefile', 'tests/browser/**', 'licenses/browser/**', 'licenses/browser-inventory.json', '.github/workflows/browser.yml']
+    paths: ['htdocs/**', 'htdocs-deps/**', '**/*.go', 'go.mod', 'go.sum', 'Makefile', 'tools/bun-lock.mjs', 'tests/browser/**', 'licenses/browser/**', 'licenses/browser-inventory.json', '.github/workflows/browser.yml']
   workflow_dispatch:
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
@@ -25,28 +25,29 @@ jobs:
         with:
           go-version: '1.27.x'
           cache-dependency-path: go.sum
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
-          node-version: '22'
-          cache: npm
-          cache-dependency-path: |
-            htdocs-deps/package-lock.json
-            tests/browser/package-lock.json
-      - run: npm ci --prefix htdocs-deps
-      - run: npm ci --prefix tests/browser
-      - run: npm run licenses --prefix tests/browser
-      - run: npm audit --prefix tests/browser --audit-level=moderate
+          bun-version: '1.4.2'
+      - name: Cache Bun packages
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-1.4.2-${{ hashFiles('htdocs-deps/bun.lock', 'tests/browser/bun.lock') }}
+      - run: bun install --cwd htdocs-deps --frozen-lockfile
+      - run: bun install --cwd tests/browser --frozen-lockfile
+      - run: bun run --cwd tests/browser licenses
+      - run: bun audit --cwd tests/browser --audit-level=moderate
       - name: Cache Chromium
         id: chromium-cache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-chromium-${{ hashFiles('tests/browser/package-lock.json') }}
+          key: ${{ runner.os }}-chromium-${{ hashFiles('tests/browser/bun.lock') }}
       - name: Install Chromium and its system dependencies
         working-directory: tests/browser
-        run: npx playwright install --with-deps --only-shell chromium
+        run: bunx --bun --no-install playwright install --with-deps --only-shell chromium
       - run: make build frontend
-      - run: npm test --prefix tests/browser
+      - run: bun run --cwd tests/browser test
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: failure()
         with:

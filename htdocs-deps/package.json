@@ -1,8 +1,8 @@
 {
   "private": true,
   "scripts": {
-    "build": "node build.js dist",
-    "build:dev": "node build.js dev"
+    "build": "bun build.js dist",
+    "build:dev": "bun build.js dev"
   },
   "dependencies": {
     "async": "3.2.6",
@@ -21,5 +21,6 @@
     "zxcvbn": "4.4.2"
   },
   "name": "owlcron-frontend",
-  "license": "MIT"
+  "license": "MIT",
+  "packageManager": "bun@1.4.2"
 }

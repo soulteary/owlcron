@@ -32,8 +32,8 @@ Never commit real credentials, runtime data, job logs, installed dependencies, o
 
 Original contributions use the root [MIT License](LICENSE). Record the source, version, and license of imported code and retain its copyright notices. Fonts and other assets may use different terms; see [third-party notices](THIRD_PARTY_NOTICES.md).
 
-After updating npm dependencies, run `make licenses-update licenses-check`. Go dependency changes also require updates to `licenses/go-inventory.json` and the corresponding license files. Review the notices rather than changing version numbers alone.
+After updating Bun-managed npm dependencies, run `make licenses-update licenses-check`. Go dependency changes also require updates to `licenses/go-inventory.json` and the corresponding license files. Review the notices rather than changing version numbers alone.
 
 ## Dependency updates
 
-Dependabot proposes weekly updates for the engine, independent example plugin, frontend, container bases, and GitHub Actions. Actions are pinned to full commit IDs; retain the version comment when reviewing a pin update. Minor and patch Go/npm updates are grouped, while major changes remain separate. Updates are reviewed and tested before merging; there is no automatic merge. Run the license checks and update inventories when dependencies change, and validate container or plugin behavior where applicable.
+Dependabot proposes weekly updates for the engine, independent example plugin, frontend, container bases, and GitHub Actions. Actions are pinned to full commit IDs; retain the version comment when reviewing a pin update. Minor and patch Go/Bun updates are grouped, while major changes remain separate. Updates are reviewed and tested before merging; there is no automatic merge. Run the license checks and update inventories when dependencies change, and validate container or plugin behavior where applicable.

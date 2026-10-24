@@ -10,7 +10,7 @@ OwlCron 原创代码采用 MIT 许可证，见 [LICENSE](LICENSE)。第三方代
 
 ## 前端依赖和字体
 
-[licenses/npm-inventory.json](licenses/npm-inventory.json)记录安装版本及包声明的许可证；包中提供的许可、声明和 README 文件保存在 `licenses/npm`。`package-lock.json` 锁定依赖树，其中既有构建工具，也有浏览器资源，并非所有包都会发送给浏览器。
+[licenses/npm-inventory.json](licenses/npm-inventory.json)记录安装版本及包声明的许可证；包中提供的许可、声明和 README 文件保存在 `licenses/npm`。`bun.lock` 锁定依赖树，其中既有构建工具，也有浏览器资源，并非所有包都会发送给浏览器。
 
 以下资源不能一律按 MIT 处理：
 
@@ -27,7 +27,7 @@ OwlCron 原创代码采用 MIT 许可证，见 [LICENSE](LICENSE)。第三方代
 
 ## 依赖更新和分发
 
-修改 `go.mod`、`package-lock.json` 或随附资源时，应同步刷新版本清单和上游声明。发布压缩包及容器分发时，应包含 `LICENSE`、`THIRD_PARTY_NOTICES.md` 和 `licenses/`；压缩或合并资源时保留版权头。
+修改 `go.mod`、`bun.lock` 或随附资源时，应同步刷新版本清单和上游声明。发布压缩包及容器分发时，应包含 `LICENSE`、`THIRD_PARTY_NOTICES.md` 和 `licenses/`；压缩或合并资源时保留版权头。
 
 当前清单覆盖仓库声明的 Go 模块和安装的 npm 依赖树，不覆盖部署方自行选择的外部插件或服务；这些组件需要单独维护声明。中文说明不替代 `licenses/` 中的上游许可原文。
 

@@ -7,15 +7,15 @@
 以及历史和任务日志展示。未捕获的浏览器 JavaScript 异常也会使测试失败。
 测试使用临时存储，不读取已有服务配置。
 
-在仓库根目录使用 Node.js 22 和项目要求的 Go 工具链运行：
+在仓库根目录使用 Bun 1.4.2 和项目要求的 Go 工具链运行：
 
 ```sh
-npm ci --prefix htdocs-deps
-npm ci --prefix tests/browser
-(cd tests/browser && npx playwright install --with-deps --only-shell chromium)
+bun install --cwd htdocs-deps --frozen-lockfile
+bun install --cwd tests/browser --frozen-lockfile
+(cd tests/browser && bunx --bun --no-install playwright install --with-deps --only-shell chromium)
 make build frontend
-npm run licenses --prefix tests/browser
-npm test --prefix tests/browser
+bun run --cwd tests/browser licenses
+bun run --cwd tests/browser test
 ```
 
 本地可将 `OWLCRON_BROWSER_EXECUTABLE` 设置为已安装且兼容的 Chrome/Chromium
@@ -28,7 +28,7 @@ npm test --prefix tests/browser
 可能较慢，因此设置五分钟外层超时。更新依赖后，应同步更新锁文件和许可副本：
 
 ```sh
-node tests/browser/check-licenses.mjs --write
-npm run licenses --prefix tests/browser
-npm audit --prefix tests/browser --audit-level=moderate
+bun tests/browser/check-licenses.mjs --write
+bun run --cwd tests/browser licenses
+bun audit --cwd tests/browser --audit-level=moderate
 ```

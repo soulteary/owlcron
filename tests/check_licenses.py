@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import re
 import shutil
+import subprocess
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -13,14 +14,15 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--write', action='store_true')
     args = parser.parse_args()
-    lock = json.loads((ROOT / 'htdocs-deps/package-lock.json').read_text())
+    packages = json.loads(subprocess.check_output(
+        ['bun', str(ROOT / 'tools/bun-lock.mjs'), str(ROOT / 'htdocs-deps')], text=True))
     rows = []
     copies = {}
-    for package, entry in sorted(lock['packages'].items()):
-        if not package:
-            continue
+    for entry in packages:
+        package = entry['package']
         source = ROOT / 'htdocs-deps' / package
         metadata = json.loads((source / 'package.json').read_text())
+        assert metadata['name'] == entry['name'], package
         assert metadata['version'] == entry['version'], package
         destination = Path('licenses/npm') / (metadata['name'].replace('/', '__') + '@' + metadata['version'])
         files = []

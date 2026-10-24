@@ -21,7 +21,7 @@ the upstream project and are intentionally retained.
 
 Exact installed versions and package-declared licenses are recorded in
 [licenses/npm-inventory.json](licenses/npm-inventory.json), with the package's
-available license, notice and README files under licenses/npm. package-lock.json
+available license, notice and README files under licenses/npm. bun.lock
 pins the dependency tree; these dependencies include build-time tools as well
 as browser assets, and not every listed package is shipped to the browser.
 
@@ -55,7 +55,7 @@ remain under the Go project's BSD-style license (licenses/Go-LICENSE).
 
 ## Updating dependencies or producing releases
 
-When go.mod, package-lock.json or bundled resources change, refresh the relevant
+When go.mod, bun.lock or bundled resources change, refresh the relevant
 inventory and upstream notices. Include LICENSE, THIRD_PARTY_NOTICES.md and the
 licenses directory in release archives and container distributions. Keep
 copyright headers when minifying or combining assets. This inventory covers

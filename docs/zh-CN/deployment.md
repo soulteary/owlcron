@@ -7,14 +7,16 @@
 
 ## 安装和启动
 
-使用 Go 1.27.3 或同系列更高安全补丁、Node.js 22、npm、Python 3 和 make。
+使用 Go 1.27.3 或同系列更高安全补丁、Bun 1.4.2、Python 3 和 make。
 CI 仅验证 Go 1.27 系列，建议使用该系列最新安全补丁版本。
 模块默认建议工具链为 Go 1.27.3，旧版 Go 在允许自动下载时会选择该工具链。
+
+使用 `curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.2"` 安装固定版本的 Bun，再执行 `bun --version` 核实。前端和浏览器测试分别提交 `bun.lock`，安装时始终使用 `--frozen-lockfile` 保持可复现。`bunfig.toml` 保留静态资源路径和许可证校验所需的 hoisted 布局。这些构建和测试命令不需要 Node.js 或 npm。
 
 ```sh
 git clone https://github.com/soulteary/owlcron.git
 cd owlcron
-npm ci --prefix htdocs-deps
+bun install --cwd htdocs-deps --frozen-lockfile
 make frontend build
 make licenses-check smoke
 cp config.json config.local.json

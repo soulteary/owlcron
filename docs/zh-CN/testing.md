@@ -2,12 +2,12 @@
 
 [English](../testing.md) | 简体中文
 
-所有命令默认从仓库根目录执行。Go 构建使用项目建议的安全工具链；Node.js 使用 22 系列。准备步骤和权限要求见[部署指南](deployment.md)。
+所有命令默认从仓库根目录执行。Go 构建使用项目建议的安全工具链；Bun 使用 1.4.2。准备步骤和权限要求见[部署指南](deployment.md)。
 
 ## 常规检查
 
 ```sh
-npm ci --prefix htdocs-deps
+bun install --cwd htdocs-deps --frozen-lockfile
 make frontend build
 make fmt-check vet test frontend-test licenses-check docs-check smoke
 make race
@@ -24,14 +24,14 @@ python3 -m unittest discover -s tests -p 'test_*.py'
 ## 漏洞与许可证
 
 ```sh
-npm audit --prefix htdocs-deps --audit-level=moderate
+bun audit --cwd htdocs-deps --audit-level=moderate
 go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
 (cd bin/echo-plugin && go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...)
 ```
 
 扫描依赖于当时的公告数据库。分别记录可达调用、已导入包和仅模块级命中，不要把未使用包的公告描述为已确认可利用，也不要忽略实际可达漏洞。
 
-npm 升级后运行 `make licenses-update licenses-check`，审阅许可变化。Go 依赖变化时，更新 `licenses/go-inventory.json` 及对应上游许可文件。许可证检查要求先执行 `npm ci`。
+Bun 依赖升级后运行 `make licenses-update licenses-check`，审阅许可变化。Go 依赖变化时，更新 `licenses/go-inventory.json` 及对应上游许可文件。许可证检查要求先执行 `bun install --frozen-lockfile`。
 
 ## 独立进程回归
 

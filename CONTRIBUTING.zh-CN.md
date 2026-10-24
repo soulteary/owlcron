@@ -30,8 +30,8 @@
 
 原创贡献采用根目录 [MIT License](LICENSE)。引用第三方代码必须记录来源、版本和许可并保留版权声明。字体与其他资源可能使用不同许可证，见[第三方声明](THIRD_PARTY_NOTICES.zh-CN.md)。
 
-升级 npm 依赖后执行 `make licenses-update licenses-check`；Go 依赖变化时同步更新 `licenses/go-inventory.json` 和许可原文。审阅清单变化，不能只更新版本号而遗漏许可材料。
+升级 Bun 管理的 npm 依赖后执行 `make licenses-update licenses-check`；Go 依赖变化时同步更新 `licenses/go-inventory.json` 和许可原文。审阅清单变化，不能只更新版本号而遗漏许可材料。
 
 ## 依赖更新
 
-Dependabot 每周为引擎、独立示例插件、前端、容器基础镜像和 GitHub Actions 提交更新。Actions 固定到完整提交 ID，审阅更新时保留版本注释。Go/npm 的次版本和补丁更新按组提交，主版本更新保持独立。更新必须审阅并通过测试后合并，不启用自动合并。依赖变化时执行许可证检查并更新清单，按影响范围验证容器或插件行为。
+Dependabot 每周为引擎、独立示例插件、前端、容器基础镜像和 GitHub Actions 提交更新。Actions 固定到完整提交 ID，审阅更新时保留版本注释。Go/Bun 的次版本和补丁更新按组提交，主版本更新保持独立。更新必须审阅并通过测试后合并，不启用自动合并。依赖变化时执行许可证检查并更新清单，按影响范围验证容器或插件行为。
