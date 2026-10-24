@@ -152,3 +152,5 @@ CLI 按记录流式写入已有的 `owlcron-storage-v1` 格式，不再将完整
 ## 准备账号邮件
 
 在邮箱验证和密码重置功能部署完成并通过 SMTP 验收前，保持 `account_email_enabled` 关闭。明确设置公共 HTTPS 地址 `base_app_url`，子路径部署时同时配置 `base_path`；账号链接不能从请求头推断来源。配置专用发件地址，并将 SMTP 凭据限制为本服务使用。既有用户无需验证邮箱仍可登录，管理员恢复密码的路径继续保留。配置校验与限额参见[账号邮件策略](configuration.md#账号邮件策略)。公开注册保持关闭。
+
+邮箱验证和密码恢复链接包含持有者令牌，公共链接与 SMTP 传输都必须加密。`account_email_allow_insecure` 仅供隔离的本地测试使用明文 HTTP 和 SMTP，生产环境不得开启。
