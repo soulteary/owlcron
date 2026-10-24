@@ -39,6 +39,8 @@ export async function checkSingleNodePages(page, responseFor, {base, session, po
     await okay('app/create_event', {id,title:id,enabled:true,timing:null,category:'general',target:'all',
       plugin:'echoplug',params:{message:id,repeat:1,delay_ms:1},timeout:10,max_children:1});
   }
+  await page.waitForFunction(() => ['browser_chain_success', 'browser_chain_error'].every(id =>
+    app.schedule.some(event => event.id === id)));
   await okay('app/update_event', {id:'browser_smoke',chain:'',chain_error:''});
   await page.goto(base + '/#Schedule?sub=edit_event&id=browser_smoke');
   await page.locator('#fe_ee_timezone').selectOption('America/New_York');

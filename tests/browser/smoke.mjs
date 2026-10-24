@@ -10,6 +10,7 @@ import {setTimeout as delay} from 'node:timers/promises';
 import {chromium} from 'playwright';
 import {checkAdminPages} from './admin-pages.mjs';
 import {checkSingleNodePages} from './single-node-pages.mjs';
+import {checkCompactLogin, checkResponsivePages} from './responsive-pages.mjs';
 import {checkKeyboardPages} from './keyboard-pages.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -59,6 +60,7 @@ try {
   page.setDefaultTimeout(15000);
   page.on('pageerror', error => errors.push(error.stack || error.message));
   await page.goto(base);
+  await checkCompactLogin(page);
   await page.getByRole('link', {name:'Account access help'}).click();
   await page.getByText('Accounts are created by your OwlCron administrator.', {exact:false}).waitFor();
   assert.equal(await page.locator('#fe_pr_email, #fe_reset_password, #fe_ca_username').count(), 0);
@@ -174,6 +176,7 @@ try {
     return [chart.options.scales.x.ticks.color, chart.options.scales.y.grid.color, chart.options.plugins.legend.labels.color];
   }), ['#555555','rgba(0,0,0,0.1)','#555555']);
   await checkSingleNodePages(page, responseFor, {base, session:login.session_id, poll, completedID:id, work});
+  await checkResponsivePages(page, base, id);
   await checkKeyboardPages(page, base, login.session_id);
   assert.deepEqual(errors, [], 'Browser JavaScript errors');
   console.log('Browser smoke passed: account/profile, six admin pages/CRUD, event configuration, rerun/abort/retry/chains, readonly access, history/logs/charts/themes');

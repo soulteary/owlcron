@@ -601,3 +601,87 @@ td.table_label {
 #fe_eu_priv_grp_limit:checked + label:after {
 	content: ':'
 }
+
+/* Keep the desktop layout, but let compact screens reach every control. */
+a:focus-visible, [role="button"]:focus-visible, [tabindex]:focus-visible, input:focus-visible,
+select:focus-visible, textarea:focus-visible, button:focus-visible {
+	outline: 2px solid #3f7ed5;
+	outline-offset: 3px;
+}
+
+@media only screen and (max-width: 800px) {
+	div.container { min-width: 0; width: calc(100% - 16px); }
+	#d_header { height: auto; }
+	#d_header > .container { display: flex; align-items: center; flex-wrap: wrap; }
+	#d_header_title { flex: 1; }
+	#theme-control { float: none; margin: 6px; }
+	#d_header_user_container { width: 100%; }
+	.tab_bar { height: auto; overflow: visible; display: flex; flex-wrap: wrap; gap: 4px; }
+	.tab_bar > .tab { margin-left: 0; }
+	.tab_bar > .tab_widget { float: none; margin-left: 4px; }
+	.main { padding: 8px; overflow: visible; }
+	.main > div { min-width: 0; }
+	div:has(> .side_tab_bar) { margin-left: 0 !important; }
+	.side_tab_bar {
+		position: static !important; width: 100%; height: auto;
+		display: flex; flex-wrap: wrap; gap: 4px; border-right: 0;
+		margin-bottom: 16px;
+	}
+	.side_tab_bar > div:not(.tab) { display: none; }
+	.tab.side, .tab.side.inactive { left: 0; float: none; clear: none; margin: 0; border-right: 1px solid var(--border-color); }
+	.inline_dialog_container { width: 100%; max-width: 500px; }
+	.dialog_content, .dialog_simple { padding: 16px; }
+	#dialog_container {
+		left: 8px !important; top: 8px !important; width: calc(100% - 16px);
+		max-height: calc(100dvh - 16px); overflow: auto;
+	}
+	#dialog_main, .confirm_container { width: 100% !important; box-sizing: border-box; }
+	#dialog_main table { max-width: 100%; }
+	#dialog_main tr:has(> td > fieldset.dt_fs) { display: flex; flex-wrap: wrap; }
+	div.subtitle { height: auto; min-height: 20px; }
+	div.subtitle_widget { float: none; display: inline-block; margin-left: 0; padding-left: 0; margin-right: 10px; }
+	input, select, textarea { max-width: 100%; box-sizing: border-box; }
+	fieldset { min-width: 0; box-sizing: border-box; }
+	.table_value, .caption { overflow-wrap: anywhere; }
+	/* Forms stack their labels; data tables retain columns and scroll locally. */
+	table:has(> tbody > tr > .table_label) { display: block; width: 100%; }
+	table:has(> tbody > tr > .table_label) > tbody { display: block; }
+	table:has(> tbody > tr > .table_label) > tbody > tr:not(.collapse) { display: block; }
+	table:has(> tbody > tr > .table_label) > tbody > tr > td { display: block; width: auto; text-align: left; }
+	.table_label { padding: 6px 0 3px; }
+	table:has(> tbody > tr > td > .button) { display: block; }
+	table:has(> tbody > tr > td > .button) > tbody > tr { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+	table:has(> tbody > tr > td > .button) > tbody > tr > td { width: auto; }
+	table:has(> tbody > tr > td > .button) > tbody > tr > td[width] { display: none; }
+	table.data_table { display: block; max-width: 100%; overflow-x: auto; }
+	.pagination { max-width: 100%; overflow-x: auto; }
+	#page_MyAccount > div { padding: 16px 0 !important; }
+	#page_MyAccount > div > center > table,
+	#page_MyAccount > div > center > table > tbody,
+	#page_MyAccount > div > center > table > tbody > tr,
+	#page_MyAccount > div > center > table > tbody > tr > td { display: block; width: 100%; }
+	#page_MyAccount fieldset { margin: 20px auto 0 !important; }
+	#page_MyAccount td[colspan] table { display: block; }
+	#page_MyAccount td[colspan] table td { display: inline-block; width: auto; margin: 4px; }
+	#page_MyAccount td[colspan] table td[width] { display: none; }
+	#d_home_header_stats fieldset > div:not(.clear),
+	#page_JobDetails fieldset > div[style*="width:25%"],
+	#page_History fieldset > div[style*="width:25%"] { width: 50% !important; }
+	.info_value { overflow-wrap: anywhere; }
+	/* The original absolute pie columns overlap below desktop width. */
+	div:has(> .pie-column) { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; }
+	div.pie-column, div.pie-column.column-left, div.pie-column.column-center, div.pie-column.column-right {
+		position: relative; left: auto; margin: 0; width: 250px; max-width: 100%; transform: none;
+	}
+	.pie-legend-column { display: block; width: 100%; height: auto; max-height: 100px; margin-left: 0; }
+	.pie-legend-container { width: 100%; }
+	.pie-legend-item { display: inline-block; margin-right: 4px; }
+	.pie-column > div { max-width: 100%; }
+	pre.log_chunk, #d_live_job_log, #i_arch_job_log { box-sizing: border-box; overflow-wrap: anywhere; }
+	#d_footer .left, #d_footer .right { float: none; }
+}
+
+@media only screen and (max-width: 400px) {
+	#page_JobDetails fieldset > div[style*="width:25%"],
+	#page_History fieldset > div[style*="width:25%"] { width: 100% !important; }
+}
