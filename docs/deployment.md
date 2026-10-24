@@ -132,6 +132,30 @@ Input must contain one password of 12–72 bytes, with an optional trailing newl
 
 ## Preparing account email
 
-Keep `account_email_enabled` disabled until verification and password-reset support is deployed and tested with your SMTP relay. Choose the public HTTPS `base_app_url` explicitly, including `base_path` when deployed under a subpath; account links must never derive their origin from request headers. Configure a dedicated sender and restrict SMTP credentials to this service. Existing users retain login access without email verification, and administrator password recovery remains available. See [account email policy](configuration.md#account-email-policy) for validation and limits. Public registration remains closed.
+Email verification and password recovery are available but disabled by default.
+Before enabling `account_email_enabled`, configure your SMTP relay and the trusted
+public URL, then test the complete flow with a dedicated account. This fragment
+uses STARTTLS; add your relay's authentication settings if required, and keep
+credentials in protected configuration:
+
+```json
+{
+  "account_email_enabled": true,
+  "base_app_url": "https://cron.example.com",
+  "smtp_hostname": "smtp.example.com",
+  "smtp_port": 587,
+  "smtp_tls_mode": "starttls",
+  "email_from": "OwlCron <noreply@example.com>"
+}
+```
+
+For a URL prefix, set `base_path` and use the same path in `base_app_url`. Account
+links use this configured URL, never the request's Host header. Keep the setting
+consistent across nodes and restart after configuration changes. Existing users
+can still sign in without verification, but email password recovery requires an
+enabled account with a verified address. Public registration remains closed.
+See [account email policy](configuration.md#account-email-policy) for limits and
+[account email and password recovery](operations.md#account-email-and-password-recovery)
+for verification steps, delivery troubleshooting and administrator fallbacks.
 
 Account verification and recovery links contain bearer tokens: keep both public links and SMTP transport encrypted. `account_email_allow_insecure` permits plaintext HTTP and SMTP only for isolated local testing; never enable it in production.

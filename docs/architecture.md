@@ -60,4 +60,13 @@ HTTP handling includes account and key validation, object-scoped authorization, 
 
 Email supports SMTP authentication, TLS, timeouts, and per-recipient delivery. Email and WebHooks use persistent queues, claim leases, retries, dead-letter state, and local spools. Delivery carries stable identifiers and is at least once: a crash after recipient acceptance but before recording success can cause a duplicate. See [notification queues](../engine/notification_queue.go), [mail transport](../engine/mail_transport.go), and [WebHook signing](../engine/webhook_signing.go).
 
+Account email is opt-in. One-time verification and recovery actions are bound to
+the canonical user, password revision, address and expiry. Token consumption and
+the account change share an atomic update; the user index is a discovery aid.
+The account mail queue stores references and regenerates/revalidates links at
+delivery time. Password changes invalidate existing sessions. See
+[account actions](../engine/account_actions.go) and the
+[account operations guide](operations.md#account-email-and-password-recovery).
+Public registration remains disabled.
+
 See [testing](testing.md) for load and fault scenarios.

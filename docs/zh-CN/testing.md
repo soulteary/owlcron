@@ -99,6 +99,10 @@ Go 质量报告在推送标签、发布 Release 或手动触发时运行，包�
 
 [Reports / Go Tests and Report Card](https://github.com/soulteary/owlcron/actions/workflows/go-quality-reports.yml)
 
-可选的[真实浏览器冒烟测试](../../tests/browser/README.zh-CN.md)在 Chromium 中覆盖登录、事件编辑和执行、历史、日志及主题偏好持久化。
+按路径筛选的 [CI / Browser Tests](../../.github/workflows/browser.yml) 工作流
+运行[浏览器验收测试](../../tests/browser/README.zh-CN.md)：通用界面冒烟与隔离的
+SMTP/账号邮件流程。后者验证邮箱确认、找回密码、链接隐私、拒绝令牌重放和会话
+撤销。可按浏览器测试指南在本地运行两项测试，需要本地端口和 Chromium，
+不依赖外部 SMTP 服务。
 
-工作流显示名称按 `CI /`、`Reports /` 和 `Release /` 分组；文件名保持不变，现有链接仍然有效。README 中的 Go Test Report badge 表示报告工作流的运行状态，不代表覆盖率。Go Report Card badge 来自公共评估服务，可能与工作流生成的报告更新时间不同。工作流生成的覆盖率和质量报告分别保存在 `.github/coverage.svg` 与 `.github/goreportcard.svg`；首次成功回写前，通过工作流产物查看报告。
+工作流显示名称按 `CI /`、`Reports /` 和 `Release /` 分组；文件名保持不变，现有链接仍然有效。README badge 按测试状态、Go Report Card、版本、许可证排序。Go Tests badge 表示主分支构建与测试工作流状态，不是覆盖率百分比。Go Report Card badge 来自公共评估服务，可能与工作流生成的报告更新时间不同。工作流生成的覆盖率和质量报告分别保存在 `.github/coverage.svg` 与 `.github/goreportcard.svg`；首次成功回写前，通过工作流产物查看报告。

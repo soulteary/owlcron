@@ -71,6 +71,21 @@ OwlCron 链接；未开启邮件找回时，旧入口显示管理员协助恢复
 如果所有管理员均无法登录，请按部署文档中的管理员密码重置流程离线恢复。CLI
 会创建或重置管理员，不能用于普通用户的密码重置，因为它会授予管理员权限。
 
+账号接口使用 OwlCron 自身的契约，不能直接替代 Cronicle 的旧邮件流程。
+以下接口均通过 POST 接收 JSON 对象，可选用 `/v1` 后缀：
+
+- `/api/user/request_email_verification`：已登录用户提交 `email` 和
+  `current_password`，确认前保留当前邮箱。
+- `/api/user/verify_email`：提交验证链接中的 `user_id` 和 `token`。
+- `/api/user/forgot_password`：提交准确、区分大小写的 `username` 和已验证的
+  `email`；响应不会透露账号是否匹配。
+- `/api/user/reset_password`：提交 `user_id`、`token`、`new_password` 和
+  `confirm_password`。成功后旧会话和账号链接失效。
+
+这四个接口只有在启用账号邮件后才可用。处理器拒绝超过 4 KiB 的请求体、重复或
+未知字段以及非 POST 方法；接受现有客户端作为传输字段附带的字符串 `session_id`，
+但它不能替代当前密码或链接令牌。GET 请求不会消费这些令牌。
+
 管理界面会保存插件执行身份和 API Key 启用状态。后端没有提供欢迎邮件、API Key
 描述和作者字段，因此表单不再提供这些选项。初始账号密码应通过安全渠道交付。
 脚本插件通过 `owlcron-script` 运行经过审阅的文件；默认没有可编写内联脚本的

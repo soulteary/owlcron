@@ -22,6 +22,12 @@ The HTTP service listens on all interfaces. `base_app_url` sets the public appli
 
 See [deployment](docs/deployment.md) for proxy, cookie, credential, and backup requirements.
 
+Account email is disabled by default and public registration remains closed.
+Enabling email verification and recovery requires a trusted public HTTPS URL and
+SMTP TLS. Recovery links are credentials: do not publish them in issues, logs or
+screenshots. Follow the [account email runbook](docs/operations.md#account-email-and-password-recovery)
+for expiry, revocation, delivery failures and restoring backups.
+
 ## Dependency checks
 
 CI runs `bun audit` against locked npm dependencies and `govulncheck` against the main module and example plugin. These checks cover known advisories at scan time; they do not rule out unknown vulnerabilities. Rebuild the frontend, run installation smoke tests, and refresh notices with `make licenses-update licenses-check` after dependency changes.

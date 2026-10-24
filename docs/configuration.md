@@ -9,7 +9,7 @@ For startup, proxy configuration, and administrator initialization, see [deploym
 ## Basic settings
 
 - `hostname`: a unique node name. Set it explicitly in a cluster and keep it consistent with node registration, public keys, and certificates.
-- `base_app_url`: the external application URL, used for links and origin checks. It does not restrict the listening address.
+- `base_app_url`: the external application URL used for generated links. It does not restrict the listening address or replace HTTP/WebSocket origin checks against the incoming request host.
 - `http_port`: the HTTP port, default 3012. The service listens on all interfaces; restrict access with a firewall or proxy.
 - `secret_key`: a random secret of at least 32 bytes, also configurable through `OWLCRON_SECRET_KEY`. Protect configuration and key files.
 - `storage_engine`: `Filesystem`, `S3`, or `Couchbase`. The local default is Filesystem.

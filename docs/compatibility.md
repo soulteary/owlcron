@@ -80,6 +80,22 @@ their current password. An administrator can reset another user's password in
 The CLI creates or resets an administrator; do not use it to reset an ordinary
 user, because it grants administrator privileges.
 
+The account endpoints are OwlCron's contract, not drop-in replacements for old
+Cronicle email flows. Each accepts a JSON object by POST, with optional `/v1`:
+
+- `/api/user/request_email_verification`: an authenticated user supplies `email`
+  and `current_password`; the current email stays active until confirmation.
+- `/api/user/verify_email`: supply `user_id` and `token` from the verification link.
+- `/api/user/forgot_password`: supply the exact, case-sensitive `username` and
+  verified `email`; the response does not reveal whether the account matches.
+- `/api/user/reset_password`: supply `user_id`, `token`, `new_password` and
+  `confirm_password`. A successful reset invalidates prior sessions and links.
+
+All four are disabled unless account email is enabled. Their handlers reject
+bodies over 4 KiB, duplicate or unknown fields, and non-POST methods. The existing
+client's string `session_id` transport field is accepted; it does not substitute
+for the current password or link token. GET requests never consume these tokens.
+
 The administration UI saves supported plugin identities and API-key enabled
 state. Welcome emails and API-key descriptions/authors are not provided by the
 backend, so the forms do not offer these controls. Share initial account

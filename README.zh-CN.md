@@ -4,14 +4,7 @@
 
 通过 Web 界面调度任务、执行插件，并查看执行历史与日志。
 
-[![Build and Test](https://github.com/soulteary/owlcron/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/soulteary/owlcron/actions/workflows/ci.yml)
-[![Browser Tests](https://github.com/soulteary/owlcron/actions/workflows/browser.yml/badge.svg?branch=main)](https://github.com/soulteary/owlcron/actions/workflows/browser.yml)
-[![Container and Deployment](https://github.com/soulteary/owlcron/actions/workflows/container.yml/badge.svg?branch=main)](https://github.com/soulteary/owlcron/actions/workflows/container.yml)
-[![Go Test Report](https://github.com/soulteary/owlcron/actions/workflows/go-quality-reports.yml/badge.svg)](https://github.com/soulteary/owlcron/actions/workflows/go-quality-reports.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/soulteary/owlcron)](https://goreportcard.com/report/github.com/soulteary/owlcron)
-[![Release](https://img.shields.io/github/v/release/soulteary/owlcron)](https://github.com/soulteary/owlcron/releases)
-[![Go](https://img.shields.io/badge/Go-1.27-00ADD8?logo=go&logoColor=white)](docs/zh-CN/releases.md)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Go Tests](https://img.shields.io/github/actions/workflow/status/soulteary/owlcron/ci.yml?branch=main&label=Go%20Tests)](https://github.com/soulteary/owlcron/actions/workflows/ci.yml) [![Go Report Card](https://goreportcard.com/badge/github.com/soulteary/owlcron)](https://goreportcard.com/report/github.com/soulteary/owlcron) [![Release](https://img.shields.io/github/v/release/soulteary/owlcron)](https://github.com/soulteary/owlcron/releases) [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 OwlCron 是一个使用 Go 编写、以替代 [Cronicle](https://github.com/jhuckaby/Cronicle) 为目标的任务调度服务，提供 Web 管理界面、定时和按需任务、插件执行、任务日志及通知，并对 Cronicle 的部分工作流、API 和插件约定提供兼容。迁移范围见 [Cronicle 兼容性](docs/zh-CN/compatibility.md)。
 
@@ -57,6 +50,12 @@ chmod 600 config.local.json
 初始化会提供 General 分类和 Echo Plugin 示例插件。可以创建使用该插件的本机事件，手动执行后查看历史与日志；`make smoke` 会在独立临时数据目录中自动验证这条链路。
 
 HTTP 服务默认监听所有网卡，`base_app_url` 不限制监听地址。对外部署前请限制后台端口访问并配置 HTTPS。不要将配置秘密、运行数据和日志加入版本控制。
+
+## 账号访问
+
+账号由管理员创建，公开注册保持关闭。管理员启用账号邮件并配置 HTTPS 和 SMTP TLS 后，
+可使用邮箱验证和邮件找回密码。既有邮箱需要先验证，才能用于接收密码重置链接。
+具体操作见[账号邮件与密码找回](docs/zh-CN/operations.md#账号邮件与密码找回)。
 
 ## 文档
 

@@ -17,6 +17,11 @@
 - [迁移预检](migration.md)：只读检查 Cronicle 导出。
 - [兼容性](compatibility.md)：Cronicle 兼容范围及迁移到 OwlCron 的要求。
 
+## 账号
+
+- [账号邮件策略](configuration.md#账号邮件策略)：开关、配置和限额。
+- [邮箱验证与密码找回](operations.md#账号邮件与密码找回)：用户操作、投递故障和恢复。
+
 ## 运维与可靠性
 
 - [运维与指标](operations.md)：采集、告警和恢复流程。
@@ -26,5 +31,4 @@
 ## 参与开发
 
 - [测试](testing.md)：开发检查、CI 和故障场景。
-
 - [贡献指南](../../CONTRIBUTING.zh-CN.md)、[安全策略](../../SECURITY.zh-CN.md)和[第三方声明](../../THIRD_PARTY_NOTICES.zh-CN.md)。

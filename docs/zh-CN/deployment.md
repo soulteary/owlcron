@@ -151,6 +151,25 @@ CLI 按记录流式写入已有的 `owlcron-storage-v1` 格式，不再将完整
 
 ## 准备账号邮件
 
-在邮箱验证和密码重置功能部署完成并通过 SMTP 验收前，保持 `account_email_enabled` 关闭。明确设置公共 HTTPS 地址 `base_app_url`，子路径部署时同时配置 `base_path`；账号链接不能从请求头推断来源。配置专用发件地址，并将 SMTP 凭据限制为本服务使用。既有用户无需验证邮箱仍可登录，管理员恢复密码的路径继续保留。配置校验与限额参见[账号邮件策略](configuration.md#账号邮件策略)。公开注册保持关闭。
+邮箱验证和邮件找回密码已可用，但默认关闭。启用 `account_email_enabled` 前，
+配置 SMTP 服务和可信的公共地址，并用专用测试账号验证完整流程。以下配置片段
+使用 STARTTLS；如果邮件服务要求认证，另行设置认证参数，并保护好包含凭据的配置：
+
+```json
+{
+  "account_email_enabled": true,
+  "base_app_url": "https://cron.example.com",
+  "smtp_hostname": "smtp.example.com",
+  "smtp_port": 587,
+  "smtp_tls_mode": "starttls",
+  "email_from": "OwlCron <noreply@example.com>"
+}
+```
+
+使用 URL 前缀时，配置 `base_path` 并在 `base_app_url` 中保留相同路径。账号邮件
+链接使用这个固定地址，不读取请求中的 Host。各节点保持配置一致，修改后重启。
+既有用户未验证邮箱也可继续登录，但邮件找回要求账号已启用、邮箱已验证。
+公开注册保持关闭。限额见[账号邮件策略](configuration.md#账号邮件策略)，
+验证步骤、投递排障和管理员后备方案见[账号邮件与密码找回](operations.md#账号邮件与密码找回)。
 
 邮箱验证和密码恢复链接包含持有者令牌，公共链接与 SMTP 传输都必须加密。`account_email_allow_insecure` 仅供隔离的本地测试使用明文 HTTP 和 SMTP，生产环境不得开启。

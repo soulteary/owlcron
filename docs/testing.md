@@ -99,6 +99,11 @@ Go quality reports run on tags, published releases, and manual dispatches. They 
 
 [Reports / Go Tests and Report Card](https://github.com/soulteary/owlcron/actions/workflows/go-quality-reports.yml)
 
-The optional [real-browser smoke test](../tests/browser/README.md) covers login, event editing and execution, history, logs, and theme persistence in Chromium.
+The path-filtered [CI / Browser Tests](../.github/workflows/browser.yml) workflow
+runs the [browser acceptance tests](../tests/browser/README.md): general UI smoke
+checks plus the isolated SMTP/account-email flow. The latter exercises email
+verification and password recovery, link privacy, token replay rejection and
+session revocation. Run both locally with the commands in the browser guide;
+they require local ports and Chromium, but no external SMTP service.
 
-Workflow display names are grouped under `CI /`, `Reports /`, and `Release /`; filenames stay unchanged so existing links remain valid. The README Go Test Report badge shows report workflow status, not coverage. The Go Report Card badge uses the public assessment service and may differ in freshness from the workflow-generated report. Generated coverage and quality badges are saved as `.github/coverage.svg` and `.github/goreportcard.svg`; before the first successful writeback, inspect the workflow artifacts.
+Workflow display names are grouped under `CI /`, `Reports /`, and `Release /`; filenames stay unchanged so existing links remain valid. The README badges follow test status, Go Report Card, release and license order. The Go Tests badge shows the main branch build-and-test workflow status, not a coverage percentage. The Go Report Card badge uses the public assessment service and may differ in freshness from the workflow-generated report. Generated coverage and quality badges are saved as `.github/coverage.svg` and `.github/goreportcard.svg`; before the first successful writeback, inspect the workflow artifacts.
