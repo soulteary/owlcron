@@ -1,0 +1,1 @@
+{"id":"fixture-job","event":"fixture-event","now":1700000000,"params":{"message":"synthetic fixture"},"hostname":"worker.example.invalid"}

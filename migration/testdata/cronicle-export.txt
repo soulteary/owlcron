@@ -1,0 +1,17 @@
+# Cronicle Data Export v1.0
+# Synthetic compatibility fixture; no production data.
+users/fixture_user - {"username":"fixture_user","enabled":1,"privileges":{"admin":1}}
+global/api_keys - {"first_page":0,"last_page":0,"length":0,"page_size":50,"type":"list"}
+global/api_keys/0 - {"type":"list_page","items":[]}
+global/categories - {"first_page":0,"last_page":0,"length":1,"page_size":50,"type":"list"}
+global/categories/0 - {"type":"list_page","items":[{"id":"general","title":"General","enabled":1}]}
+global/plugins - {"first_page":0,"last_page":0,"length":1,"page_size":50,"type":"list"}
+global/plugins/0 - {"type":"list_page","items":[{"id":"shell","title":"Shell Script","enabled":1,"command":"bin/shell-plugin.js","params":[{"id":"script","type":"textarea","value":"#!/bin/sh\\nprintf fixture"},{"id":"json","type":"checkbox","value":0}]}]}
+global/schedule - {"first_page":0,"last_page":0,"length":2,"page_size":50,"type":"list"}
+global/schedule/0 - {"type":"list_page","items":[{"id":"daily","title":"Daily","enabled":1,"plugin":"shell","category":"general","target":"all","timing":{"hours":[9],"minutes":[0]},"timezone":"UTC","params":{"script":"#!/bin/sh\\nprintf fixture","json":0}},{"id":"manual","title":"Manual","enabled":0,"plugin":"shell","category":"general","target":"all","timing":false,"timezone":"UTC"}]}
+global/server_groups - {"first_page":0,"last_page":0,"length":1,"page_size":50,"type":"list"}
+global/server_groups/0 - {"type":"list_page","items":[{"id":"all","title":"All","regexp":".","master":1}]}
+global/servers - {"first_page":0,"last_page":0,"length":1,"page_size":50,"type":"list"}
+global/servers/0 - {"type":"list_page","items":[{"hostname":"worker.example.invalid","ip":"192.0.2.1"}]}
+global/users - {"first_page":0,"last_page":0,"length":1,"page_size":50,"type":"list"}
+global/users/0 - {"type":"list_page","items":[{"username":"fixture_user"}]}
