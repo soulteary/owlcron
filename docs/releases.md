@@ -67,8 +67,14 @@ The harness uses Python's standard library from the source checkout; the daemon
 and its child plugins run outside the checkout with an empty executable `PATH`,
 without Go, Bun, Node.js or `node_modules`. `/bin/sh` is required for this test's
 shell script. Production custom plugins may require their own interpreters and
-dependencies. This validates isolation from build tools, not a container image
-or every possible target operating system. A digest
+dependencies. The release workflow repeats this same verification inside a
+separate Linux Python slim container without Go, Bun or Node.js. It mounts only
+the built archive and three Python helper files, with no source checkout,
+disabled networking, an unprivileged user, a read-only root filesystem and a
+temporary writable `/tmp`. Loopback remains available for the application test.
+Python is test infrastructure; the extracted Go application does not depend on
+it. This extra check validates the Linux archive in an isolated runtime, not the
+project's separately built deployment image or every target operating system. A digest
 checks file integrity; it is not a signature or independent proof of origin.
 The output directory must not already contain the same archive name. Completed
 archives and checksums are staged before final filenames are created. Archive
