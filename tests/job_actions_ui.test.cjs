@@ -41,3 +41,22 @@ test('rerun stays unavailable for deleted or multiplex events and watching requi
   assert.equal(page.toggle_watch(),false);
   assert.match(errors[0],/My Account/);
 });
+
+test('Home hides abort and flush controls from readers and refuses direct actions',()=>{
+  for(const allowed of [false,true]) {
+    let page;const errors=[],rows=[];
+    const app={hasPrivilege:()=>allowed,activeJobs:{job:{id:'job',pending:true,hostname:'local'}},eventQueue:{event:1},schedule:[{id:'event',title:'Event'}],
+      doError(message){errors.push(message);return false;}};
+    vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../htdocs/js/pages/Home.class.js'),'utf8'),{
+      Class:{subclass(base,name,methods){page=methods;}},Page:{Base:{}},app,
+      get_inner_window_size:()=>({width:1000}),hash_keys_to_array:Object.keys,commify:String,
+      find_object:(items,query)=>items.find(item=>item.id===query.id),$:()=>({html(){return this;},show(){}})
+    });
+    page.getBasicTable=(items,columns,label,render)=>{for(let i=0;i<items.length;i++)rows.push(render(items[i],i));return '';};
+    for(const name of ['getNiceJob','getNiceEvent','getNiceCategory','getNiceGroup','getNicePlugin','getNiceJobElapsedTime','getNiceJobPendingText'])page[name]=()=>'';
+    page.get_active_jobs_html();page.refresh_event_queues();
+    assert.equal(rows[0].at(-1).includes('Abort Job'),allowed);
+    assert.equal(rows[1].at(-1).includes('Flush Queue'),allowed);
+    if(!allowed){assert.equal(page.abort_job(0),false);assert.equal(page.flush_event_queue(0),false);assert.equal(errors.length,2);}
+  }
+});
