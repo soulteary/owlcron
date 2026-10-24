@@ -16,6 +16,7 @@ import subprocess
 import tempfile
 import time
 import urllib.request
+from check_frontend_assets import check_frontend_assets
 
 
 def require(condition, message):
@@ -103,30 +104,32 @@ def accept_distribution(distribution):
                 raise RuntimeError('Distribution daemon shutdown timed out')
             require(process.returncode == 0, 'Distribution daemon shutdown failed')
 
-        def run_event():
-            job = api('app/run_event', {'id': 'release-script'})['ids'][0]
+        def run_event(event='release-script', marker=b'RELEASE_SCRIPT_OK'):
+            job = api('app/run_event', {'id': event})['ids'][0]
             deadline = time.monotonic() + 20
             while time.monotonic() < deadline:
                 status = api('app/get_job_status', {'id': job})
                 if status.get('complete'):
-                    require(status['job']['code'] == 0, 'Bundled script adapter job failed')
+                    require(status['job']['code'] == 0, 'Bundled plugin job failed')
                     break
                 time.sleep(0.1)
             else:
-                raise RuntimeError('Bundled script adapter job timed out')
-            history = api('app/get_event_history', {'id': 'release-script'})
+                raise RuntimeError('Bundled plugin job timed out')
+            history = api('app/get_event_history', {'id': event})
             require(any(row['id'] == job for row in history['rows']), 'Job missing from history')
             output = api('app/get_job_log', {'id': job, 'offset': 0, 'limit': 32768})
-            require(b'RELEASE_SCRIPT_OK' in base64.b64decode(output['log_base64']), 'Script output missing')
+            require(marker in base64.b64decode(output['log_base64']), 'Plugin output missing')
             return job
 
         try:
             write_config()
             cli('setup')
             process = start(bootstrap=True)
-            for asset in ('/js/_combo.js', '/css/_combo.css', '/js/external/jquery.min.js'):
-                with opener.open(config['base_app_url'] + asset, timeout=5) as response:
-                    require(response.status == 200 and response.read(), 'Bundled frontend asset missing')
+            check_frontend_assets(config['base_app_url'])
+            api('app/create_event', dict(id='release-echo', title='Release Echo acceptance', enabled=0,
+                category='general', target='local', plugin='echoplug', timing={}, timezone='UTC',
+                max_children=1, params=dict(message='RELEASE_ECHO_OK', repeat='1', delay_ms='0')))
+            run_event('release-echo', b'RELEASE_ECHO_OK')
             script = work / 'acceptance.sh'
             script.write_text('#!/bin/sh\nprintf "RELEASE_SCRIPT_OK\\n"\n')
             script.chmod(0o700)
@@ -170,7 +173,7 @@ def accept_distribution(distribution):
                     process.kill()
                     process.wait(timeout=5)
                 log.close()
-    print('Release acceptance passed: empty runtime PATH, frontend, login, script adapter, '
+    print('Release acceptance passed: empty runtime PATH, frontend asset graph, login, Echo Plugin, script adapter, '
           'history, restart, offline backup and fresh-store restore')
 
 

@@ -54,9 +54,10 @@ The adjacent `.tar.gz.sha256` file is compatible with `sha256sum --check` on
 Linux. The verification command checks the digest, extracts to a temporary
 directory, checks executable metadata and the adapter, and runs a single-node
 acceptance test against only the extracted distribution. The test checks the
-built frontend, first boot and login, an actual job using the bundled script
-adapter, history and logs, graceful restart with persistent state, and an offline
-backup imported into fresh storage followed by another successful job. It stops
+built frontend and its linked JavaScript, worker and font assets, first boot and
+login, actual jobs using the bundled Echo Plugin and script adapter, history and
+logs, graceful restart with persistent state, and an offline backup imported into
+fresh storage followed by another successful job. It stops
 the daemon before both export and import. The test deletes the original
 data, log and queue directories before restoration and checks both prior job
 histories and their persisted log contents. Storage export includes persisted
@@ -69,7 +70,7 @@ without Go, Bun, Node.js or `node_modules`. `/bin/sh` is required for this test'
 shell script. Production custom plugins may require their own interpreters and
 dependencies. The release workflow repeats this same verification inside a
 separate Linux Python slim container without Go, Bun or Node.js. It mounts only
-the built archive and three Python helper files, with no source checkout,
+the built archive and four Python helper files, with no source checkout,
 disabled networking, an unprivileged user, a read-only root filesystem and a
 temporary writable `/tmp`. Loopback remains available for the application test.
 Python is test infrastructure; the extracted Go application does not depend on

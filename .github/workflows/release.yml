@@ -1,7 +1,7 @@
 name: Release / Build and Package
 on:
   pull_request:
-    paths: ['htdocs-deps/**', 'tools/bun-lock.mjs', 'tests/check_licenses.py', 'tools/package_release.py', 'tools/verify_release.py', 'tools/release/**', 'tests/test_release_package.py', 'tests/release_acceptance.py', '**/*.go', 'config.json', 'htdocs/**', 'go.mod', 'go.sum', 'Makefile', '.github/workflows/release.yml']
+    paths: ['htdocs-deps/**', 'tools/bun-lock.mjs', 'tests/check_licenses.py', 'tools/package_release.py', 'tools/verify_release.py', 'tools/release/**', 'tests/test_release_package.py', 'tests/release_acceptance.py', 'tests/check_frontend_assets.py', '**/*.go', 'config.json', 'htdocs/**', 'go.mod', 'go.sum', 'Makefile', '.github/workflows/release.yml']
   push:
     tags: ['v*']
   workflow_dispatch:
@@ -51,6 +51,7 @@ jobs:
             --mount "type=bind,src=$PWD/tools/verify_release.py,dst=/check/tools/verify_release.py,readonly" \
             --mount "type=bind,src=$PWD/tools/package_release.py,dst=/check/tools/package_release.py,readonly" \
             --mount "type=bind,src=$PWD/tests/release_acceptance.py,dst=/check/tests/release_acceptance.py,readonly" \
+            --mount "type=bind,src=$PWD/tests/check_frontend_assets.py,dst=/check/tests/check_frontend_assets.py,readonly" \
             python:3.13.17-slim-trixie /bin/sh -eu -c '
               for tool in go bun node npm; do
                 if command -v "$tool" >/dev/null 2>&1; then
