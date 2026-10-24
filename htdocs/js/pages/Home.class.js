@@ -4,8 +4,17 @@ Class.subclass( Page.Base, "Page.Home", {
 	
 	onInit: function() {
 		// called once at page load
-		this.worker = new Worker('js/home-worker.js');
-		this.worker.onmessage = this.render_upcoming_events.bind(this);
+		this.worker = null;
+		window.addEventListener('pagehide', this.stop_worker.bind(this));
+		window.addEventListener('pageshow', function(event) {
+			// A restored document does not run onInit again.  Its previous
+			// worker was terminated before entering the back/forward cache.
+			if (!event.persisted) return;
+			if (this.active) {
+				this.start_worker();
+				this.refresh_upcoming_events();
+			}
+		}.bind(this));
 		
 		var html = '';
 		html += '<div style="padding:10px 20px 20px 20px">';
@@ -40,10 +49,23 @@ Class.subclass( Page.Base, "Page.Home", {
 		
 		this.div.html( html );
 	},
+
+	start_worker: function() {
+		if (this.worker) return;
+		this.worker = new Worker('js/home-worker.js');
+		this.worker.onmessage = this.render_upcoming_events.bind(this);
+	},
+
+	stop_worker: function() {
+		if (!this.worker) return;
+		this.worker.terminate();
+		this.worker = null;
+	},
 	
 	onActivate: function(args) {
 		// page activation
 		if (!this.requireLogin(args)) return true;
+		this.start_worker();
 		
 		if (!args) args = {};
 		this.args = args;
@@ -176,6 +198,8 @@ Class.subclass( Page.Base, "Page.Home", {
 	
 	refresh_upcoming_events: function() {
 		// send message to worker to refresh upcoming
+		// Socket updates can arrive after pagehide, before navigation finishes.
+		if (!this.worker) return;
 		this.worker_start_time = hires_time_now();
 		this.worker.postMessage({
 			default_tz: app.tz,
@@ -628,6 +652,7 @@ Class.subclass( Page.Base, "Page.Home", {
 	
 	onDeactivate: function() {
 		// called when page is deactivated
+		this.stop_worker();
 		// this.div.html( '' );
 		return true;
 	}
