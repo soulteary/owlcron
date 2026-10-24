@@ -6,6 +6,8 @@ OwlCron 是一个使用 Go 编写、以替代 [Cronicle](https://github.com/jhuc
 
 项目目前处于实验性阶段。集群持续收敛、远程派发确认和生产环境容量仍有[已知限制](docs/zh-CN/limitations.md)，请先在隔离环境验证。
 
+![OwlCron](.github/assets/owlcron-banner.png)
+
 ## 快速开始
 
 需要 Go、Bun 1.4.2、Python 3 和 make。模块默认建议 Go 1.27.3；使用其他工具链前请阅读[部署要求](docs/zh-CN/deployment.md)。

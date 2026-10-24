@@ -13,6 +13,8 @@ Go quality reports run on tags, published releases, and manual dispatches. They 
 
 [Go quality reports](https://github.com/soulteary/owlcron/actions/workflows/go-quality-reports.yml)
 
+![OwlCron](.github/assets/owlcron-banner.png)
+
 ## Quick start
 
 Install Go, Bun 1.4.2, Python 3, and make. The module recommends Go 1.27.3; see the [deployment requirements](docs/deployment.md) before choosing another toolchain.
