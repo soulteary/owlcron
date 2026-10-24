@@ -63,8 +63,8 @@ Class.add( Page.Admin, {
 				'<div class="td_big"><a href="#Admin?sub=edit_plugin&id='+plugin.id+'">' + self.getNicePlugin(plugin, col_width) + '</a></div>',
 				self.getNiceUsername(plugin, true, col_width),
 				num_events ? commify( num_events ) : '(None)',
-				'<span title="'+get_nice_date_time(plugin.created, true)+'">'+get_nice_date(plugin.created, true)+'</span>',
-				'<span title="'+get_nice_date_time(plugin.modified, true)+'">'+get_nice_date(plugin.modified, true)+'</span>',
+				'<span title="'+self.getNiceRecordDate(plugin.created, false)+'">'+self.getNiceRecordDate(plugin.created, true)+'</span>',
+				'<span title="'+self.getNiceRecordDate(plugin.modified, false)+'">'+self.getNiceRecordDate(plugin.modified, true)+'</span>',
 				actions.join(' | ')
 			];
 			
@@ -360,7 +360,7 @@ Class.add( Page.Admin, {
 		html += get_form_table_row('Executable:', '<textarea id="fe_ep_command" style="width:550px; height:50px; resize:vertical;" spellcheck="false" onkeydown="return $P().stopEnter(this,event)">'+escape_text_field_value(plugin.command)+'</textarea>');
 		html += get_form_table_caption(
 			'Enter the filesystem path to your executable, including any command-line arguments.<br/>' + 
-			'Do not include any pipes or redirects -- for those, please use the <b>Shell Plugin</b>.' 
+			'Commands are executed directly, without shell pipes or redirects. For shell scripts, create a plugin using <code>/opt/owlcron/owlcron-script -- /bin/sh /opt/jobs/script.sh</code> and deploy the reviewed script to every target server.'
 		);
 		html += get_form_table_spacer();
 		
@@ -529,7 +529,7 @@ Class.add( Page.Admin, {
 				else {
 					// add new, check for unique id
 					if (find_object(self.plugin.params, { id: param.id })) {
-						return add.badField('fe_epp_id', "That parameter ID is already taken.  Please enter a unique value.");
+						return app.badField('fe_epp_id', "That parameter ID is already taken.  Please enter a unique value.");
 					}
 					
 					self.plugin.params.push( param );
@@ -599,7 +599,7 @@ Class.add( Page.Admin, {
 		
 		param.id = trim( $('#fe_epp_id').val() );
 		if (!param.id) return app.badField('fe_epp_id', "Please enter an ID for the plugin parameter.");
-		if (!param.id.match(/^\w+$/)) return app.badField('fe_epp_id', "The parameter ID needs to be alphanumeric.");
+		if (!param.id.match(/^[a-zA-Z0-9_-]{1,100}$/)) return app.badField('fe_epp_id', "Use 1-100 letters, digits, underscores or dashes for the parameter ID.");
 		
 		param.title = trim( $('#fe_epp_title').val() );
 		if ((param.type != 'hidden') && !param.title) return app.badField('fe_epp_title', "Please enter a label for the plugin parameter.");
@@ -676,14 +676,12 @@ Class.add( Page.Admin, {
 		
 		plugin.command = trim( $('#fe_ep_command').val() );
 		if (!plugin.command) return app.badField('fe_ep_command', "Please enter a filesystem path to the executable command for the Plugin.");
-		if (plugin.command.match(/[\n\r]/)) return app.badField('fe_ep_command', "You must not include any newlines (EOLs) in your command.  Please consider using the built-in Shell Plugin.");
+		if (plugin.command.match(/[\n\r]/)) return app.badField('fe_ep_command', "Commands must fit on one line. Put multi-line shell code in a reviewed script file and run it through owlcron-script.");
 		
 		plugin.cwd = trim( $('#fe_ep_cwd').val() );
 		plugin.uid = trim( $('#fe_ep_uid').val() );
 		plugin.gid = trim( $('#fe_ep_gid').val() );
 		
-		if (plugin.uid.match(/^\d+$/)) plugin.uid = parseInt( plugin.uid );
-		if (plugin.gid.match(/^\d+$/)) plugin.gid = parseInt( plugin.gid );
 		
 		return plugin;
 	}

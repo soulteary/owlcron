@@ -2,6 +2,21 @@
 
 Class.add( Page.Admin, {
 	
+	get_server_group_regexp: function(pattern) {
+		// Preview common Go/RE2 expressions without making matching decisions for the server.
+		var flags = '';
+		pattern = String(pattern || '');
+		var prefix;
+		while ((prefix = pattern.match(/^\(\?([ims]+)\)/))) {
+			for (var flag of prefix[1]) if (flags.indexOf(flag) < 0) flags += flag;
+			pattern = pattern.slice(prefix[0].length);
+		}
+		if (/\[\[:|\\[QEpP]|\(\?[ims-]+:/.test(pattern)) return null;
+		pattern = pattern.replace(/\\A/g, '^').replace(/\\z/g, '$').replace(/\(\?P</g, '(?<');
+		try { return new RegExp(pattern, flags); }
+		catch (error) { return null; }
+	},
+
 	gosub_servers: function(args) {
 		// show server list, server groups
 		this.div.removeClass('loading');
@@ -79,10 +94,12 @@ Class.add( Page.Admin, {
 			
 			var group_names = [];
 			var eligible = false;
+			var unknown_match = false;
 			for (var idx = 0, len = app.server_groups.length; idx < len; idx++) {
 				var group = app.server_groups[idx];
-				var regexp = new RegExp( group.regexp, "i" );
-				if (server.hostname.match(regexp)) {
+				var regexp = self.get_server_group_regexp(group.regexp);
+				if (!regexp) { unknown_match = true; continue; }
+				if (regexp.test(server.hostname)) {
 					group_names.push( group.title );
 					if (group.master) eligible = true;
 				}
@@ -104,8 +121,8 @@ Class.add( Page.Admin, {
 			var tds = [
 				'<div class="td_big">' + self.getNiceGroup(null, server.hostname, col_width) + '</div>',
 				(server.ip || 'n/a').replace(/^\:\:ffff\:(\d+\.\d+\.\d+\.\d+)$/, '$1'),
-				group_names.length ? group_names.join(', ') : '(None)',
-				server.master ? '<span class="color_label green"><i class="fa fa-check">&nbsp;</i>Primary</span>' : (eligible ? '<span class="color_label purple">Backup</span>' : '<span class="color_label blue">Worker</span>'),
+				(group_names.length ? group_names.join(', ') : '(None)') + (unknown_match ? ' (additional matches evaluated by server)' : ''),
+				server.master ? '<span class="color_label green"><i class="fa fa-check">&nbsp;</i>Primary</span>' : (eligible ? '<span class="color_label purple">Backup</span>' : (unknown_match ? 'Eligibility evaluated by server' : '<span class="color_label blue">Worker</span>')),
 				num_jobs ? commify( num_jobs ) : '(None)',
 				get_text_from_seconds( server.uptime, true, true ).replace(/\bday\b/, 'days'),
 				short_float(cpu) + '%',
@@ -150,10 +167,10 @@ Class.add( Page.Admin, {
 				'<span class="link" onMouseUp="$P().delete_group('+idx+')"><b>Delete</b></span>'
 			];
 			
-			var regexp = new RegExp( group.regexp, "i" );
+			var regexp = self.get_server_group_regexp(group.regexp);
 			var num_servers = 0;
 			for (var hostname in app.servers) {
-				if (hostname.match(regexp)) num_servers++;
+				if (regexp && regexp.test(hostname)) num_servers++;
 			}
 			
 			var group_events = find_objects( app.schedule, { target: group.id } );
@@ -163,7 +180,7 @@ Class.add( Page.Admin, {
 				'<div class="td_big" style="white-space:nowrap;"><span class="link" onMouseUp="$P().edit_group('+idx+')">' + self.getNiceGroup(group, null, col_width) + '</span></div>',
 				'<div class="ellip" style="font-family:monospace; max-width:'+col_width+'px;">/' + encode_entities(group.regexp) + '/</div>',
 				// group.description || '(No description)',
-				num_servers ? commify( num_servers) : '(None)',
+				regexp ? (num_servers ? commify( num_servers) : '(None)') : '(Server-side matching)',
 				num_events ? commify( num_events ) : '(None)',
 				group.master ? '<b>Primary Eligible</b>' : 'Worker Only',
 				actions.join(' | ')
@@ -277,13 +294,13 @@ Class.add( Page.Admin, {
 			get_form_table_caption("Enter a title for the server group, short and sweet.") + 
 			get_form_table_spacer() + 
 			get_form_table_row('Hostname Match:', '<input type="text" id="fe_eg_regexp" size="30" style="font-family:monospace; font-size:13px;" value="'+escape_text_field_value(group.regexp)+'" spellcheck="false"/>') + 
-			get_form_table_caption("Enter a regular expression to auto-assign servers to this group by their hostnames, e.g. \"^mtx\\d+\\.\".") + 
+			get_form_table_caption("Enter a Go/RE2 regular expression; the server validates and applies it to hostnames, e.g. \"^mtx\\d+\\.\".") +
 			get_form_table_spacer() + 
 			get_form_table_row('Maximum Jobs per Node:', '<input type="number" id="fe_eg_max_jobs" min="0" step="1" value="' + (group.max_jobs || 0) + '" />') +
 			get_form_table_caption('Zero is unlimited. The strictest matching group applies, including direct host targets.') +
 			get_form_table_spacer() +
 			get_form_table_row('Server Class:', '<select id="fe_eg_master">' + render_menu_options([ [1,'Primary Eligible'], [0,'Worker Only'] ], group.master, false) + '</select>') + 
-			get_form_table_caption("Select whether servers in the group are eligible to become the primary server, or run as workers only.") + 
+			get_form_table_caption("Select whether servers in the group are eligible to become the primary server, or run as workers only. Adding workers also requires shared storage and trusted cluster identities configured on each server.") +
 		'</table>';
 		
 		app.confirm( '<i class="mdi mdi-server-network">&nbsp;&nbsp;</i>' + (edit ? "Edit Server Group" : "Add Server Group"), html, edit ? "Save Changes" : "Add Group", function(result) {
@@ -295,11 +312,7 @@ Class.add( Page.Admin, {
 				group.regexp = $('#fe_eg_regexp').val().replace(/^\/(.+)\/$/, '$1');
 				if (!group.regexp) return app.badField('fe_eg_regexp', "Please enter a regular expression for the server group.");
 				
-				try { new RegExp(group.regexp); }
-				catch(err) {
-					return app.badField('fe_eg_regexp', "Invalid regular expression: " + err);
-				}
-				
+
 				group.max_jobs = Number($('#fe_eg_max_jobs').val());
 				if (!Number.isSafeInteger(group.max_jobs) || group.max_jobs < 0) return app.badField('fe_eg_max_jobs', 'Enter a non-negative integer.');
 				group.master = parseInt( $('#fe_eg_master').val() );

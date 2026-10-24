@@ -33,3 +33,5 @@ bun tests/browser/check-licenses.mjs --write
 bun run --cwd tests/browser licenses
 bun audit --cwd tests/browser --audit-level=moderate
 ```
+
+浏览器测试也覆盖账号访问帮助、个人资料保存、六个管理子页面，以及临时用户、API Key、插件和分类的创建、编辑与删除。所有操作都使用临时服务数据。

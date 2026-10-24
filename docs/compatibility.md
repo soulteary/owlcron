@@ -62,3 +62,35 @@ be recreated, and categories assigned to events cannot be deleted. The browser's
 administration area remains administrator-only; delegated clients use the APIs
 (`/api/app/create_category`, `update_category`, `delete_category`, optionally
 suffixed with `/v1`). The administrator's user/API-key forms expose these rights.
+
+## Browser account and administration workflows
+
+Accounts are provisioned by administrators in **Admin → Users**. The login page's
+**Account access help** explains how to request an account or password reset;
+self-service registration and email recovery are unavailable. Old registration
+and recovery links show this help instead of submitting unsupported API requests.
+Signed-in users can update their profile and password in **My Account**, using
+their current password. An administrator can reset another user's password in
+**Admin → Users**. If all administrators are locked out, use the offline
+[administrator password reset](deployment.md#resetting-an-administrator-password).
+The CLI creates or resets an administrator; do not use it to reset an ordinary
+user, because it grants administrator privileges.
+
+The administration UI saves supported plugin identities and API-key enabled
+state. Welcome emails and API-key descriptions/authors are not provided by the
+backend, so the forms do not offer these controls. Share initial account
+credentials through a secure channel. Script-plugin commands use reviewed files
+through `owlcron-script`; no built-in inline Shell Plugin is installed. See
+[script files](script-files.md) for an executable configuration example.
+
+Server-group expressions are validated by Go's regular-expression engine. The
+browser previews common expressions with their case sensitivity preserved; it
+labels expressions it cannot preview as server-side matching. Configure shared
+storage and trusted node identities before adding workers.
+
+The event form edits single success/failure chain targets. For events configured
+through the API with target arrays, it displays and preserves those targets;
+change the array through the event API. Saving another field must not erase them.
+Activity pages read the current nested record format and use the full log count
+for pagination. Records without actor details are shown without inventing an
+identity.

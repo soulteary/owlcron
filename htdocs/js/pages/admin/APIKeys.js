@@ -37,7 +37,7 @@ Class.add( Page.Admin, {
 			]
 		);
 		
-		var cols = ['App Title', 'API Key', 'Status', 'Author', 'Created', 'Actions'];
+		var cols = ['App Title', 'API Key', 'Status', 'Created', 'Actions'];
 		
 		html += '<div style="padding:20px 20px 30px 20px">';
 		
@@ -56,8 +56,7 @@ Class.add( Page.Admin, {
 				'<div class="td_big">' + self.getNiceAPIKey(item, true, col_width) + '</div>',
 				'<div style="">' + encode_entities(item.key) + '</div>',
 				item.active ? '<span class="color_label green"><i class="fa fa-check">&nbsp;</i>Active</span>' : '<span class="color_label red"><i class="fa fa-warning">&nbsp;</i>Suspended</span>',
-				self.getNiceUsername(item.username, true, col_width),
-				'<span title="'+get_nice_date_time(item.created, true)+'">'+get_nice_date(item.created, true)+'</span>',
+				'<span title="'+self.getNiceRecordDate(item.created, false)+'">'+self.getNiceRecordDate(item.created, true)+'</span>',
 				actions.join(' | ')
 			];
 		} );
@@ -108,7 +107,7 @@ Class.add( Page.Admin, {
 		html += '<div style="padding:0px 20px 50px 20px">';
 		html += '<center><table style="margin:0;">';
 		
-		this.api_key = { privileges: {}, key: get_unique_id() };
+		this.api_key = { privileges: {}, key: get_unique_id(), active: true, enabled: true };
 		
 		html += this.get_api_key_edit_html();
 		
@@ -287,11 +286,6 @@ Class.add( Page.Admin, {
 		html += get_form_table_caption( "Enter the title of the application that will be using the API Key.");
 		html += get_form_table_spacer();
 		
-		// description
-		html += get_form_table_row('App Description', '<textarea id="fe_ak_desc" style="width:550px; height:50px; resize:vertical;">'+escape_text_field_value(api_key.description)+'</textarea>');
-		html += get_form_table_caption( "Optionally enter a more detailed description of the application." );
-		html += get_form_table_spacer();
-		
 		// privilege list
 		var priv_html = '';
 		for (var idx = 0, len = config.privilege_list.length; idx < len; idx++) {
@@ -316,9 +310,11 @@ Class.add( Page.Admin, {
 		var api_key = this.api_key;
 		
 		api_key.key = $('#fe_ak_key').val();
-		api_key.active = parseInt( $('#fe_ak_status').val() );
+		api_key.enabled = $('#fe_ak_status').val() === '1';
+		api_key.active = api_key.enabled;
 		api_key.title = $('#fe_ak_title').val();
-		api_key.description = $('#fe_ak_desc').val();
+		if (!api_key.title.trim()) return app.badField('fe_ak_title', 'Please enter an app title.');
+		delete api_key.description;
 		
 		if (!api_key.key.length) {
 			return app.badField('#fe_ak_key', "Please enter an API Key string, or generate a random one.");

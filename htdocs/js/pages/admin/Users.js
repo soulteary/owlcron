@@ -59,7 +59,7 @@ Class.add( Page.Admin, {
 				'<div class="ellip" style="max-width:'+col_width+'px;"><a href="mailto:'+user.email+'">'+encode_entities(user.email)+'</a></div>',
 				user.active ? '<span class="color_label green"><i class="fa fa-check">&nbsp;</i>Active</span>' : '<span class="color_label red"><i class="fa fa-warning">&nbsp;</i>Suspended</span>',
 				user.privileges.admin ? '<span class="color_label purple"><i class="fa fa-lock">&nbsp;</i>Admin</span>' : '<span class="color_label gray">Standard</span>',
-				'<span title="'+get_nice_date_time(user.created, true)+'">'+get_nice_date(user.created, true)+'</span>',
+				'<span title="'+self.getNiceRecordDate(user.created, false)+'">'+self.getNiceRecordDate(user.created, true)+'</span>',
 				actions.join(' | ')
 			];
 		} );
@@ -137,14 +137,13 @@ Class.add( Page.Admin, {
 		html += '<center><table style="margin:0;">';
 		
 		this.user = { 
+			active: true,
 			privileges: copy_object( config.default_privileges )
 		};
 		
 		html += this.get_user_edit_html();
 		
-		// notify user
-		html += get_form_table_row( 'Notify', '<input type="checkbox" id="fe_eu_send_email" value="1" checked="checked"/><label for="fe_eu_send_email">Send Welcome Email</label>' );
-		html += get_form_table_caption( "Select notification options for the new user." );
+		html += get_form_table_caption("Welcome email is not available. Share the initial password through a secure channel and ask the user to change it after signing in.");
 		html += get_form_table_spacer();
 		
 		// buttons at bottom
@@ -154,10 +153,6 @@ Class.add( Page.Admin, {
 			html += '<table><tr>';
 				html += '<td><div class="button" style="width:120px; font-weight:normal;" onMouseUp="$P().cancel_user_edit()">Cancel</div></td>';
 				html += '<td width="50">&nbsp;</td>';
-				if (config.debug) {
-					html += '<td><div class="button" style="width:120px; font-weight:normal;" onMouseUp="$P().populate_random_user()">Randomize...</div></td>';
-					html += '<td width="50">&nbsp;</td>';
-				}
 				html += '<td><div class="button" style="width:120px;" onMouseUp="$P().do_new_user()"><i class="fa fa-user-plus">&nbsp;&nbsp;</i>Create User</div></td>';
 			html += '</tr></table>';
 			
@@ -181,25 +176,7 @@ Class.add( Page.Admin, {
 	},
 	
 	populate_random_user: function() {
-		// grab random user data (for testing only)
-		var self = this;
-		
-		$.ajax({
-			url: 'http://api.randomuser.me/',
-			dataType: 'json',
-			success: function(data){
-				// console.log(data);
-				if (data.results && data.results[0] && data.results[0].user) {
-					var user = data.results[0].user;
-					$('#fe_eu_username').val( user.username );
-					$('#fe_eu_email').val( user.email );
-					$('#fe_eu_fullname').val( ucfirst(user.name.first) + ' ' + ucfirst(user.name.last) );
-					$('#fe_eu_send_email').prop( 'checked', false );
-					self.generate_password();
-					self.checkUserExists('eu');
-				}
-			}
-		});
+		return app.doError("Enter account details locally. Automatic profiles from external services are not supported.");
 	},
 	
 	do_new_user: function(force) {
@@ -214,20 +191,10 @@ Class.add( Page.Admin, {
 		if (!user.username.match(/^[\w\-\.]+$/)) {
 			return app.badField('#fe_eu_username', "Please make sure the username contains only alphanumerics, periods and dashes.");
 		}
-		if (!user.email.length) {
-			return app.badField('#fe_eu_email', "Please enter an e-mail address where the user can be reached.");
-		}
-		if (!user.email.match(/^\S+\@\S+$/)) {
-			return app.badField('#fe_eu_email', "The e-mail address you entered does not appear to be correct.");
-		}
-		if (!user.full_name.length) {
-			return app.badField('#fe_eu_fullname', "Please enter the user's first and last names.");
-		}
 		if (!user.password.length) {
 			return app.badField('#fe_eu_password', "Please enter a secure password to protect the account.");
 		}
 		
-		user.send_email = $('#fe_eu_send_email').is(':checked') ? 1 : 0;
 		
 		this.user = user;
 		
@@ -381,6 +348,7 @@ Class.add( Page.Admin, {
 		// get html for editing a user (or creating a new one)
 		var html = '';
 		var user = this.user;
+		var editing = !!user.username;
 		
 		// user id
 		html += get_form_table_row( 'Username', 
@@ -404,12 +372,12 @@ Class.add( Page.Admin, {
 		
 		// email
 		html += get_form_table_row( 'Email Address', '<input type="text" id="fe_eu_email" size="30" value="'+escape_text_field_value(user.email)+'" spellcheck="false"/>' );
-		html += get_form_table_caption( "This can be used to recover the password if the user forgets.  It will not be shared with anyone outside the server." );
+		html += get_form_table_caption( "Optional contact address. Forgotten passwords must be reset by an administrator; email recovery is not available." );
 		html += get_form_table_spacer();
 		
 		// password
-		html += get_form_table_row( user.password ? 'Change Password' : 'Password', '<input type="text" id="fe_eu_password" size="20" value="" spellcheck="false"/>&nbsp;<span class="link addme" onMouseUp="$P().generate_password()">&laquo; Generate Random</span>' );
-		html += get_form_table_caption( user.password ? "Optionally enter a new password here to reset it.  Please make it secure." : "Enter a password for the account.  Please make it secure." );
+		html += get_form_table_row( editing ? 'Change Password' : 'Password', '<input type="text" id="fe_eu_password" size="20" value="" spellcheck="false"/>&nbsp;<span class="link addme" onMouseUp="$P().generate_password()">&laquo; Generate Random</span>' );
+		html += get_form_table_caption( editing ? "Leave blank to keep the current password. A new password must contain 12-72 UTF-8 bytes." : "Enter a password containing 12-72 UTF-8 bytes." );
 		html += get_form_table_spacer();
 		
 		// privilege list
@@ -528,7 +496,7 @@ Class.add( Page.Admin, {
 	get_user_form_json: function() {
 		// get user elements from form, used for new or edit
 		var user = {
-			username: trim($('#fe_eu_username').val().toLowerCase()),
+			username: trim($('#fe_eu_username').val()),
 			active: parseInt($('#fe_eu_status').val()),
 			full_name: trim($('#fe_eu_fullname').val()),
 			email: trim($('#fe_eu_email').val()),
@@ -536,6 +504,11 @@ Class.add( Page.Admin, {
 			privileges: {}
 		};
 		
+		if (!/^[a-zA-Z0-9_.-]{3,50}$/.test(user.username)) return app.badField('fe_eu_username', 'Use 3-50 letters, digits, periods, underscores or dashes.');
+		if (user.email && !/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(user.email)) return app.badField('fe_eu_email', 'Please enter a valid email address or leave it blank.');
+		var password_bytes = new TextEncoder().encode(user.password).length;
+		if (user.password && (password_bytes < 12 || password_bytes > 72)) return app.badField('fe_eu_password', 'Passwords must contain 12-72 UTF-8 bytes.');
+
 		user.privileges.admin = $('#fe_eu_priv_admin').is(':checked') ? 1 : 0;
 		
 		if (!user.privileges.admin) {
