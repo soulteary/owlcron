@@ -1,0 +1,3 @@
+# Preserve the dependency layout used by frontend asset paths and license checks.
+[install]
+linker = "hoisted"

@@ -8,12 +8,12 @@ OwlCron 是一个使用 Go 编写、以替代 [Cronicle](https://github.com/jhuc
 
 ## 快速开始
 
-需要 Go、Node.js 22、npm、Python 3 和 make。模块默认建议 Go 1.27.3；使用其他工具链前请阅读[部署要求](docs/zh-CN/deployment.md)。
+需要 Go、Bun 1.4.2、Python 3 和 make。模块默认建议 Go 1.27.3；使用其他工具链前请阅读[部署要求](docs/zh-CN/deployment.md)。
 
 ```sh
 git clone https://github.com/soulteary/owlcron.git
 cd owlcron
-npm ci --prefix htdocs-deps
+bun install --cwd htdocs-deps --frozen-lockfile
 make frontend build
 cp config.json config.local.json
 chmod 600 config.local.json
@@ -49,7 +49,7 @@ HTTP 服务默认监听所有网卡，`base_app_url` 不限制监听地址。对
 在仓库根目录执行：
 
 ```sh
-npm ci --prefix htdocs-deps
+bun install --cwd htdocs-deps --frozen-lockfile
 make frontend build
 make fmt-check vet test frontend-test licenses-check docs-check smoke
 ```

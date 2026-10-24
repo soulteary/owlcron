@@ -9,7 +9,7 @@ security patch in that series. The `go 1.26.0` directive in `go.mod` is the modu
 language baseline, not a promise of support or testing on Go 1.26. The separate
 `toolchain go1.27.3` directive selects the recommended compiler when automatic
 toolchain selection is enabled. Go 1.25 and 1.26 are not in the supported matrix.
-Frontend/release builds use Node.js 22, npm, Python 3.9 or later, and make.
+Frontend/release builds use Bun 1.4.2, Python 3.9 or later, and make.
 
 The release workflow builds and executes Linux amd64 binaries on its native
 runner. The packaging script can also validate a native developer build (such

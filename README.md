@@ -8,12 +8,12 @@ The project is experimental. Review the [known limitations](docs/limitations.md)
 
 ## Quick start
 
-Install Go, Node.js 22, npm, Python 3, and make. The module recommends Go 1.27.3; see the [deployment requirements](docs/deployment.md) before choosing another toolchain.
+Install Go, Bun 1.4.2, Python 3, and make. The module recommends Go 1.27.3; see the [deployment requirements](docs/deployment.md) before choosing another toolchain.
 
 ```sh
 git clone https://github.com/soulteary/owlcron.git
 cd owlcron
-npm ci --prefix htdocs-deps
+bun install --cwd htdocs-deps --frozen-lockfile
 make frontend build
 cp config.json config.local.json
 chmod 600 config.local.json
@@ -49,7 +49,7 @@ The [documentation index](docs/README.md) links to both language editions.
 Run these commands from the repository root:
 
 ```sh
-npm ci --prefix htdocs-deps
+bun install --cwd htdocs-deps --frozen-lockfile
 make frontend build
 make fmt-check vet test frontend-test licenses-check docs-check smoke
 ```

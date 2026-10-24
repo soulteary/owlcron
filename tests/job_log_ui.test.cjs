@@ -1,4 +1,4 @@
-// Run with node --test tests/job_log_ui.test.cjs.
+// Run with bun test tests/job_log_ui.test.cjs.
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');

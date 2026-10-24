@@ -8,15 +8,15 @@ through the UI, checks persisted light/dark preferences, creates and edits an
 event (including log retention), runs it, and opens its history and log. It also
 fails on uncaught browser JavaScript errors. No existing configuration is read.
 
-From the repository root, using Node.js 22 and the documented Go toolchain:
+From the repository root, using Bun 1.4.2 and the documented Go toolchain:
 
 ```sh
-npm ci --prefix htdocs-deps
-npm ci --prefix tests/browser
-(cd tests/browser && npx playwright install --with-deps --only-shell chromium)
+bun install --cwd htdocs-deps --frozen-lockfile
+bun install --cwd tests/browser --frozen-lockfile
+(cd tests/browser && bunx --bun --no-install playwright install --with-deps --only-shell chromium)
 make build frontend
-npm run licenses --prefix tests/browser
-npm test --prefix tests/browser
+bun run --cwd tests/browser licenses
+bun run --cwd tests/browser test
 ```
 
 To use an existing compatible Chrome/Chromium installation locally, set
@@ -32,7 +32,7 @@ critical-path smoke test, not a claim of full cross-browser or accessibility
 coverage. Package upgrades require refreshing the lockfile and license copies:
 
 ```sh
-node tests/browser/check-licenses.mjs --write
-npm run licenses --prefix tests/browser
-npm audit --prefix tests/browser --audit-level=moderate
+bun tests/browser/check-licenses.mjs --write
+bun run --cwd tests/browser licenses
+bun audit --cwd tests/browser --audit-level=moderate
 ```

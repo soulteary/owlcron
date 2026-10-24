@@ -1,10 +1,10 @@
-FROM node:25-bookworm-slim AS frontend
+FROM oven/bun:1.4.2 AS frontend
 WORKDIR /src
-COPY htdocs-deps/package*.json htdocs-deps/
-RUN npm ci --prefix htdocs-deps
+COPY htdocs-deps/package.json htdocs-deps/bun.lock htdocs-deps/bunfig.toml htdocs-deps/
+RUN bun install --cwd htdocs-deps --frozen-lockfile
 COPY htdocs-deps/ htdocs-deps/
 COPY htdocs/ htdocs/
-RUN npm run build --prefix htdocs-deps \
+RUN bun run --cwd htdocs-deps build \
     && mkdir -p /out/htdocs \
     && cp -aL htdocs/. /out/htdocs/
 

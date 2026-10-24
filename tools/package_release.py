@@ -122,7 +122,7 @@ def main():
         env = dict(os.environ, CGO_ENABLED='0')
         flags = (f'-X github.com/soulteary/owlcron/cli.Version={args.version} '
                  f'-X github.com/soulteary/owlcron/cli.Commit={commit}')
-        subprocess.run(['npm', 'ci', '--prefix', 'htdocs-deps'], cwd=source, env=env, check=True)
+        subprocess.run(['bun', 'install', '--cwd', 'htdocs-deps', '--frozen-lockfile'], cwd=source, env=env, check=True)
         subprocess.run(['make', 'build', 'frontend', 'GO_BUILD_FLAGS=-trimpath', f'LDFLAGS={flags}'], cwd=source, env=env, check=True)
         actual = subprocess.check_output([str(source / 'owlcron-engine'), 'version'], cwd=source, text=True).strip()
         expected = f'OwlCron {args.version} (commit {commit})'

@@ -2,17 +2,18 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {lockedPackages} from '../../tools/bun-lock.mjs';
 const directory = path.dirname(fileURLToPath(import.meta.url));
 const destination = path.resolve(directory, '../../licenses/browser');
-const lock = JSON.parse(fs.readFileSync(path.join(directory, 'package-lock.json')));
+const packages = lockedPackages(directory);
 const rows = [];
 const copies = new Map();
-for (const [name, entry] of Object.entries(lock.packages).sort()) {
-  if (!name) continue;
+for (const entry of packages) {
+  const name = entry.package;
   const source = path.join(directory, name);
   const metadata = JSON.parse(fs.readFileSync(path.join(source, 'package.json')));
   assert.equal(metadata.version, entry.version, name);
-  assert.equal(metadata.license, entry.license, name);
+  assert.equal(metadata.name, entry.name, name);
   const files = fs.readdirSync(source).filter(file => /^(license|notice|copying)(\.|$)/i.test(file)).sort();
   assert.ok(files.length, 'Missing license for ' + name);
   const folder = metadata.name.replaceAll('/', '__') + '@' + metadata.version;

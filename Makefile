@@ -42,10 +42,10 @@ vet:
 	go vet ./...
 
 frontend:
-	cd htdocs-deps && node build.js dist
+	cd htdocs-deps && bun build.js dist
 
 frontend-test:
-	node --test tests/*_ui.test.cjs
+	bun test tests/*_ui.test.cjs tests/bun_lock.test.mjs
 
 integration:
 	@test -n "$$OWLCRON_TEST_S3_ENDPOINT" || (echo "Set OWLCRON_TEST_S3_ENDPOINT" >&2; exit 1)

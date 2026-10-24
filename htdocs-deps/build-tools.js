@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 // Build Tools Module -- included by build.js.
 // Copies, symlinks and compresses files into the right locations.

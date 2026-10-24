@@ -24,6 +24,6 @@ See [deployment](docs/deployment.md) for proxy, cookie, credential, and backup r
 
 ## Dependency checks
 
-CI runs `npm audit` against locked npm dependencies and `govulncheck` against the main module and example plugin. These checks cover known advisories at scan time; they do not rule out unknown vulnerabilities. Rebuild the frontend, run installation smoke tests, and refresh notices with `make licenses-update licenses-check` after dependency changes.
+CI runs `bun audit` against locked npm dependencies and `govulncheck` against the main module and example plugin. These checks cover known advisories at scan time; they do not rule out unknown vulnerabilities. Rebuild the frontend, run installation smoke tests, and refresh notices with `make licenses-update licenses-check` after dependency changes.
 
 Scanners may report vulnerable packages contained in a module but not imported by this project. Distinguish reachable calls, imported packages, and module-only findings. Verify the call path and document the decision instead of hiding scanner output.

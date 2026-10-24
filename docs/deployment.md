@@ -6,12 +6,14 @@ Use OwlCron initially for development, evaluation, and controlled environments. 
 
 ## Installation and startup
 
-Use Go 1.27.3 or a later security patch in the same series, Node.js 22, npm, Python 3, and make. CI validates Go 1.27 only; prefer its latest security patch. The module recommends Go 1.27.3, which older Go installations can select when automatic toolchain download is enabled.
+Use Go 1.27.3 or a later security patch in the same series, Bun 1.4.2, Python 3, and make. CI validates Go 1.27 only; prefer its latest security patch. The module recommends Go 1.27.3, which older Go installations can select when automatic toolchain download is enabled.
+
+Install the pinned Bun toolchain with `curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.2"`, then verify `bun --version`. Frontend and browser dependencies use separate committed `bun.lock` files; always use `--frozen-lockfile` for reproducible installation. `bunfig.toml` keeps the hoisted layout required by static asset paths and license validation. Node.js and npm are not required for these build and test commands.
 
 ```sh
 git clone https://github.com/soulteary/owlcron.git
 cd owlcron
-npm ci --prefix htdocs-deps
+bun install --cwd htdocs-deps --frozen-lockfile
 make frontend build
 make licenses-check smoke
 cp config.json config.local.json

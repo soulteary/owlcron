@@ -2,12 +2,12 @@
 
 English | [简体中文](zh-CN/testing.md)
 
-Run commands from the repository root unless stated otherwise. Use the recommended patched Go toolchain and Node.js 22. See [deployment](deployment.md) for prerequisites and permissions.
+Run commands from the repository root unless stated otherwise. Use the recommended patched Go toolchain and Bun 1.4.2. See [deployment](deployment.md) for prerequisites and permissions.
 
 ## Routine checks
 
 ```sh
-npm ci --prefix htdocs-deps
+bun install --cwd htdocs-deps --frozen-lockfile
 make frontend build
 make fmt-check vet test frontend-test licenses-check docs-check smoke
 make race
@@ -24,14 +24,14 @@ python3 -m unittest discover -s tests -p 'test_*.py'
 ## Vulnerabilities and licenses
 
 ```sh
-npm audit --prefix htdocs-deps --audit-level=moderate
+bun audit --cwd htdocs-deps --audit-level=moderate
 go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
 (cd bin/echo-plugin && go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...)
 ```
 
 Scans use the advisory database available at runtime. Distinguish reachable calls, imported packages, and module-only findings. Do not describe an unused package advisory as confirmed exploitation, or ignore a reachable vulnerability.
 
-After npm upgrades, run `make licenses-update licenses-check` and review changed terms. Go dependency changes also require updating `licenses/go-inventory.json` and the relevant upstream notices. Run `npm ci` before checking license inventories.
+After Bun dependency upgrades, run `make licenses-update licenses-check` and review changed terms. Go dependency changes also require updating `licenses/go-inventory.json` and the relevant upstream notices. Run `bun install --frozen-lockfile` before checking license inventories.
 
 ## Independent-process regression
 
@@ -77,7 +77,7 @@ Resources, mounts, backends, data volume, and log/notification load affect resul
 
 ## CI and evidence
 
-[Routine CI](../.github/workflows/ci.yml) checks Go 1.27, Node.js 22, builds, unit tests, installation smoke tests, licenses, and vulnerabilities. [Fault acceptance](../.github/workflows/process-acceptance.yml) covers process and Linux fault scenarios.
+[Routine CI](../.github/workflows/ci.yml) checks Go 1.27, Bun 1.4.2, builds, unit tests, installation smoke tests, licenses, and vulnerabilities. [Fault acceptance](../.github/workflows/process-acceptance.yml) covers process and Linux fault scenarios.
 
 CI runs on pull requests and pushes to `main`; feature-branch pushes do not start a second copy of the same checks. New commits cancel superseded runs. Dependency and Docker layer caches reduce repeated downloads and builds; tests still execute on cache hits. On main, the Linux fault matrix triggers for Go code, its dependencies, the Makefile, acceptance/load harnesses, and its own workflow. Frontend-only tests and container configuration checks use their relevant CI workflows without rerunning unrelated Linux fault scenarios.
 
