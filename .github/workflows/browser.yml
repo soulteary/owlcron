@@ -1,4 +1,4 @@
-name: Browser smoke
+name: CI / Browser Tests
 on:
   pull_request:
     paths: ['htdocs/**', 'htdocs-deps/**', '**/*.go', 'go.mod', 'go.sum', 'Makefile', 'tools/bun-lock.mjs', 'tests/browser/**', 'licenses/browser/**', 'licenses/browser-inventory.json', '.github/workflows/browser.yml']
