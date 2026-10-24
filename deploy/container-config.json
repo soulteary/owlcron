@@ -1,0 +1,12 @@
+{
+  "base_app_url": "http://localhost:3012",
+  "http_port": 3012,
+  "hostname": "owlcron-single",
+  "storage_engine": "Filesystem",
+  "storage_base_dir": "/var/lib/owlcron/data",
+  "log_dir": "/var/lib/owlcron/logs",
+  "queue_dir": "/var/lib/owlcron/queue",
+  "job_log_expire_days": 30,
+  "job_data_expire_days": 90,
+  "scheduler_startup_grace": 10
+}
