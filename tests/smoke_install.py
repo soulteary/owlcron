@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 def main():
-    subprocess.run(['/bin/sh', str(ROOT / 'tests/smoke_script_adapter.sh'),
+    subprocess.run(['/bin/sh', str(Path(__file__).resolve().parent / 'smoke_script_adapter.sh'),
                     str(ROOT / 'owlcron-script')], check=True)
     with tempfile.TemporaryDirectory(prefix='owlcron-smoke-') as directory:
         work = Path(directory)

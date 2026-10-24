@@ -21,13 +21,21 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// Version and Commit may be set by release builds using Go linker flags.
+var Version = "dev"
+var Commit = "unknown"
+
+func VersionString() string {
+	return fmt.Sprintf("OwlCron %s (commit %s)", Version, Commit)
+}
+
 func Run(args []string, config *types.Config, logger *zap.Logger) (handled bool, err error) {
 	if len(args) == 0 {
 		return false, nil
 	}
 	switch args[0] {
 	case "version":
-		fmt.Println("OwlCron (development build)")
+		fmt.Println(VersionString())
 		return true, nil
 	case "help":
 		printHelp()

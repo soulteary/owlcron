@@ -37,3 +37,6 @@ coverage.out
 /htdocs/css/materialdesignicons*
 /htdocs/fonts/
 /htdocs/socket.io/
+
+# Release archives
+/dist/

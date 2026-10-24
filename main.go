@@ -34,6 +34,12 @@ func run() error {
 	configFile := flag.String("config", "config.json", "Configuration file path")
 	debug := flag.Bool("debug", false, "Enable debug mode")
 	flag.Parse()
+	cliArgs := flag.Args()
+	// Version inspection must not load configuration or create runtime state.
+	if len(cliArgs) > 0 && cliArgs[0] == "version" {
+		_, err := cli.Run(cliArgs, nil, nil)
+		return err
+	}
 
 	// 初始化日志
 	var logger *zap.Logger
@@ -55,7 +61,6 @@ func run() error {
 	}
 
 	// CLI 子命令处理
-	cliArgs := flag.Args()
 	if handled, err := cli.Run(cliArgs, config, logger); handled {
 		return err
 	}

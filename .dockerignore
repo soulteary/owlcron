@@ -23,3 +23,6 @@ htdocs/socket.io
 htdocs/css/base.css*
 htdocs/css/font-awesome*
 htdocs/css/materialdesignicons*
+
+# Local release archives
+dist

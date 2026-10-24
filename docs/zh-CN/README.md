@@ -16,3 +16,4 @@
 
 - [容器与 Kubernetes](containers.md)
 - [运行脚本文件](script-files.md)
+- [版本和发行](releases.md)：支持的工具链、发行包验证和草稿发布流程。

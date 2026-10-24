@@ -96,7 +96,7 @@ Prefer a stopped, consistent snapshot for Filesystem storage. Use a consistent b
 
 Restore into an isolated environment and check login, jobs, history, and logs before upgrading the deployment. For rollback, retain the previous executable, static assets, plugins, and pre-upgrade snapshot. If formats change, restore the matching snapshot rather than assuming an old binary can read new data. Restore tests must not send duplicate notifications to real recipients.
 
-The project does not yet promise stable release packaging or data-migration compatibility. Validate upgrades, cross-version rollback, and remote-backend disaster recovery against the intended deployment.
+The [release workflow and version policy](releases.md) define verified archive contents and the supported build matrix. Data-migration compatibility is not yet guaranteed. Validate upgrades, cross-version rollback, and remote-backend disaster recovery against the intended deployment.
 
 ## Hosting under a URL prefix
 

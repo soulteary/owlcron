@@ -16,3 +16,4 @@ For Chinese documentation, open the [Chinese index](zh-CN/README.md). Update bot
 
 - [Containers and Kubernetes](containers.md)
 - [Running script files](script-files.md)
+- [Versions and releases](releases.md): supported toolchain, archive verification, and draft releases.
