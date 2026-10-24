@@ -16,7 +16,7 @@ function fixture() {
    matches(s){return matches(this,s);},closest(s){return this.matches(s)?this:null;},getClientRects(){return this.hidden?[]:[{}];},
    contains(other){return other===this||this.children.includes(other);},querySelector(){return null;},
    querySelectorAll(s){return s.includes('onmouseup')?this.children.filter(c=>matches(c,s)):this.children.filter(c=>c.tabIndex>=0);},
-   focus(){active=this;},dispatchEvent(e){events.push({node:this,type:e.type});}};
+   focus(){active=this;},dispatchEvent(e){events.push({node:this,type:e.type,shiftKey:e.shiftKey,ctrlKey:e.ctrlKey,altKey:e.altKey,metaKey:e.metaKey});}};
   return n;
  }
  const trigger=element('DIV',{onmouseup:'open'});active=trigger;
@@ -25,7 +25,7 @@ function fixture() {
  const Dialog={active:false,clickBlock:false,show(){dialog=element('DIV',{},this.next||[]);this.active=true;},hide(){this.active=false;dialog=null;}};
  const app={confirm_click(value){events.push({confirm:value});Dialog.hide();}};
  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../htdocs/js/keyboard.js'),'utf8'),{document,window:{addEventListener(type,fn){resize=fn;}},Dialog,app,
-  MouseEvent:class{constructor(type){this.type=type;}},MutationObserver:class{constructor(fn){observer=fn;}observe(){}}});
+  MouseEvent:class{constructor(type,options){this.type=type;Object.assign(this,options);}},MutationObserver:class{constructor(fn){observer=fn;}observe(){}}});
  return {element,trigger,events,Dialog,document,regions,resize(){resize();}, get dialog(){return dialog;},
   add(n){observer([{addedNodes:[n]}]);},key(target,key,extra={}){const e={target,key,preventDefault(){this.prevented=true;},stopImmediatePropagation(){this.stopped=true;},stopPropagation(){this.bubbleStopped=true;},...extra};keydown(e);return e;}};
 }
@@ -97,4 +97,10 @@ test('pagination scroll regions own only the temporary focus attributes',()=>{
  pagination.scrollWidth=200;existing.scrollWidth=200;f.resize();
  assert.equal(pagination.hasAttribute('role'),false);assert.equal(pagination.hasAttribute('aria-label'),false);assert.equal(pagination.hasAttribute('tabindex'),false);
  assert.equal(existing.attrs.role,'navigation');assert.equal(existing.attrs.tabindex,'0');assert.equal(existing.attrs['aria-label'],'Pages');
+});
+
+test('keyboard actions preserve modifiers used by scheduled run date selection',()=>{
+ const f=fixture(),run=f.element('SPAN',{onmouseup:'run_event(event)'});f.add(run);
+ f.key(run,'Enter',{shiftKey:true,ctrlKey:false,altKey:true,metaKey:true});
+ const action=f.events[0];assert.equal(action.type,'mouseup');assert.equal(action.shiftKey,true);assert.equal(action.ctrlKey,false);assert.equal(action.altKey,true);assert.equal(action.metaKey,true);
 });

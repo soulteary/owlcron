@@ -116,7 +116,7 @@
 		event.preventDefault();
 		event.stopImmediatePropagation();
 		if (event.repeat) return;
-		action.dispatchEvent(new MouseEvent(action.hasAttribute('onmouseup') ? 'mouseup' : 'click', {bubbles:true, cancelable:true, view:window}));
+		action.dispatchEvent(new MouseEvent(action.hasAttribute('onmouseup') ? 'mouseup' : 'click', {bubbles:true, cancelable:true, view:window, shiftKey:event.shiftKey, ctrlKey:event.ctrlKey, altKey:event.altKey, metaKey:event.metaKey}));
 	}, true);
 
 	function init() {
