@@ -132,3 +132,11 @@ execution; queued, delayed and multiplex jobs use the same check. Existing jobs
 are not terminated when a limit is lowered. A full node is excluded from new
 selection; an event with no capacity waits only when event queuing is enabled.
 The top-level `max_jobs` continues to limit the whole cluster.
+
+## Browser theme
+
+The header theme selector supports System, Light and Dark. System follows OS
+changes; an explicit choice is stored locally in the browser under
+`owlcron.theme`. Selecting System restores automatic changes. Storage restrictions
+fall back to an in-memory preference and do not prevent login. Theme preferences
+are local UI settings, not account settings.
