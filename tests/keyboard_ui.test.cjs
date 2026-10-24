@@ -7,7 +7,7 @@ const path=require('node:path');
 function fixture() {
  let keydown, observer, dialog=null, active;
  const events=[];
- const matches=(n,s)=>s.includes('onmouseup') ? n.hasAttribute('onmouseup')||n.hasAttribute('onclick') : s==='input, select, textarea, [contenteditable="true"]' ? /INPUT|TEXTAREA|SELECT/.test(n.tagName)||n.attrs.contenteditable==='true' : false;
+ const matches=(n,s)=>s.includes('onmouseup') ? n.hasAttribute('onmouseup')||n.hasAttribute('onclick')||/^tab_/.test(n.attrs.id||'') : s==='input, select, textarea, [contenteditable="true"]' ? /INPUT|TEXTAREA|SELECT/.test(n.tagName)||n.attrs.contenteditable==='true' : s==='button, a[href]' ? n.tagName==='BUTTON'||(n.tagName==='A'&&n.hasAttribute('href')) : false;
  function element(tag='DIV',attrs={},children=[]) {
   const n={tagName:tag,attrs:{...attrs},children,textContent:'Action',nodeType:1,isConnected:true,disabled:false,title:'',
    hasAttribute(k){return k in this.attrs;},getAttribute(k){return this.attrs[k]??null;},setAttribute(k,v){this.attrs[k]=v;},
@@ -26,7 +26,7 @@ function fixture() {
  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../htdocs/js/keyboard.js'),'utf8'),{document,window:{},Dialog,app,
   MouseEvent:class{constructor(type){this.type=type;}},MutationObserver:class{constructor(fn){observer=fn;}observe(){}}});
  return {element,trigger,events,Dialog,document, get dialog(){return dialog;},
-  add(n){observer([{addedNodes:[n]}]);},key(target,key,extra={}){const e={target,key,preventDefault(){this.prevented=true;},stopImmediatePropagation(){this.stopped=true;},...extra};keydown(e);return e;}};
+  add(n){observer([{addedNodes:[n]}]);},key(target,key,extra={}){const e={target,key,preventDefault(){this.prevented=true;},stopImmediatePropagation(){this.stopped=true;},stopPropagation(){this.bubbleStopped=true;},...extra};keydown(e);return e;}};
 }
 
 test('legacy actions are tabbable and activate once with Enter or Space, including dynamic pages',()=>{
@@ -34,8 +34,9 @@ test('legacy actions are tabbable and activate once with Enter or Space, includi
  for(const key of ['Enter',' ']) {const e=f.key(f.trigger,key);assert.equal(e.prevented,true);assert.equal(e.stopped,true);}
  assert.deepEqual(f.events.map(e=>e.type),['mouseup','mouseup']);
  f.key(f.trigger,' ',{repeat:true});assert.equal(f.events.length,2);
+ const tab=f.element('DIV',{id:'tab_Schedule'});f.add(tab);assert.equal(tab.tabIndex,0);f.key(tab,'Enter');assert.equal(f.events[2].type,'click');
  const added=f.element('SPAN',{onclick:'action'});f.add(added);assert.equal(added.tabIndex,0);
- f.key(added,'Enter');assert.equal(f.events[2].type,'click');
+ f.key(added,'Enter');assert.equal(f.events[3].type,'click');
 });
 
 test('native form controls, real links and disabled actions retain their own semantics',()=>{
@@ -70,4 +71,12 @@ test('Enter on the focused Cancel control invokes Cancel rather than the framewo
 test('event script editor allows Tab to leave the textarea',()=>{
  const source=fs.readFileSync(path.join(__dirname,'../htdocs/js/pages/Schedule.class.js'),'utf8');
  assert.doesNotMatch(source,/onkeydown="return catchTab\(this,event\)"/);
+});
+
+ test('native dialog button and link Enter retain browser defaults without global confirm',()=>{
+ const f=fixture();f.Dialog.show();f.Dialog.active='confirmation';
+ for(const n of [f.element('BUTTON'),f.element('A',{href:'#Home'})]) {
+  const e=f.key(n,'Enter');assert.equal(e.bubbleStopped,true);assert.equal(e.prevented,undefined);
+ }
+ assert.equal(f.events.length,0);
 });

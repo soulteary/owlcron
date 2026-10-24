@@ -1,7 +1,7 @@
 // Keyboard access for the legacy mouse-driven controls and modal framework.
 (function() {
 	'use strict';
-	var actions = '[onmouseup], [onclick]';
+	var actions = '[onmouseup], [onclick], .tab[id^="tab_"]';
 	var focusable = 'a[href], button, input, select, textarea, [tabindex]';
 	var returnFocus = null;
 
@@ -78,6 +78,8 @@
 		}
 		if (event.key !== 'Enter' && event.key !== ' ') return;
 		var target = event.target;
+		// Keep native button/link defaults, without the framework treating Enter as Confirm.
+		if (dialog && event.key === 'Enter' && target.closest && target.closest('button, a[href]')) event.stopPropagation();
 		if (target.closest && target.closest('input, select, textarea, [contenteditable="true"]')) return;
 		var action = target.closest && target.closest(actions);
 		if (!action || /^(INPUT|SELECT|TEXTAREA|BUTTON)$/.test(action.tagName)) return;
