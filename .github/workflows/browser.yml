@@ -49,6 +49,12 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-${{ matrix.browser }}-${{ hashFiles('tests/browser/bun.lock') }}
+      - name: Use Ubuntu archive for browser dependencies
+        # The Azure mirror can throttle font/media packages past the job budget.
+        run: |
+          if [ -f /etc/apt/apt-mirrors.txt ]; then
+            sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/apt-mirrors.txt
+          fi
       - name: Install browser and system dependencies
         working-directory: tests/browser
         env:
