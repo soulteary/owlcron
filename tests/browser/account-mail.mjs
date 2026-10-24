@@ -7,7 +7,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import net from 'node:net';
 import {setTimeout as delay} from 'node:timers/promises';
-import {chromium} from 'playwright';
+import {browserName, launchBrowser} from './browser.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const work = mkdtempSync(path.join(tmpdir(), 'owlcron-account-mail-'));
@@ -77,10 +77,13 @@ try {
     return (await fetch(base+'/api/user/'+endpoint, {method:'POST',signal:AbortSignal.timeout(5000),headers:{'Content-Type':'application/json',
       ...(session ? {'X-Session-ID':session} : {})},body:JSON.stringify(body)})).json();
   }
-  browser = await chromium.launch({headless:true,...(process.env.OWLCRON_BROWSER_EXECUTABLE ?
-    {executablePath:process.env.OWLCRON_BROWSER_EXECUTABLE} : {})});
-  const page = await browser.newPage();
+  browser = await launchBrowser();
+  const page = await browser.newPage({viewport:{width:375,height:900}});
   page.setDefaultTimeout(15000);
+  async function fitsViewport() {
+    const fits = await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2);
+    assert.equal(fits, true, 'Account form overflows the 375px viewport');
+  }
   const errors = [];
   const consoleMessages = [];
   page.on('console', message => consoleMessages.push(message.text()));
@@ -109,11 +112,15 @@ try {
   stage = 'initial login';
   await page.goto(base);
   assert.equal(await page.locator('#fe_ca_username').count(),0,'Registration remains closed');
+  await page.locator('#fe_login_username').waitFor();
+  await fitsViewport();
   await page.locator('#fe_login_username').fill(username);
   await page.locator('#fe_login_password').fill(password);
   const login = await responseFor('login', () => page.locator('.button:visible').filter({hasText:'Login'}).click());
   stage = 'email verification request';
   await page.goto(base+'/#MyAccount');
+  await page.locator('#fe_ma_email').waitFor();
+  await fitsViewport();
   await page.locator('#fe_ma_email').fill(email);
   await page.locator('#fe_ma_old_password').fill(password);
   await responseFor('request_email_verification', () => page.getByRole('button',{name:'Send verification email'}).click());
@@ -125,6 +132,7 @@ try {
   await page.goto('about:blank');
   await page.goto(verificationLink);
   await page.locator('#confirm_email_verification').waitFor();
+  await fitsViewport();
   assert.ok(!page.url().includes('token='),'Verification token removed from URL before rendering');
   await responseFor('verify_email', () => page.locator('#confirm_email_verification').click());
   const replayVerification = await api('verify_email',{user_id:verificationParams.get('u'),token:verificationParams.get('token')});
@@ -136,6 +144,8 @@ try {
   const absent = await api('forgot_password',{username:'missing-account',email});
   await page.evaluate(() => app.doUserLogout(true));
   await page.goto(base+'/#Login?recover=1');
+  await page.locator('#fe_recovery_username').waitFor();
+  await fitsViewport();
   await page.locator('#fe_recovery_username').fill(username);
   await page.locator('#fe_recovery_email').fill(email);
   const known = await responseFor('forgot_password', () => page.locator('#request_password_recovery').click());
@@ -147,6 +157,7 @@ try {
   // Reusing the open tab must scrub the token before the application router.
   await page.goto(recoveryLink);
   await page.locator('#fe_reset_password').waitFor();
+  await fitsViewport();
   assert.ok(!page.url().includes('token='),'Recovery token removed from URL before rendering');
   // Opening an email link must not consume it or change the current password.
   const beforeReset = await api('login',{username,password});
@@ -161,6 +172,8 @@ try {
   assert.notEqual(replay.code,0,'Recovery token must be single-use');
   assert.notEqual((await api('login',{username,password})).code,0,'Old password is revoked');
   assert.notEqual((await api('resume_session',{session_id:login.session_id})).code,0,'Existing sessions are revoked');
+  await page.locator('#fe_login_username').waitFor();
+  await fitsViewport();
   await page.locator('#fe_login_username').fill(username);
   await page.locator('#fe_login_password').fill(replacement);
   await responseFor('login', () => page.locator('.button:visible').filter({hasText:'Login'}).click());
@@ -169,7 +182,7 @@ try {
   for (const token of [verificationParams.get('token'),recoveryParams.get('token')]) {
     assert.ok(!consoleMessages.some(message => message.includes(token)), 'Action tokens must not appear in browser console');
   }
-  console.log('Account mail passed: local SMTP, verification, private recovery response, explicit reset, replay protection, session revocation, new login and closed registration');
+  console.log(browserName + ' account mail passed: local SMTP, verification, private recovery response, explicit reset, replay protection, session revocation, new login and closed registration');
 } catch (error) {
   console.error(String(error.message).replace(/https?:\/\/[^\s]+/g, '[redacted URL]').replace(/[a-f0-9]{48,}/gi, '[redacted secret]'));
   // Errors, screenshots and daemon logs can contain token-bearing URLs. Keep this test output secret-free.

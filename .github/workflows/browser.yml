@@ -12,11 +12,17 @@ concurrency:
 permissions:
   contents: read
 jobs:
-  chromium:
+  browser:
+    name: ${{ matrix.browser }}
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     env:
       GOTOOLCHAIN: local
+      OWLCRON_BROWSER: ${{ matrix.browser }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -37,15 +43,22 @@ jobs:
       - run: bun install --cwd tests/browser --frozen-lockfile
       - run: bun run --cwd tests/browser licenses
       - run: bun audit --cwd tests/browser --audit-level=moderate
-      - name: Cache Chromium
-        id: chromium-cache
+      - name: Cache browser binaries
+        id: browser-cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-chromium-${{ hashFiles('tests/browser/bun.lock') }}
-      - name: Install Chromium and its system dependencies
+          key: ${{ runner.os }}-${{ matrix.browser }}-${{ hashFiles('tests/browser/bun.lock') }}
+      - name: Install browser and system dependencies
         working-directory: tests/browser
-        run: bunx --bun --no-install playwright install --with-deps --only-shell chromium
+        env:
+          BROWSER: ${{ matrix.browser }}
+        run: |
+          if [ "$BROWSER" = chromium ]; then
+            bunx --bun --no-install playwright install --with-deps --only-shell chromium
+          else
+            bunx --bun --no-install playwright install --with-deps "$BROWSER"
+          fi
       - run: make build frontend
       - name: Single-node pages and permission acceptance
         run: bun run --cwd tests/browser test
@@ -54,7 +67,7 @@ jobs:
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
-          name: chromium-smoke-failure
+          name: ${{ matrix.browser }}-smoke-failure
           path: tests/browser/test-results/
           if-no-files-found: ignore
           retention-days: 7

@@ -19,7 +19,7 @@ not read an existing service configuration or target a deployed instance.
   sessions, and successful login with the new password. It also checks fresh-page
   and same-document email links without exposing their tokens in browser logs.
 
-Both run in headless Chromium and fail on uncaught browser JavaScript errors.
+Both run in the selected headless browser and fail on uncaught browser JavaScript errors. CI runs Chromium, Firefox and WebKit in parallel.
 The account runner sends no external email; public registration stays disabled.
 
 From the repository root, using Bun 1.4.2 and the documented Go toolchain:
@@ -27,16 +27,21 @@ From the repository root, using Bun 1.4.2 and the documented Go toolchain:
 ```sh
 bun install --cwd htdocs-deps --frozen-lockfile
 bun install --cwd tests/browser --frozen-lockfile
-(cd tests/browser && bunx --bun --no-install playwright install --with-deps --only-shell chromium)
+(cd tests/browser && bunx --bun --no-install playwright install --with-deps chromium firefox webkit)
 make build frontend
 bun run --cwd tests/browser licenses
 bun run --cwd tests/browser test
 bun run --cwd tests/browser test:account-mail
+OWLCRON_BROWSER=firefox bun run --cwd tests/browser test
+OWLCRON_BROWSER=firefox bun run --cwd tests/browser test:account-mail
+OWLCRON_BROWSER=webkit bun run --cwd tests/browser test
+OWLCRON_BROWSER=webkit bun run --cwd tests/browser test:account-mail
 ```
 
 To use an existing compatible Chrome/Chromium installation locally, set
-`OWLCRON_BROWSER_EXECUTABLE` to its absolute executable path. CI uses Playwright's
-pinned Chromium revision. Both runners need permission to bind localhost ports
+`OWLCRON_BROWSER_EXECUTABLE` to its absolute executable path. This override is only supported for Chromium. `OWLCRON_BROWSER` defaults to
+`chromium` and accepts `firefox` or `webkit`; invalid values fail explicitly.
+CI uses the browser revisions pinned by Playwright. Both runners need permission to bind localhost ports
 and launch browser/daemon processes.
 
 The general smoke runner saves failure screenshots in `tests/browser/test-results/`.
@@ -45,10 +50,11 @@ screenshots or dump SMTP messages, token-bearing URLs or daemon logs. Credential
 messages and daemon state are temporary and cleaned up when each run exits.
 
 The path-filtered [CI / Browser Tests](../../.github/workflows/browser.yml)
-workflow runs both runners, caches the pinned browser, and uses a five-minute
-outer timeout for cold installations. It keeps browser installation out of the
-quick Go job. These tests cover selected Chromium workflows; they do not establish
-complete cross-browser or accessibility coverage.
+workflow runs both runners in each browser, caches the pinned browser separately,
+and uses a five-minute outer timeout for cold installations. It keeps browser installation out of the
+quick Go job. Engine coverage does not certify every Chrome, Edge or Safari release, real
+mobile devices, or screen-reader accessibility. Keep release notes limited to
+the workflows and viewport checks actually exercised.
 
 Package upgrades require refreshing the lockfile and license copies:
 
@@ -58,4 +64,4 @@ bun run --cwd tests/browser licenses
 bun audit --cwd tests/browser --audit-level=moderate
 ```
 
-The maintained [single-node coverage checklist](../../docs/testing.md#single-node-ui-release-gate) separates browser assertions from engine tests and manual release checks. The expanded smoke shares its existing daemon and Chromium process; it does not wait for minute-boundary cron firings or use external services.
+The maintained [single-node coverage checklist](../../docs/testing.md#single-node-ui-release-gate) separates browser assertions from engine tests and manual release checks. The expanded smoke shares its existing daemon and browser process; it does not wait for minute-boundary cron firings or use external services.
