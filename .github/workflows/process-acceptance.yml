@@ -7,6 +7,10 @@ on:
     paths: ['**/*.go', 'go.mod', 'go.sum', 'Makefile', 'tests/**', '.github/workflows/**']
   workflow_dispatch:
 
+# Push and PR events for one branch share a group; newer runs replace old ones.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 permissions:
   contents: read
 

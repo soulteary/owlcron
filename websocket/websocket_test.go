@@ -48,6 +48,12 @@ func TestClosingOneClientPreservesConcurrentConnections(t *testing.T) {
 		defer conn.Close()
 		connections = append(connections, conn)
 	}
+	// A successful client handshake can precede registration on the server.
+	// Wait for registration, while still failing if IDs overwrite one another.
+	registrationDeadline := time.Now().Add(2 * time.Second)
+	for len(server.GetClients()) != len(connections) && time.Now().Before(registrationDeadline) {
+		time.Sleep(time.Millisecond)
+	}
 	before := server.GetClients()
 	if len(before) != len(connections) {
 		t.Fatalf("concurrent clients replaced each other: %d clients for %d connections", len(before), len(connections))
