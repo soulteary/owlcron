@@ -140,3 +140,15 @@ func TestLegacyImportRebuildsCanonicalRecords(t *testing.T) {
 		t.Fatal("missing plugin canonical record")
 	}
 }
+
+func TestBuildVersionString(t *testing.T) {
+	version, commit := Version, Commit
+	t.Cleanup(func() { Version, Commit = version, commit })
+	Version, Commit = "v0.1.2-test", "0123456789abcdef"
+	if got := VersionString(); got != "OwlCron v0.1.2-test (commit 0123456789abcdef)" {
+		t.Fatalf("unexpected build version: %s", got)
+	}
+	if handled, err := Run([]string{"version"}, nil, nil); !handled || err != nil {
+		t.Fatalf("version requires runtime configuration: handled=%v err=%v", handled, err)
+	}
+}

@@ -39,6 +39,9 @@ coverage.out
 /htdocs/fonts/
 /htdocs/socket.io/
 
+# Release archives
+/dist/
+
 # Browser test dependencies and failure artifacts
 /tests/browser/node_modules/
 /tests/browser/test-results/
