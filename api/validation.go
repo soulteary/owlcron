@@ -13,6 +13,9 @@ import (
 
 // ValidateEvent 验证事件数据
 func ValidateEvent(event *types.Event) error {
+	if event.LogExpireDays != nil && (*event.LogExpireDays < 0 || *event.LogExpireDays > 36500) {
+		return fmt.Errorf("log_expire_days must be between 0 and 36500")
+	}
 	if strings.ContainsAny(event.Title, "<>") {
 		return fmt.Errorf("event title must not contain HTML")
 	}

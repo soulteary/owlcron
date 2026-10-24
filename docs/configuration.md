@@ -133,6 +133,17 @@ are not terminated when a limit is lowered. A full node is excluded from new
 selection; an event with no capacity waits only when event queuing is enabled.
 The top-level `max_jobs` continues to limit the whole cluster.
 
+## Per-event log retention
+
+Events can set `log_expire_days`: omit it or send `null` to inherit
+`job_log_expire_days`, use `0` to retain logs indefinitely, or use 1–36500 days.
+The effective value is copied into each new job. Editing an event or the global
+policy does not change jobs that already have a snapshot; older jobs without one
+still use the global policy. The event editor exposes the same choices.
+Expiration starts at job completion. History retention (`job_data_expire_days`)
+can remove the entire job, including a log otherwise kept indefinitely. Pending
+completion delivery and deletion markers retain their existing protections.
+
 ## Browser theme
 
 The header theme selector supports System, Light and Dark. System follows OS

@@ -33,6 +33,7 @@ func (fb FlexBool) Bool() bool { return bool(fb) }
 
 // Event 表示一个调度事件
 type Event struct {
+	LogExpireDays    *int   `json:"log_expire_days,omitempty"`
 	Source           string `json:"source,omitempty"`
 	SourceEvent      string `json:"source_event,omitempty"`
 	SourceJob        string `json:"source_job,omitempty"`
@@ -116,6 +117,7 @@ type Timing struct {
 
 // Job 表示一个运行中的任务
 type Job struct {
+	LogExpireDays    *int   `json:"log_expire_days,omitempty"`
 	Action           string `json:"action,omitempty"`
 	Source           string `json:"source,omitempty"`
 	SourceEvent      string `json:"source_event,omitempty"`

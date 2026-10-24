@@ -122,6 +122,9 @@ func (jm *JobManager) launchJobWithToken(event *types.Event, timestamp int64, to
 		return nil, fmt.Errorf("missing event")
 	}
 	event = types.CloneEvent(event)
+	if event.LogExpireDays != nil && (*event.LogExpireDays < 0 || *event.LogExpireDays > 36500) {
+		return nil, fmt.Errorf("invalid log_expire_days")
+	}
 	if event.Detached.Bool() {
 		return nil, fmt.Errorf("detached execution is not supported")
 	}
@@ -260,6 +263,11 @@ func (jm *JobManager) createJob(event *types.Event, hostname string, timestamp i
 		hostname = jm.getHostname()
 	}
 	job := &types.Job{ID: jm.generateJobID(), Event: event.ID, EventTitle: event.Title, Category: event.Category, Plugin: event.Plugin, Hostname: hostname, Target: event.Target, Params: types.CloneMap(event.Params), TimeStart: float64(time.Now().UnixNano()) / 1e9, Now: timestamp, Timeout: event.Timeout, CWD: event.CWD, UID: event.UID, GID: event.GID, WebHook: event.WebHook, Retries: event.Retries, RetryDelay: event.RetryDelay, NotifySuccess: event.NotifySuccess, NotifyFail: event.NotifyFail, Detached: event.Detached.Bool(), ChainData: types.CloneMap(event.ChainData), ChainParams: types.CloneMap(event.ChainParams)}
+	days := jm.engine.config.JobLogExpireDays
+	if event.LogExpireDays != nil {
+		days = *event.LogExpireDays
+	}
+	job.LogExpireDays = &days
 	job.Source = event.Source
 	job.SourceEvent = event.SourceEvent
 	job.SourceJob = event.SourceJob
