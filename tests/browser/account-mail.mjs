@@ -144,7 +144,7 @@ try {
   const recoveryLink = await mailAction('reset');
   const recoveryParams = new URLSearchParams(new URL(recoveryLink).hash.split('?')[1]);
   stage = 'password reset form';
-  await page.goto('about:blank');
+  // Reusing the open tab must scrub the token before the application router.
   await page.goto(recoveryLink);
   await page.locator('#fe_reset_password').waitFor();
   assert.ok(!page.url().includes('token='),'Recovery token removed from URL before rendering');
