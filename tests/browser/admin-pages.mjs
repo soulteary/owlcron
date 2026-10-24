@@ -20,6 +20,7 @@ export async function checkAdminPages(page, responseFor) {
   assert.equal(await page.locator('#fe_ak_desc').count(), 0);
   await page.locator('#fe_ak_title').fill('Admin smoke key');
   const createdKey = await responseFor('app/create_api_key', () => button('Create Key').click());
+  await page.waitForURL(url => url.hash.includes('sub=edit_api_key') && url.hash.includes('id=' + createdKey.id));
   await page.locator('#fe_ak_status').waitFor();
   assert.equal(await page.locator('#fe_ak_status').inputValue(), '1');
   await page.locator('#fe_ak_status').selectOption('0');

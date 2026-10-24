@@ -47,3 +47,10 @@ bun tests/browser/check-licenses.mjs --write
 bun run --cwd tests/browser licenses
 bun audit --cwd tests/browser --audit-level=moderate
 ```
+
+扩展冒烟测试还检查时区、定时、重试、超时和队列参数保存，历史任务再次执行、
+终止运行任务、失败日志、有限重试、超时、入队与清空、成功与失败任务链，以及独立只读账号的
+控件隐藏和 API 拒绝。测试复用已有
+临时服务和 Chromium 进程，不等待分钟边界的定时任务触发，也不访问外部服务。
+[单节点覆盖清单](../../docs/zh-CN/testing.md#单节点界面发布门槛)区分浏览器断言、
+引擎回归和人工发布检查。

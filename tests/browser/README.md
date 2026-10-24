@@ -7,7 +7,11 @@ not read an existing service configuration or target a deployed instance.
 
 - `test` runs the general UI smoke check: login and account help, profile updates,
   six administration pages and temporary resource changes, theme persistence,
-  event editing and execution, history, logs and charts.
+  event editing and execution, history, logs and charts. It also checks timezone/
+  timing/retry/timeout/queue persistence, archived reruns, live aborts, failed
+  job logs, bounded retry, timeout enforcement, queue admission/flush,
+  success/failure chains and a separate read-only account (hidden controls and
+  rejected APIs).
 - `test:account-mail` starts an in-process SMTP server and enables account email
   only in its temporary configuration. It checks email verification, the recovery
   request form, matching/nonmatching account responses, explicit password reset,
@@ -53,3 +57,5 @@ bun tests/browser/check-licenses.mjs --write
 bun run --cwd tests/browser licenses
 bun audit --cwd tests/browser --audit-level=moderate
 ```
+
+The maintained [single-node coverage checklist](../../docs/testing.md#single-node-ui-release-gate) separates browser assertions from engine tests and manual release checks. The expanded smoke shares its existing daemon and Chromium process; it does not wait for minute-boundary cron firings or use external services.
