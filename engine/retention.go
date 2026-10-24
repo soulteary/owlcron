@@ -69,10 +69,9 @@ func (e *Engine) RunHistoryMaintenance(ctx context.Context, now time.Time) error
 		if err := e.RetryHistoryDeletions(ctx); err != nil {
 			return err
 		}
-		if e.config.JobDataExpireDays > 0 || e.config.JobLogExpireDays > 0 {
-			if err := e.cleanSharedHistory(ctx, now, batch); err != nil {
-				return err
-			}
+		// Event-level overrides may expire logs even when the global policy is off.
+		if err := e.cleanSharedHistory(ctx, now, batch); err != nil {
+			return err
 		}
 	}
 	if err := e.evictDeletedHistory(ctx, batch); err != nil {
@@ -192,9 +191,6 @@ func (e *Engine) cleanLocalLogs(ctx context.Context, now time.Time, batch int) e
 			return err
 		}
 		if !deleted && !logDeleted {
-			if e.config.JobLogExpireDays <= 0 || float64(info.ModTime().Unix()) > float64(now.Unix())-float64(e.config.JobLogExpireDays)*86400 {
-				continue
-			}
 			// An incomplete or unknown canonical record is protected after a
 			// restart. TTL never guesses whether an orphan has finished.
 			raw, err := e.storage.Get(ctx, "jobs:"+id)
@@ -208,7 +204,7 @@ func (e *Engine) cleanLocalLogs(ctx context.Context, now time.Time, batch int) e
 			if err := json.Unmarshal(raw, &job); err != nil {
 				return err
 			}
-			if !job.Complete || job.StorageError != "" || !expiredJob(&job, now, e.config.JobLogExpireDays) {
+			if !job.Complete || job.StorageError != "" || !expiredJob(&job, now, e.jobLogRetentionDays(&job)) {
 				continue
 			}
 		}
@@ -256,7 +252,7 @@ func (e *Engine) cleanSharedHistory(ctx context.Context, now time.Time, batch in
 			if err := e.DeleteJobHistory(job.ID); err != nil && !errors.Is(err, ErrHistoryCleanupPending) {
 				return err
 			}
-		} else if expiredJob(job, now, e.config.JobLogExpireDays) {
+		} else if expiredJob(job, now, e.jobLogRetentionDays(job)) {
 			if err := e.DeleteJobLog(job.ID); err != nil && !errors.Is(err, ErrHistoryCleanupPending) {
 				return err
 			}
@@ -356,4 +352,12 @@ func (e *Engine) runCompletionRecovery() {
 			e.jobManager.RetryRemoteCompletions()
 		}
 	}()
+}
+
+// Legacy jobs without a snapshot retain the global fallback behavior.
+func (e *Engine) jobLogRetentionDays(job *types.Job) int {
+	if job.LogExpireDays != nil {
+		return *job.LogExpireDays
+	}
+	return e.config.JobLogExpireDays
 }

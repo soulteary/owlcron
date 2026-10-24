@@ -6,6 +6,10 @@ func CloneJob(job *Job) *Job {
 		return nil
 	}
 	cp := *job
+	if job.LogExpireDays != nil {
+		days := *job.LogExpireDays
+		cp.LogExpireDays = &days
+	}
 	cp.Params = CloneMap(job.Params)
 	cp.ChainData = CloneMap(job.ChainData)
 	cp.ChainParams = CloneMap(job.ChainParams)
@@ -33,6 +37,10 @@ func CloneEvent(event *Event) *Event {
 		return nil
 	}
 	cp := *event
+	if event.LogExpireDays != nil {
+		days := *event.LogExpireDays
+		cp.LogExpireDays = &days
+	}
 	cp.Params = CloneMap(event.Params)
 	cp.ChainData = CloneMap(event.ChainData)
 	cp.ChainParams = CloneMap(event.ChainParams)
