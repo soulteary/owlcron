@@ -8,7 +8,7 @@ This guide describes component responsibilities, persistence boundaries, and rec
 
 The Go module lives at the repository root; see [go.mod](../go.mod) for toolchain metadata. The server handles scheduling, plugin execution, HTTP APIs, WebSockets, and storage. The browser interface is built into static assets. Running the service does not require the original Cronicle daemon. Deployers must supply any shell, Node.js, Python, or other runtime required by their plugins.
 
-OwlCron is designed to replace Cronicle with a Go service. It retains selected compatibility with Cronicle's event, plugin, and job concepts to support migration, while using its own storage and cluster implementation. See [compatibility](compatibility.md) for supported behavior and migration requirements, and the [README](../README.md) for the project overview.
+See [compatibility](compatibility.md) for supported Cronicle behavior and migration requirements.
 
 - [Entry point](../main.go): configuration, listener setup, process lifecycle, and exit status.
 - [Engine](../engine/engine.go): node roles, maintenance, leadership leases, and shutdown coordination.

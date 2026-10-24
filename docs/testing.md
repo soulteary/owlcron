@@ -92,3 +92,11 @@ To reproduce a single load stage, set `OWLCRON_LOAD_STAGE` to `regression`, `clu
 Workflow files define the checks; the GitHub Actions run for a commit is the source of its execution status. Record the commit, toolchain, resources, backend, commands, exit codes, and skipped cases with test results.
 
 Keep local logs, failure stacks, scan output, and benchmark data outside the repository or as CI artifacts. Retain reusable test scripts and regression cases in the repository. Maintain deployment-relevant limitations in product documentation instead of removing them with temporary reports.
+
+## Go quality reports
+
+Go quality reports run on tags, published releases, and manual dispatches. They run tests with the race detector and coverage, check the independent example plugin, and generate Go Report Card results. Download reports and raw test evidence from the workflow artifacts (retained for 14 days). Stable reports are committed only when the tested commit still matches the default branch; otherwise they remain artifacts. The existing CI continues to check pull requests.
+
+[Go quality reports](https://github.com/soulteary/owlcron/actions/workflows/go-quality-reports.yml)
+
+The optional [real-browser smoke test](../tests/browser/README.md) covers login, event editing and execution, history, logs, and theme persistence in Chromium.

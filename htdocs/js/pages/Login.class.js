@@ -122,7 +122,7 @@ Class.subclass( Page.Base, "Page.Login", {
 		if (!action) return;
 		this.pendingEmailAction = null;
 		var self = this;
-		app.api.post('user/verify_email', {user_id:action.userID, token:action.token}, function() {
+		app.api.postAccountAction('user/verify_email', {user_id:action.userID, token:action.token}, function() {
 			self.div.html('<div class="inline_dialog_container"><div class="dialog_title shade-light">Email Verified</div>' +
 				'<div class="dialog_content"><p>Your email address has been verified. Return to your account to continue.</p></div>' +
 				'<div class="dialog_buttons"><a class="button" href="#MyAccount">Continue</a></div></div>');
@@ -150,7 +150,7 @@ Class.subclass( Page.Base, "Page.Login", {
 		if (!username || !email) return app.showMessage('error', 'Enter your username and verified email address.');
 		this.recoveryPending = true;
 		var self = this;
-		app.api.post('user/forgot_password', {username:username, email:email}, function() {
+		app.api.postAccountAction('user/forgot_password', {username:username, email:email}, function() {
 			self.recoveryPending = false;
 			self.div.html('<div class="inline_dialog_container"><div class="dialog_title shade-light">Check Your Email</div>' +
 				'<div class="dialog_content"><p>If an enabled account matches this username and verified email address, password reset instructions will be sent. If no email arrives, contact your administrator.</p></div>' +
@@ -189,7 +189,7 @@ Class.subclass( Page.Base, "Page.Login", {
 		if (password !== confirmation) return app.showMessage('error', 'The passwords do not match.');
 		this.pendingResetAction = null;
 		var self = this;
-		app.api.post('user/reset_password', {user_id:action.userID, token:action.token, new_password:password, confirm_password:confirmation}, function() {
+		app.api.postAccountAction('user/reset_password', {user_id:action.userID, token:action.token, new_password:password, confirm_password:confirmation}, function() {
 			app.doUserLogout(true);
 			app.showMessage('success', 'Your password has changed. Sign in with your new password.');
 		}, function() {

@@ -31,9 +31,7 @@
 
 执行中的任务遇到 daemon 强杀后，重启核对执行 token 和内核启动身份，再回收已验证的进程组并将任务标记为中断失败。不会自动续跑或重做插件。`OWLCRON_JOB_TOKEN` 是保留环境变量。无法验证的旧版存活 PID 会阻止启动，需人工核查；不要盲目杀死同号 PID。保持重启前后的 OS 身份和进程检查权限一致。主动脱离进程组或删除标记的插件不在该恢复约定内，detached 执行配置也不受支持。
 
-完成写入失败时，本地已同步 spool 保留结果供重试及重启恢复；worker 的完成 outbox 在主节点可靠确认后删除。已写入本地磁盘的日志可恢复，纯内存缓冲中的尾部不作保证。外部命令及通知均不能保证恰好一次；插件应使用 Job ID，通知接收方应使用稳定消息标识实现幂等。
-
-`export`、`import`、`storage-migrate` 应在全部节点停止后执行，以取得一致快照；具体参数见 `./owlcron-engine help`。备份包括规范记录、历史、日志、游标、队列和墓碑，排除初始明文密码及瞬态主租约/代次。import 会覆盖同名 key，但不删除目标中的额外记录；优先恢复到空命名空间。远程逐 key 恢复失败可用同一备份重试。
+完成提交、worker 确认及日志恢复机制见[架构](architecture.md)。`log_dir` 和 `queue_dir` 必须持久化；内存缓冲中的日志尾部不保证恢复。插件应使用 Job ID 或业务键实现幂等，通知接收方应按稳定消息标识去重。备份及导入操作见[部署指南](deployment.md#备份升级与回滚)。
 
 ### 保留清理与日志限制
 
@@ -153,3 +151,5 @@ mTLS 使用 `cluster_tls_require_client_cert: true`，要求显式 CA 和每节�
 数值为零或省略时使用以下默认值：`account_token_ttl_seconds: 1800`（非零时允许 60–86400）、`account_email_cooldown_seconds: 60`、`account_email_rate_limit: 5`、`account_email_ip_rate_limit: 20`、`account_email_rate_window_seconds: 3600`。冷却时间和窗口最大为 86400 秒，请求限额最大为 100000，负数均被拒绝。
 
 既有邮箱初始状态为未验证。验证仅对当前完全一致的地址有效，邮箱变更后清除验证状态。启用账号邮件后，可在 My Account 验证邮箱；已启用且邮箱已验证的账号可以从登录页找回密码，详见[账号邮件操作指南](operations.md#账号邮件与密码找回)。公开注册保持关闭，仍由管理员创建账号和重置密码。
+
+账号邮件除了要求 HTTPS 链接，还要求 SMTP TLS。显式设置 `account_email_allow_insecure` 也允许本地测试邮件服务使用 `smtp_tls_mode: "none"`；仅限隔离的本地测试，不能用于生产。启用 TLS 时仍会校验证书。

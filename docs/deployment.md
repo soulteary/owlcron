@@ -6,7 +6,7 @@ Use OwlCron initially for development, evaluation, and controlled environments. 
 
 ## Installation and startup
 
-Use Go 1.27.3 or a later security patch in the same series, Bun 1.4.2, Python 3, and make. CI validates Go 1.27 only; prefer its latest security patch. The module recommends Go 1.27.3, which older Go installations can select when automatic toolchain download is enabled.
+Source builds require Go, Bun, Python, and make; see [versions and releases](releases.md#supported-toolchain-and-platforms) for supported versions and platforms.
 
 Install the pinned Bun toolchain with `curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.2"`, then verify `bun --version`. Frontend and browser dependencies use separate committed `bun.lock` files; always use `--frozen-lockfile` for reproducible installation. `bunfig.toml` keeps the hoisted layout required by static asset paths and license validation. Node.js and npm are not required for these build and test commands.
 
@@ -100,6 +100,8 @@ Restore into an isolated environment and check login, jobs, history, and logs be
 
 The [release workflow and version policy](releases.md) define verified archive contents and the supported build matrix. Data-migration compatibility is not yet guaranteed. Validate upgrades, cross-version rollback, and remote-backend disaster recovery against the intended deployment.
 
+Run `export`, `import`, and `storage-migrate` only after stopping all nodes to obtain a consistent snapshot; see `./owlcron-engine help` for arguments. Backups include canonical records, history, logs, cursors, queues, and tombstones, but exclude initial plaintext passwords and transient leadership leases/generations. Import overwrites matching keys without deleting extra destination records, so prefer an empty namespace. Failed remote per-key restores can retry the same backup.
+
 The CLI streams backup records to the existing `owlcron-storage-v1` format instead of retaining the full export in memory. File exports are written to a private temporary file, synced, and renamed only after completion; errors before the rename preserve the previous destination. A directory-sync failure after the rename reports unconfirmed durability; the new file may already be visible. The key list and largest individual record still consume memory. Standard-output exports can be partial on failure, so check the exit status before using them. Streaming does not make a live backend snapshot consistent.
 
 ## Hosting under a URL prefix
@@ -131,3 +133,5 @@ Input must contain one password of 12–72 bytes, with an optional trailing newl
 ## Preparing account email
 
 Keep `account_email_enabled` disabled until verification and password-reset support is deployed and tested with your SMTP relay. Choose the public HTTPS `base_app_url` explicitly, including `base_path` when deployed under a subpath; account links must never derive their origin from request headers. Configure a dedicated sender and restrict SMTP credentials to this service. Existing users retain login access without email verification, and administrator password recovery remains available. See [account email policy](configuration.md#account-email-policy) for validation and limits. Public registration remains closed.
+
+Account verification and recovery links contain bearer tokens: keep both public links and SMTP transport encrypted. `account_email_allow_insecure` permits plaintext HTTP and SMTP only for isolated local testing; never enable it in production.

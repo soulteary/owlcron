@@ -8,7 +8,7 @@ function fixture(enabled = true) {
  let definition, html = '', requests = [], messages = [], logout = 0;
  const values = {'#fe_reset_password':'long-new-password', '#fe_reset_confirm':'long-new-password', '#fe_recovery_username':'CaseUser', '#fe_recovery_email':'verified@example.test'};
  const context = {Page:{Base:{}},Class:{subclass:(_a,_b,d)=>definition=d},config:{password_recovery:enabled},TextEncoder,
-  app:{user:null,getPref(){return '';},get_password_type(){return 'password';},get_password_toggle_html(){return '';},setWindowTitle(){},showTabBar(){},showMessage:(...args)=>messages.push(args),doUserLogout:()=>logout++,api:{post:(...args)=>requests.push(args)}},
+  app:{user:null,getPref(){return '';},get_password_type(){return 'password';},get_password_toggle_html(){return '';},setWindowTitle(){},showTabBar(){},showMessage:(...args)=>messages.push(args),doUserLogout:()=>logout++,api:{postAccountAction:(...args)=>requests.push(args)}},
   $:id=>({val:()=>values[id],focus(){},keypress(){}}),window:{},setTimeout(fn){fn();}};
  vm.runInNewContext(source,context);
  const page=Object.assign({div:{css(){},html:value=>html=value}},definition);

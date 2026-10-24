@@ -87,12 +87,7 @@ retries. Do not replace the backend with an empty namespace or restart all nodes
 at once to clear errors. The [known limitations](limitations.md) still apply to
 remote dispatch and recovery; metrics do not establish exactly-once execution.
 
-Record backup success and age in the backup system. Stop all nodes before
-`export`, `import` or `storage-migrate` for a consistent snapshot. Encrypt backups,
-retain matching binaries/configuration and regularly restore into an isolated
-environment with real notification recipients disabled. Verify accounts,
-schedule, history and logs before declaring a restore successful. Follow the
-[deployment and rollback procedure](deployment.md#backups-upgrades-and-rollback).
+Record backup success and age in the backup system and regularly rehearse isolated restores. Follow [deployment and rollback](deployment.md#backups-upgrades-and-rollback) for shutdown requirements, backup scope, import behavior, and verification steps.
 
 ### Verify an account email
 

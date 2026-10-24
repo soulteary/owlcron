@@ -58,8 +58,21 @@ func decodeAccountRequest(w http.ResponseWriter, r *http.Request, dst interface{
 	if err != nil {
 		return false
 	}
-	if _, err := decodeRequestParameters(raw); err != nil || len(bytes.TrimSpace(raw)) == 0 || bytes.TrimSpace(raw)[0] != '{' {
+	params, err := decodeRequestParameters(raw)
+	if err != nil || len(bytes.TrimSpace(raw)) == 0 || bytes.TrimSpace(raw)[0] != '{' {
 		return false
+	}
+	// The compatibility client transports its session in JSON for text/plain
+	// requests. Authentication has already checked it; it is not action data.
+	if session, exists := params["session_id"]; exists {
+		if _, ok := session.(string); !ok {
+			return false
+		}
+		delete(params, "session_id")
+		raw, err = json.Marshal(params)
+		if err != nil {
+			return false
+		}
 	}
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.DisallowUnknownFields()

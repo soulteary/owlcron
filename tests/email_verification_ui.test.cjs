@@ -8,7 +8,7 @@ const source = fs.readFileSync(path.join(__dirname, '../htdocs/js/pages/Login.cl
 test('verification link waits for explicit confirmation and sends the token once', () => {
  let definition, calls = [], html = '';
  const context = {Page:{Base:{}}, Class:{subclass:(_a,_b,d)=>definition=d}, config:{email_verification:true},
- app:{setWindowTitle(){},showTabBar(){},api:{post:(...args)=>calls.push(args)}},window:{}};
+ app:{setWindowTitle(){},showTabBar(){},api:{postAccountAction:(...args)=>calls.push(args)}},window:{}};
  vm.runInNewContext(source,context);
  const page = Object.assign({div:{html:value=>html=value}},definition);
  page.showEmailVerification({purpose:'verify',userID:'user1',token:'a'.repeat(64)});
