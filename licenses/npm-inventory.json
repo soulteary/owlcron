@@ -139,14 +139,14 @@
   },
   {
     "name": "jstimezonedetect",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "license": [
       {
         "type": "MIT",
-        "url": "https://bitbucket.org/pellepim/jstimezonedetect/src/default/LICENCE.txt"
+        "url": "https://github.com/pellepim/jstimezonedetect/blob/master/LICENCE.txt"
       }
     ],
-    "notices": "licenses/npm/jstimezonedetect@1.0.6",
+    "notices": "licenses/npm/jstimezonedetect@1.0.7",
     "files": [
       "LICENCE.txt",
       "README.md"
@@ -193,9 +193,9 @@
   },
   {
     "name": "moment-timezone",
-    "version": "0.5.35",
+    "version": "0.6.5",
     "license": "MIT",
-    "notices": "licenses/npm/moment-timezone@0.5.35",
+    "notices": "licenses/npm/moment-timezone@0.6.5",
     "files": [
       "LICENSE",
       "README.md"
@@ -281,9 +281,9 @@
   },
   {
     "name": "uglify-js",
-    "version": "3.14.3",
+    "version": "3.19.3",
     "license": "BSD-2-Clause",
-    "notices": "licenses/npm/uglify-js@3.14.3",
+    "notices": "licenses/npm/uglify-js@3.19.3",
     "files": [
       "LICENSE",
       "README.md"
