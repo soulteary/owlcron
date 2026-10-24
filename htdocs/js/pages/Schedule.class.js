@@ -15,6 +15,7 @@ Class.subclass( Page.Base, "Page.Schedule", {
 		if (!args) args = {};
 		if (!args.sub) args.sub = this.default_sub;
 		this.args = args;
+		this.event_edit_mounted = false;
 		
 		app.showTabBar(true);
 		// this.tab[0]._page_id = Nav.currentAnchor();
@@ -469,8 +470,11 @@ Class.subclass( Page.Base, "Page.Schedule", {
 	
 	gosub_new_event: function(args) {
 		if (!app.hasPrivilege('create_events')) {
-			Nav.go('Schedule');
-			return app.doError('You do not have permission to open this event form.');
+			setTimeout(function() {
+				Nav.go('Schedule');
+				app.doError('You do not have permission to open this event form.');
+			}, 1);
+			return false;
 		}
 		// create new event
 		var html = '';
@@ -574,9 +578,13 @@ Class.subclass( Page.Base, "Page.Schedule", {
 	},
 	
 	gosub_edit_event: function(args) {
+		this.event_edit_mounted = false;
 		if (!app.hasPrivilege('edit_events')) {
-			Nav.go('Schedule');
-			return app.doError('You do not have permission to open this event form.');
+			setTimeout(function() {
+				Nav.go('Schedule');
+				app.doError('You do not have permission to open this event form.');
+			}, 1);
+			return false;
 		}
 		// edit event subpage
 		var event = find_object( app.schedule, { id: args.id } );
@@ -669,6 +677,7 @@ Class.subclass( Page.Base, "Page.Schedule", {
 		html += '</div>'; // sidebar tabs
 		
 		this.div.html( html );
+		this.event_edit_mounted = true;
 	},
 	
 	do_copy_event: function() {
@@ -1938,7 +1947,8 @@ Class.subclass( Page.Base, "Page.Schedule", {
 	leavesub_edit_event: function(args) {
 		// special hook fired when leaving edit_event sub-page
 		// try to save edited state of event in mem cache
-		if (this.event_copy) return; // in middle of edit --> copy operation
+		if (!this.event_edit_mounted || this.event_copy) return; // no rendered form, or edit --> copy
+		this.event_edit_mounted = false;
 		
 		var event = this.get_event_form_json(true); // quiet mode
 		if (event) {

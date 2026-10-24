@@ -4,16 +4,16 @@ const fs=require('node:fs');
 const path=require('node:path');
 const vm=require('node:vm');
 function fixture(privileges=[]) {
-  let page;const errors=[],navigation=[];
+  let page;const errors=[],navigation=[],timers=[];
   const app={hasPrivilege:name=>privileges.includes(name),isAdmin:()=>false,doError(message){errors.push(message);return false;}};
   vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../htdocs/js/pages/Schedule.class.js'),'utf8'),{
     Class:{subclass(base,name,methods){page=methods;}},Page:{Base:{}},
     app,
-    setTimeout(){},get_inner_window_size:()=>({width:1000}),escape_text_field_value:value=>String(value || ''),
+    setTimeout(callback){timers.push(callback);},get_inner_window_size:()=>({width:1000}),escape_text_field_value:value=>String(value || ''),
     render_menu_options:()=>'',copy_object:object=>({...object}),find_object:(items,query)=>items.find(item=>item.id===query.id),summarize_event_timing:()=>'',
     config:{},Nav:{go(route){navigation.push(route);}}
   });
-  return {page,errors,navigation,app};
+  return {page,errors,navigation,app,timers};
 }
 
 test('readers retain schedule history and status without event mutation controls',()=>{
@@ -46,9 +46,11 @@ test('direct schedule mutation handlers stop before touching form or event state
 });
 
 test('direct new/edit routes return readers to the schedule',()=>{
-  const {page,navigation}=fixture();
+  const {page,navigation,timers}=fixture();
   assert.equal(page.gosub_new_event({}),false);
   assert.equal(page.gosub_edit_event({id:'event'}),false);
+  assert.deepEqual(navigation,[]);
+  for(const callback of timers)callback();
   assert.deepEqual(navigation,['Schedule','Schedule']);
 });
 
@@ -72,4 +74,21 @@ test('real schedule table rendering uses permission-aware actions for both reade
     assert.equal(rows[0][7].includes('>Edit<'),privileges.includes('edit_events'));
     assert.equal(rows[0][0].includes('checkbox'),privileges.includes('edit_events'));
   }
+});
+
+
+test('denied edit activation can deactivate without reading a form that was never rendered',()=>{
+  const {page,app,timers,navigation}=fixture();
+  app.showTabBar=()=>{};
+  page.requireLogin=()=>true;
+  page.div={addClass(){}};
+  page.get_event_form_json=()=>{throw new Error('Cannot read an unmounted edit form');};
+  // Even a prior editor session must not carry its mounted state into a denied route.
+  page.event_edit_mounted=true;
+  assert.equal(page.onActivate({sub:'edit_event',id:'restricted'}),true);
+  assert.equal(page.event_edit_mounted,false);
+  assert.equal(page.onDeactivate(),true);
+  assert.deepEqual(navigation,[]);
+  timers.shift()();
+  assert.deepEqual(navigation,['Schedule']);
 });
