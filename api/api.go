@@ -44,6 +44,7 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 	// 状态 API
 	register("/api/app/status", s.handleStatus)
 	register("/api/app/ping", s.handlePing)
+	register("/api/app/ready", s.handleReady)
 	register("/api/app/echo", s.handleEcho)
 
 	// 事件 API

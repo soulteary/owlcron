@@ -56,6 +56,8 @@ make fmt-check vet test frontend-test licenses-check docs-check smoke
 
 `make race` 运行竞态检查；需要 Docker 的故障验收见[测试文档](docs/zh-CN/testing.md)。示例插件是独立 Go 模块，修改时还需在 `bin/echo-plugin` 中运行测试。
 
+可选的[真实浏览器冒烟测试](tests/browser/README.zh-CN.md)在 Chromium 中覆盖登录、事件编辑和执行、历史、日志以及主题偏好持久化。
+
 ## 许可证
 
 OwlCron 原创代码采用 [MIT License](LICENSE)。继承的 Cronicle 代码保留原作者版权和 MIT 许可。第三方代码与字体遵循各自许可证，详见[第三方声明](THIRD_PARTY_NOTICES.zh-CN.md)及 `licenses/`。

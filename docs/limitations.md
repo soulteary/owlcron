@@ -12,7 +12,7 @@ Passing ordinary tests or a single recovery cycle does not replace sustained fau
 
 ## Remote dispatch acknowledgment
 
-Remote dispatch does not yet have a separate durable acceptance acknowledgment protocol. Successfully writing a control frame does not mean a worker has durably accepted the job. A disconnect can leave dispatch acceptance uncertain. Event queue recovery and completion replay do not eliminate this window.
+Remote dispatch does not yet have a separate durable acceptance acknowledgment protocol. Successfully writing a control frame does not mean a worker has durably accepted the job. A disconnect can leave dispatch acceptance uncertain. Event queue recovery and completion replay do not eliminate this window. Remote admission checks durable job history and permanent deletion markers so completed job IDs cannot execute again after a worker restart; inability to check this state rejects admission. This replay guard does not add a dispatch acknowledgment or authorize resending uncertain work.
 
 ## External side effects and notifications
 

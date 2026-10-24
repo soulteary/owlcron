@@ -26,3 +26,5 @@ htdocs/css/materialdesignicons*
 
 # Local release archives
 dist
+
+tests/browser/test-results/

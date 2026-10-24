@@ -179,7 +179,7 @@
                 ],
                 "startupProbe": {
                   "httpGet": {
-                    "path": "/api/app/ping",
+                    "path": "/api/app/ready",
                     "port": "http"
                   },
                   "timeoutSeconds": 3,
@@ -188,7 +188,7 @@
                 },
                 "readinessProbe": {
                   "httpGet": {
-                    "path": "/api/app/ping",
+                    "path": "/api/app/ready",
                     "port": "http"
                   },
                   "timeoutSeconds": 3,

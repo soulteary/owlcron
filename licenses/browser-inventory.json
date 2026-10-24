@@ -1,0 +1,22 @@
+[
+  {
+    "name": "playwright",
+    "version": "1.64.1",
+    "license": "Apache-2.0",
+    "notices": "licenses/browser/playwright@1.64.1",
+    "files": [
+      "LICENSE",
+      "NOTICE"
+    ]
+  },
+  {
+    "name": "playwright-core",
+    "version": "1.64.1",
+    "license": "Apache-2.0",
+    "notices": "licenses/browser/playwright-core@1.64.1",
+    "files": [
+      "LICENSE",
+      "NOTICE"
+    ]
+  }
+]
