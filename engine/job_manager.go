@@ -226,6 +226,10 @@ func (jm *JobManager) launchJobWithToken(event *types.Event, timestamp int64, to
 		jm.mu.Unlock()
 		return nil, fmt.Errorf("multiplex exceeds global concurrency limit")
 	}
+	if err := jm.checkNodeCapacity(jobs); err != nil {
+		jm.mu.Unlock()
+		return nil, err
+	}
 	if err := jm.stageQueueAdmission(token, jobs); err != nil {
 		jm.mu.Unlock()
 		return nil, err
@@ -1069,7 +1073,7 @@ func (jm *JobManager) checkConcurrencyLimits(event *types.Event) error {
 func (jm *JobManager) chooseServers(event *types.Event) []string {
 	// 如果目标是 "local" 或空，返回本地服务器
 	if event.Target == "" || event.Target == "local" {
-		return []string{"local"}
+		return jm.availableServers([]string{"local"})
 	}
 
 	// 从存储加载服务器组
@@ -1101,6 +1105,10 @@ func (jm *JobManager) chooseServers(event *types.Event) []string {
 			servers = []string{event.Target}
 		}
 	}
+	if len(servers) == 0 {
+		return nil
+	}
+	servers = jm.availableServers(servers)
 	if len(servers) == 0 {
 		return nil
 	}

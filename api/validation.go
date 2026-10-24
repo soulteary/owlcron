@@ -147,6 +147,9 @@ func ValidateCategory(category *types.Category) error {
 
 // ValidateServerGroup 验证服务器组数据
 func ValidateServerGroup(group *types.ServerGroup) error {
+	if group.MaxJobs < 0 {
+		return fmt.Errorf("max_jobs must be non-negative")
+	}
 	if strings.ContainsAny(group.Title, "<>") {
 		return fmt.Errorf("group title must not contain HTML")
 	}
