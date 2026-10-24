@@ -77,7 +77,7 @@ Resources, mounts, backends, data volume, and log/notification load affect resul
 
 ## CI and evidence
 
-[Routine CI](../.github/workflows/ci.yml) checks Go 1.27, Bun 1.4.2, builds, unit tests, installation smoke tests, licenses, and vulnerabilities. [Fault acceptance](../.github/workflows/process-acceptance.yml) covers process and Linux fault scenarios.
+[CI / Build and Test](../.github/workflows/ci.yml) checks Go 1.27, Bun 1.4.2, builds, unit tests, installation smoke tests, licenses, and vulnerabilities. [CI / Process Fault Acceptance](../.github/workflows/process-acceptance.yml) covers process and Linux fault scenarios.
 
 CI runs on pull requests and pushes to `main`; feature-branch pushes do not start a second copy of the same checks. New commits cancel superseded runs. Dependency and Docker layer caches reduce repeated downloads and builds; tests still execute on cache hits. On main, the Linux fault matrix triggers for Go code, its dependencies, the Makefile, acceptance/load harnesses, and its own workflow. Frontend-only tests and container configuration checks use their relevant CI workflows without rerunning unrelated Linux fault scenarios.
 
@@ -97,6 +97,8 @@ Keep local logs, failure stacks, scan output, and benchmark data outside the rep
 
 Go quality reports run on tags, published releases, and manual dispatches. They run tests with the race detector and coverage, check the independent example plugin, and generate Go Report Card results. Download reports and raw test evidence from the workflow artifacts (retained for 14 days). Stable reports are committed only when the tested commit still matches the default branch; otherwise they remain artifacts. The existing CI continues to check pull requests.
 
-[Go quality reports](https://github.com/soulteary/owlcron/actions/workflows/go-quality-reports.yml)
+[Reports / Go Tests and Report Card](https://github.com/soulteary/owlcron/actions/workflows/go-quality-reports.yml)
 
 The optional [real-browser smoke test](../tests/browser/README.md) covers login, event editing and execution, history, logs, and theme persistence in Chromium.
+
+Workflow display names are grouped under `CI /`, `Reports /`, and `Release /`; filenames stay unchanged so existing links remain valid. The README Go Test Report badge shows report workflow status, not coverage. The Go Report Card badge uses the public assessment service and may differ in freshness from the workflow-generated report. Generated coverage and quality badges are saved as `.github/coverage.svg` and `.github/goreportcard.svg`; before the first successful writeback, inspect the workflow artifacts.

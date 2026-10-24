@@ -142,13 +142,14 @@ Class.subclass( Page.Base, "Page.MyAccount", {
 		
 		app.showProgress( 1.0, "Saving account..." );
 		
-		app.api.post( 'user/update', {
+		var params = {
 			username: app.username,
 			full_name: trim($('#fe_ma_fullname').val()),
-			email: app.config.account_email_enabled ? app.user.email : trim($('#fe_ma_email').val()),
 			old_password: $('#fe_ma_old_password').val(),
 			new_password: $('#fe_ma_new_password').val()
-		}, 
+		};
+		if (!app.config.account_email_enabled) params.email = trim($('#fe_ma_email').val());
+		app.api.postAccountAction('user/update', params,
 		function(resp) {
 			// save complete
 			app.hideProgress();
