@@ -23,6 +23,26 @@ func TestAccountRequestStrictBody(t *testing.T) {
 		}
 	}
 }
+
+func TestAccountRequestAcceptsOnlyTypedSessionTransport(t *testing.T) {
+	for _, tc := range []struct {
+		body  string
+		valid bool
+	}{
+		{`{"email":"a@example.test","session_id":"existing-session"}`, true},
+		{`{"email":"a@example.test","session_id":null}`, false},
+		{`{"email":"a@example.test","session_id":{"admin":true}}`, false},
+		{`{"email":"a@example.test","session_id":"one","session_id":"two"}`, false},
+	} {
+		var req struct {
+			Email string `json:"email"`
+		}
+		got := decodeAccountRequest(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tc.body)), &req)
+		if got != tc.valid {
+			t.Errorf("session transport accepted=%v, want %v", got, tc.valid)
+		}
+	}
+}
 func TestAccountAdmissionIndependentLimits(t *testing.T) {
 	eng, _ := securityServer(t)
 	s := &Server{engine: eng, accountLimiter: newAccountLimiter(&types.Config{AccountEmailRateLimit: 1, AccountEmailIPRateLimit: 10})}
