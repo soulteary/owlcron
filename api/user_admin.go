@@ -175,7 +175,7 @@ func (s *Server) updateUser(w http.ResponseWriter, r *http.Request, admin bool) 
 	}
 	user.Enabled = enabled
 	user.Privileges = privs
-	if err = ValidateUser(user); err != nil {
+	if err = validateUserUpdate(&expected, user); err != nil {
 		s.sendError(w, 1, err.Error())
 		return
 	}

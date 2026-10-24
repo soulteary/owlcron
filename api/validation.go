@@ -178,17 +178,31 @@ func ValidateServerGroup(group *types.ServerGroup) error {
 
 // ValidateUser 验证用户数据
 func ValidateUser(user *types.User) error {
+	if err := validateUserProfile(user); err != nil {
+		return err
+	}
+	if !isValidUsername(user.Username) {
+		return fmt.Errorf("invalid username format")
+	}
+	return nil
+}
+
+// Existing identities may predate the account creation policy. Updates keep the
+// canonical identity immutable while validating the fields that can change.
+func validateUserUpdate(expected, user *types.User) error {
+	if expected.ID != user.ID || expected.Username != user.Username {
+		return fmt.Errorf("account identity cannot change")
+	}
+	return validateUserProfile(user)
+}
+
+func validateUserProfile(user *types.User) error {
 	if user.ID == "" {
 		return fmt.Errorf("user id is required")
 	}
 
 	if user.Username == "" {
 		return fmt.Errorf("username is required")
-	}
-
-	// 验证用户名格式
-	if !isValidUsername(user.Username) {
-		return fmt.Errorf("invalid username format")
 	}
 
 	// 验证邮箱格式（如果提供）

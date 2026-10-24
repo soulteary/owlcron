@@ -115,6 +115,7 @@ Class.add( Page.Admin, {
 	
 	gosub_new_user: function(args) {
 		// create new user
+		this.editing_user = false;
 		var html = '';
 		app.setWindowTitle( "Add New User" );
 		this.div.removeClass('loading');
@@ -221,6 +222,7 @@ Class.add( Page.Admin, {
 	
 	receive_user: function(resp) {
 		// edit existing user
+		this.editing_user = true;
 		var html = '';
 		app.setWindowTitle( "Editing User \"" + (this.args.username) + "\"" );
 		this.div.removeClass('loading');
@@ -348,7 +350,7 @@ Class.add( Page.Admin, {
 		// get html for editing a user (or creating a new one)
 		var html = '';
 		var user = this.user;
-		var editing = !!user.username;
+		var editing = this.editing_user === true;
 		
 		// user id
 		html += get_form_table_row( 'Username', 
@@ -371,8 +373,17 @@ Class.add( Page.Admin, {
 		html += get_form_table_spacer();
 		
 		// email
-		html += get_form_table_row( 'Email Address', '<input type="text" id="fe_eu_email" size="30" value="'+escape_text_field_value(user.email)+'" spellcheck="false"/>' );
-		html += get_form_table_caption( "Optional contact address. Forgotten passwords must be reset by an administrator; email recovery is not available." );
+		var protected_email = editing && app.config.account_email_enabled;
+		html += get_form_table_row( 'Email Address', '<input type="text" id="fe_eu_email" size="30" value="'+escape_text_field_value(user.email)+'" spellcheck="false"' + (protected_email ? ' readonly="readonly"' : '') + '/>' );
+		if (protected_email) {
+			html += get_form_table_caption( (user.email_verified ? 'Verified email address.' : 'Email address has not been verified.') + ' The user can verify or change it from My Account using their current password. Email password recovery is available only after verification; administrators can still reset passwords here.' );
+		}
+		else if (app.config.account_email_enabled) {
+			html += get_form_table_caption( 'Optional initial contact address. The user must verify it from My Account before using email password recovery.' );
+		}
+		else {
+			html += get_form_table_caption( 'Optional contact address. Account email features are disabled; an administrator must reset forgotten passwords.' );
+		}
 		html += get_form_table_spacer();
 		
 		// password
@@ -504,7 +515,10 @@ Class.add( Page.Admin, {
 			privileges: {}
 		};
 		
-		if (!/^[a-zA-Z0-9_.-]{3,50}$/.test(user.username)) return app.badField('fe_eu_username', 'Use 3-50 letters, digits, periods, underscores or dashes.');
+		var editing = this.editing_user === true;
+		if (editing) user.username = this.user.username;
+		if (editing && app.config.account_email_enabled) delete user.email;
+		if (!editing && !/^[a-zA-Z0-9_.-]{3,50}$/.test(user.username)) return app.badField('fe_eu_username', 'Use 3-50 letters, digits, periods, underscores or dashes.');
 		if (user.email && !/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(user.email)) return app.badField('fe_eu_email', 'Please enter a valid email address or leave it blank.');
 		var password_bytes = new TextEncoder().encode(user.password).length;
 		if (user.password && (password_bytes < 12 || password_bytes > 72)) return app.badField('fe_eu_password', 'Passwords must contain 12-72 UTF-8 bytes.');
@@ -556,8 +570,18 @@ Class.add( Page.Admin, {
 	},
 	
 	generate_password: function() {
-		// generate random password
-		$('#fe_eu_password').val( b64_md5(get_unique_id()).substring(0, 8) );
+		// 128 random bits, represented as 32 ASCII bytes accepted by the password policy.
+		try {
+			if (!window.crypto || !window.crypto.getRandomValues) throw new Error('Secure random generator unavailable');
+			var bytes = new Uint8Array(16);
+			window.crypto.getRandomValues(bytes);
+			var password = '';
+			for (var idx = 0; idx < bytes.length; idx++) password += ('0' + bytes[idx].toString(16)).slice(-2);
+			$('#fe_eu_password').val(password);
+		}
+		catch (err) {
+			return app.doError('Secure password generation is unavailable in this browser. Enter a password from a trusted password manager.');
+		}
 	}
 	
 });

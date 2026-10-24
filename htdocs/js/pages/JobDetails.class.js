@@ -135,8 +135,22 @@ Class.subclass( Page.Base, "Page.JobDetails", {
 		return html;
 	},
 	
+	get_job_actions_html: function(live, event, watch_enabled) {
+		var html = '';
+		if (live) {
+			if (app.hasPrivilege('abort_events')) html += '<div class="subtitle_widget" style="margin-left:2px;"><span class="link abort" onMouseUp="$P().abort_job()"><i class="fa fa-ban">&nbsp;</i><b>Abort Job</b></span></div>';
+			if (app.hasPrivilege('edit_events') && app.user.email) html += '<div class="subtitle_widget"><span id="s_watch_job" class="link" onMouseUp="$P().toggle_watch()" style="' + (watch_enabled ? 'color:#3f7ed5;' : 'color:#777;') + '"><i class="fa ' + (watch_enabled ? 'fa-check-square-o' : 'fa-square-o') + '">&nbsp;</i><b>Watch Job</b></span></div>';
+		}
+		else {
+			if (app.hasPrivilege('run_events') && event.id && !event.multiplex) html += '<div class="subtitle_widget" style="margin-left:2px;"><span class="link" onMouseUp="$P().run_again()"><i class="fa fa-repeat">&nbsp;</i><b>Run Again</b></span></div>';
+			if (app.isAdmin()) html += '<div class="subtitle_widget"><span class="link abort" onMouseUp="$P().delete_job()"><i class="fa fa-trash-o">&nbsp;</i><b>Delete Job</b></span></div>';
+		}
+		return html;
+	},
+
 	delete_job: function() {
 		// delete job, after confirmation
+		if (!app.isAdmin()) return app.doError("Only administrators can delete job history.");
 		var self = this;
 		var job = this.job;
 		
@@ -155,6 +169,7 @@ Class.subclass( Page.Base, "Page.JobDetails", {
 	
 	run_again: function() {
 		// run job again
+		if (!app.hasPrivilege('run_events')) return app.doError("You do not have permission to run events.");
 		var self = this;
 		var event = find_object( app.schedule, { id: this.job.event } ) || null;
 		if (!event) return app.doError("Could not locate event in schedule: " + this.job.event_title + " (" + this.job.event + ")");
@@ -212,8 +227,7 @@ Class.subclass( Page.Base, "Page.JobDetails", {
 		
 		html += '<div class="subtitle" style="margin-top:7px; margin-bottom:13px;">';
 			html += 'Completed Job';
-			if (event.id && !event.multiplex) html += '<div class="subtitle_widget" style="margin-left:2px;"><span class="link" onMouseUp="$P().run_again()"><i class="fa fa-repeat">&nbsp;</i><b>Run Again</b></span></div>';
-			if (app.isAdmin()) html += '<div class="subtitle_widget"><span class="link abort" onMouseUp="$P().delete_job()"><i class="fa fa-trash-o">&nbsp;</i><b>Delete Job</b></span></div>';
+			html += this.get_job_actions_html(false, event);
 			html += '<div class="clear"></div>';
 		html += '</div>';
 		
@@ -728,6 +742,7 @@ Class.subclass( Page.Base, "Page.JobDetails", {
 	
 	abort_job: function() {
 		// abort job, after confirmation
+		if (!app.hasPrivilege('abort_events')) return app.doError("You do not have permission to abort jobs.");
 		var job = this.find_job(this.args.id);
 		
 		app.confirm( '<span style="color:red">Abort Job</span>', "Are you sure you want to abort the current job?", "Abort", function(result) {
@@ -776,6 +791,8 @@ Class.subclass( Page.Base, "Page.JobDetails", {
 	
 	toggle_watch: function() {
 		// toggle watch on/off on current live job
+		if (!app.hasPrivilege('edit_events')) return app.doError("You do not have permission to update jobs.");
+		if (!app.user.email) return app.doError("Add an email address in My Account before watching jobs.");
 		var job = this.find_job(this.args.id);
 		var watch_enabled = this.check_watch_enabled(job);
 		
@@ -832,8 +849,7 @@ Class.subclass( Page.Base, "Page.JobDetails", {
 		
 		html += '<div class="subtitle" style="margin-top:7px; margin-bottom:13px;">';
 			html += 'Live Job Progress';
-			html += '<div class="subtitle_widget" style="margin-left:2px;"><span class="link abort" onMouseUp="$P().abort_job()"><i class="fa fa-ban">&nbsp;</i><b>Abort Job</b></span></div>';
-			html += '<div class="subtitle_widget"><span id="s_watch_job" class="link" onMouseUp="$P().toggle_watch()" style="' + (watch_enabled ? 'color:#3f7ed5;' : 'color:#777;') + '"><i class="fa ' + (watch_enabled ? 'fa-check-square-o' : 'fa-square-o') + '">&nbsp;</i><b>Watch Job</b></span></div>';
+			html += this.get_job_actions_html(true, event, watch_enabled);
 			html += '<div class="clear"></div>';
 		html += '</div>';
 		
