@@ -133,3 +133,13 @@ SameSite=Lax。启用 Secure Cookie 后不要继续通过 HTTP 登录。
 已有 TLS、同源检查和可信代理要求不变。
 
 指标采集与故障处理请参阅[运维与指标](operations.md)。
+
+## 重置管理员密码
+
+使用管理命令前先停止服务。从受保护的秘密文件读取密码，避免密码出现在进程参数或 Shell 历史中：
+
+```sh
+./owlcron-engine --config config.local.json admin admin --password-stdin < /run/secrets/owlcron-admin-password
+```
+
+输入应为一个 12–72 字节的密码，可带末尾换行；前后的空格会保留。为兼容旧调用，仍接受位置参数形式的密码，但推荐使用标准输入方式。

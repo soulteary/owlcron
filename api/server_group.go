@@ -162,7 +162,7 @@ func (s *Server) handleListServerGroups(w http.ResponseWriter, r *http.Request) 
 		groups = append(groups, group)
 	}
 
-	s.sendResponse(w, 0, recordPage(r, groups), "")
+	s.sendResponse(w, 0, recordPage(r, groups, func(record *types.ServerGroup) string { return record.ID }), "")
 }
 
 // handleListServers 处理列出服务器

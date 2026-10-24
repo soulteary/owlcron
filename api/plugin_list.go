@@ -51,5 +51,5 @@ func (s *Server) handleListPlugins(w http.ResponseWriter, r *http.Request) {
 		plugins = append(plugins, canonical)
 	}
 
-	s.sendResponse(w, 0, recordPage(r, plugins), "")
+	s.sendResponse(w, 0, recordPage(r, plugins, func(record *types.Plugin) string { return record.ID }), "")
 }

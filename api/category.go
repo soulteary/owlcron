@@ -175,7 +175,7 @@ func (s *Server) handleListCategories(w http.ResponseWriter, r *http.Request) {
 		categories = append(categories, category)
 	}
 
-	s.sendResponse(w, 0, recordPage(r, categories), "")
+	s.sendResponse(w, 0, recordPage(r, categories, func(record *types.Category) string { return record.ID }), "")
 }
 
 // Validate the decoded body's ID as well as middleware parameters: a query

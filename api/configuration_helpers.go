@@ -82,16 +82,12 @@ func (s *Server) configurationInUse(key, id string) bool {
 	}
 	return false
 }
-func recordPage[T any](r *http.Request, records []*T) map[string]interface{} {
+
+const maxConfigurationPageSize = 10000
+
+func recordPage[T any](r *http.Request, records []*T, id func(*T) string) map[string]interface{} {
 	sort.Slice(records, func(i, j int) bool {
-		a, _ := json.Marshal(records[i])
-		b, _ := json.Marshal(records[j])
-		var x, y struct {
-			ID string `json:"id"`
-		}
-		_ = json.Unmarshal(a, &x)
-		_ = json.Unmarshal(b, &y)
-		return x.ID < y.ID
+		return id(records[i]) < id(records[j])
 	})
 	offset, limit := parseOffsetLimit(r, 0, len(records))
 	if offset < 0 {
@@ -100,12 +96,9 @@ func recordPage[T any](r *http.Request, records []*T) map[string]interface{} {
 	if offset > len(records) {
 		offset = len(records)
 	}
-	if limit <= 0 {
-		limit = len(records)
+	if limit <= 0 || limit > maxConfigurationPageSize {
+		limit = maxConfigurationPageSize
 	}
-	end := offset + limit
-	if end > len(records) {
-		end = len(records)
-	}
+	end := offset + min(limit, len(records)-offset)
 	return map[string]interface{}{"rows": records[offset:end], "list": map[string]int{"length": len(records)}}
 }
