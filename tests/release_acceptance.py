@@ -10,6 +10,7 @@ import json
 import os
 from pathlib import Path
 import secrets
+import shutil
 import socket
 import subprocess
 import tempfile
@@ -40,7 +41,7 @@ def accept_distribution(distribution):
         config = dict(http_port=port, base_app_url=f'http://127.0.0.1:{port}',
                       hostname='release-node', secret_key=secrets.token_hex(32),
                       storage_engine='Filesystem', storage_base_dir=str(work / 'original/data'),
-                      log_dir=str(work / 'logs'), queue_dir=str(work / 'queue'),
+                      log_dir=str(work / 'original/logs'), queue_dir=str(work / 'original/queue'),
                       udp_broadcast_port=-1, scheduler_startup_grace=1)
         path = work / 'config.json'
         session = ''
@@ -139,7 +140,7 @@ def accept_distribution(distribution):
             process = start()
             history = api('app/get_event_history', {'id': 'release-script'})
             require(any(row['id'] == first_job for row in history['rows']), 'Restart lost job history')
-            run_event()
+            second_job = run_event()
             stop(process)
             backup = work / 'backup.json'
             cli('export', str(backup))
@@ -148,10 +149,19 @@ def accept_distribution(distribution):
             require(backup.stat().st_mode & 0o077 == 0, 'Backup permissions expose private data')
             # Both source and destination daemons are stopped during backup/restore.
             # Import only the application's own format, into a separate empty store.
+            shutil.rmtree(work / 'original')
             config['storage_base_dir'] = str(work / 'restored/data')
+            config['log_dir'] = str(work / 'restored/logs')
+            config['queue_dir'] = str(work / 'restored/queue')
             write_config()
             cli('import', str(backup))
             process = start()
+            history = api('app/get_event_history', {'id': 'release-script'})
+            for prior_job in (first_job, second_job):
+                require(any(row['id'] == prior_job for row in history['rows']), 'Restore lost prior job history')
+                output = api('app/get_job_log', {'id': prior_job, 'offset': 0, 'limit': 32768})
+                require(b'RELEASE_SCRIPT_OK' in base64.b64decode(output['log_base64']),
+                        'Restore lost persisted job log')
             run_event()
             stop(process)
         finally:

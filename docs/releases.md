@@ -58,8 +58,11 @@ acceptance test against only the extracted distribution. The test checks the
 built frontend, first boot and login, an actual job using the bundled script
 adapter, history and logs, graceful restart with persistent state, and an offline
 backup imported into fresh storage followed by another successful job. It stops
-the daemon before both export and import. Core-data export does not back up
-configuration, script files or job-log files; preserve those separately.
+the daemon before both export and import. The test deletes the original
+data, log and queue directories before restoration and checks both prior job
+histories and their persisted log contents. Storage export includes persisted
+job logs, but not configuration, script files or independent local log files;
+preserve those separately.
 
 The harness uses Python's standard library from the source checkout; the daemon
 and its child plugins run outside the checkout with an empty executable `PATH`,
