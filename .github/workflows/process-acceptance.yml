@@ -1,4 +1,4 @@
-name: Go process fault acceptance
+name: CI / Process Fault Acceptance
 
 on:
   push:
