@@ -24,7 +24,7 @@ func TestScriptArgumentsAndProtocolIsolation(t *testing.T) {
 	}
 }
 func TestScriptRejectsInvalidArgumentsAndMissingCommand(t *testing.T) {
-	for _, input := range []string{`{`, `{"params":{"args":["x"]}}`, `{"params":{"args":"[1]"}}`, strings.Repeat("x", 1024*1024+1)} {
+	for _, input := range []string{`{`, `{"params":{"args":["x"]}}`, `{"params":{"args":"[1]"}}`, `{"params":{"args":"null"}}`, strings.Repeat("x", 1024*1024+1)} {
 		var out, logs bytes.Buffer
 		if run(context.Background(), []string{"/bin/sh", "-c", "echo should-not-run"}, strings.NewReader(input), &out, &logs) == 0 || logs.Len() != 0 {
 			t.Fatal("invalid input executed")

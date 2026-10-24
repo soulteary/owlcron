@@ -67,7 +67,7 @@ func execute(ctx context.Context, command []string, input io.Reader, logs io.Wri
 		if json.Unmarshal(value, &encoded) != nil {
 			return 1, errors.New("args must be a JSON-array string")
 		}
-		if len(encoded) > 65536 || json.Unmarshal([]byte(encoded), &args) != nil || len(args) > 256 {
+		if len(encoded) > 65536 || json.Unmarshal([]byte(encoded), &args) != nil || args == nil || len(args) > 256 {
 			return 1, errors.New("args must encode at most 256 strings within 64 KiB")
 		}
 	}
