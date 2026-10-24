@@ -37,14 +37,11 @@ def main():
         adapter = subprocess.run([str(distribution / 'owlcron-script'), '--', '/bin/echo', 'RELEASE_ADAPTER_OK'], input='{}\n', text=True, capture_output=True, check=True)
         require(json.loads(adapter.stdout) == {'complete':True, 'code':0}, 'Adapter completion mismatch')
         require('RELEASE_ADAPTER_OK' in adapter.stderr, 'Adapter output missing')
-        # The existing test harness uses assertions. Run it without inherited
-        # optimization so -O cannot silently weaken its behavioral checks.
+        # The harness itself needs Python; the extracted application runs with
+        # an empty PATH and cannot fall back to developer toolchains.
         env.pop('PYTHONOPTIMIZE', None)
-        smoke = ('from pathlib import Path; import sys; '
-                 'sys.path.insert(0, sys.argv[1]); import smoke_install; '
-                 'smoke_install.ROOT = Path(sys.argv[2]); smoke_install.main()')
-        subprocess.run([sys.executable, '-c', smoke, str(ROOT / 'tests'), str(distribution)],
-                       env=env, check=True, timeout=120)
+        subprocess.run([sys.executable, str(ROOT / 'tests/release_acceptance.py'), str(distribution)],
+                       env=env, check=True, timeout=150)
         print(f'Release verified: checksum, metadata, adapter and installed application ({metadata["target"]})')
 
 

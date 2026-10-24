@@ -1,7 +1,7 @@
 name: Release / Build and Package
 on:
   pull_request:
-    paths: ['htdocs-deps/**', 'tools/bun-lock.mjs', 'tests/check_licenses.py', 'tools/package_release.py', 'tools/verify_release.py', 'tools/release/**', 'tests/test_release_package.py', 'cli/**', 'main.go', 'Makefile', '.github/workflows/release.yml']
+    paths: ['htdocs-deps/**', 'tools/bun-lock.mjs', 'tests/check_licenses.py', 'tools/package_release.py', 'tools/verify_release.py', 'tools/release/**', 'tests/test_release_package.py', 'tests/release_acceptance.py', 'tests/check_frontend_assets.py', '**/*.go', 'config.json', 'htdocs/**', 'go.mod', 'go.sum', 'Makefile', '.github/workflows/release.yml']
   push:
     tags: ['v*']
   workflow_dispatch:
@@ -41,6 +41,28 @@ jobs:
         run: make release VERSION="$VERSION"
       - name: Verify archive and run extracted distribution
         run: python3 tools/verify_release.py dist/*.tar.gz
+      - name: Verify archive in a clean runtime container
+        run: |
+          docker run --rm --network none --read-only \
+            --user 65534:65534 --cap-drop ALL --security-opt no-new-privileges \
+            --tmpfs /tmp:rw,exec,nosuid,nodev,mode=1777,size=512m \
+            --env PYTHONDONTWRITEBYTECODE=1 --workdir /check \
+            --mount "type=bind,src=$PWD/dist,dst=/dist,readonly" \
+            --mount "type=bind,src=$PWD/tools/verify_release.py,dst=/check/tools/verify_release.py,readonly" \
+            --mount "type=bind,src=$PWD/tools/package_release.py,dst=/check/tools/package_release.py,readonly" \
+            --mount "type=bind,src=$PWD/tests/release_acceptance.py,dst=/check/tests/release_acceptance.py,readonly" \
+            --mount "type=bind,src=$PWD/tests/check_frontend_assets.py,dst=/check/tests/check_frontend_assets.py,readonly" \
+            python:3.13.17-slim-trixie /bin/sh -eu -c '
+              for tool in go bun node npm; do
+                if command -v "$tool" >/dev/null 2>&1; then
+                  echo "Unexpected build dependency in runtime: $tool" >&2
+                  exit 1
+                fi
+              done
+              set -- /dist/*.tar.gz
+              test "$#" -eq 1 && test -f "$1"
+              exec python3 -B /check/tools/verify_release.py "$1"
+            '
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: linux-amd64-release
