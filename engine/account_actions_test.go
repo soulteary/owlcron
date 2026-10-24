@@ -229,6 +229,8 @@ func TestAccountActionsRejectStaleBindings(t *testing.T) {
 }
 func TestAccountRecoveryGenericAndCooldown(t *testing.T) {
 	e, user := accountActionTestEngine(t)
+	// Keep this assertion independent of a wall-clock second boundary.
+	e.config.AccountEmailCooldownSeconds = 60
 	ctx := context.Background()
 	for _, name := range []string{"absent", user.Username} {
 		if err := e.RequestPasswordRecovery(ctx, name, "wrong@example.test"); err != nil {
