@@ -81,6 +81,10 @@ OWLCRON_SOAK_DURATION=3m OWLCRON_PROCESS_SOAK_DURATION=3m \
 
 CI 在 PR 和 `main` 分支推送时运行；功能分支推送不再额外触发一套重复检查。新提交会取消旧任务。依赖和 Docker 镜像层使用缓存，但缓存命中不会跳过测试。
 
+PR 使用 `go test -short` 运行单元测试，并保留静态检查、安全扫描、构建、前端和安装冒烟测试；相关改动仍运行容器检查。目标是在缓存命中且 runner 无排队时约 1–2 分钟提供反馈，并非硬性执行时限。
+
+完整故障验收在相关代码合入 `main` 后运行，并每天北京时间 03:17 定时覆盖最新主分支；也可手动触发。它包含完整 Linux race、真实远程存储、重复进程恢复和持续故障测试，不属于 PR 的快速反馈阶段。这会把长测发现的问题推迟到合并后；高风险改动可在合并前手动运行深度验收。
+
 负载验收拆分为六个并行阶段：完整 Linux race 回归、重复集群恢复、启用和关闭 race 的容量测试、单机持续故障、集群持续故障。每个阶段检查本次运行的新鲜证据，最终汇总必须包含全部六个阶段及规定记录。资源限制、重复次数和两组各三分钟的持续测试时长保持不变。完整 race 与 vet 在回归阶段执行一次。进程恢复拆分为 SIGKILL、集群、负载集群三组，所有选中用例仍重复三次。远程存储故障保持独立任务。
 
 复现单个负载阶段时，在 `make linux-load-acceptance` 前设置 `OWLCRON_LOAD_STAGE` 为 `regression`、`cluster`、`capacity-race`、`capacity-plain`、`daemon-soak` 或 `cluster-soak`；省略时仍串行执行完整矩阵。`OWLCRON_ACCEPTANCE_SKIP_BASELINE=1` 仅供同时要求 Linux 回归阶段通过的 CI 使用；独立运行远程验收默认保留基线测试。

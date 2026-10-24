@@ -1,14 +1,15 @@
 name: Go process fault acceptance
 
 on:
-  pull_request:
-    paths: ['**/*.go', 'go.mod', 'go.sum', 'Makefile', 'tests/**', '.github/workflows/**']
   push:
     branches: [main]
-    paths: ['**/*.go', 'go.mod', 'go.sum', 'Makefile', 'tests/**', '.github/workflows/**']
+    paths: ['**/*.go', 'go.mod', 'go.sum', 'Makefile', 'tests/*acceptance*', 'tests/*load*', '.github/workflows/process-acceptance.yml']
+  schedule:
+    # 03:17 Asia/Shanghai; off the hour to avoid peak scheduler load.
+    - cron: '17 19 * * *'
   workflow_dispatch:
 
-# Push and PR events for one branch share a group; newer runs replace old ones.
+# Keep only the latest deep run for a branch, including manual and scheduled runs.
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true

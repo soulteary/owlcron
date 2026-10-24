@@ -81,6 +81,10 @@ Resources, mounts, backends, data volume, and log/notification load affect resul
 
 CI runs on pull requests and pushes to `main`; feature-branch pushes do not start a second copy of the same checks. New commits cancel superseded runs. Dependency and Docker layer caches reduce repeated downloads and builds; tests still execute on cache hits.
 
+Pull requests use `go test -short` for unit tests while retaining static checks, security scans, builds, frontend checks and installation smoke tests; relevant changes still run container checks. The feedback target is about 1–2 minutes with warm caches and an available runner, not a hard execution limit.
+
+Full fault acceptance runs after relevant changes reach `main`, every day at 03:17 Asia/Shanghai (19:17 UTC), and on manual dispatch. It includes the full Linux race suite, real remote storage, repeated process recovery, and sustained faults. These checks are outside the PR fast-feedback stage, so long-test failures may be discovered after merge; run manual deep acceptance before merging high-risk changes.
+
 Load acceptance runs six parallel stages: full Linux race regression, repeated cluster recovery, capacity with and without the race detector, single-node soak, and cluster soak. Every stage validates fresh evidence, and the final job requires all six stages and their expected records. Resource limits, repeat counts, and both three-minute soak windows remain unchanged. The full race suite and vet run once in the regression stage. Process recovery is split into SIGKILL, cluster, and loaded-cluster groups; every selected test still runs three times. Remote-service faults remain a separate job.
 
 To reproduce a single load stage, set `OWLCRON_LOAD_STAGE` to `regression`, `cluster`, `capacity-race`, `capacity-plain`, `daemon-soak`, or `cluster-soak` before `make linux-load-acceptance`. Omit it for the complete sequential matrix. `OWLCRON_ACCEPTANCE_SKIP_BASELINE=1` is reserved for CI runs that also require the Linux regression stage; standalone remote acceptance includes its baseline by default.
