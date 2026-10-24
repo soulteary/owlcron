@@ -32,29 +32,31 @@ func (p *Privileges) UnmarshalJSON(data []byte) error {
 
 // User 表示一个用户
 type User struct {
-	ID         string                 `json:"id"`
-	Username   string                 `json:"username"`
-	Email      string                 `json:"email"`
-	Password   string                 `json:"password,omitempty"`
-	Enabled    bool                   `json:"enabled"`
-	Privileges Privileges             `json:"privileges"`
-	Created    int64                  `json:"created"`
-	Modified   int64                  `json:"modified"`
-	Data       map[string]interface{} `json:"data,omitempty"`
+	ID            string                 `json:"id"`
+	Username      string                 `json:"username"`
+	Email         string                 `json:"email"`
+	VerifiedEmail string                 `json:"verified_email,omitempty"`
+	Password      string                 `json:"password,omitempty"`
+	Enabled       bool                   `json:"enabled"`
+	Privileges    Privileges             `json:"privileges"`
+	Created       int64                  `json:"created"`
+	Modified      int64                  `json:"modified"`
+	Data          map[string]interface{} `json:"data,omitempty"`
 }
 
 // SafeMap returns a copy of the user without the password, suitable for API responses.
 func (u *User) SafeMap() map[string]interface{} {
 	return map[string]interface{}{
-		"id":         u.ID,
-		"username":   u.Username,
-		"email":      u.Email,
-		"enabled":    u.Enabled,
-		"active":     u.Enabled,
-		"full_name":  u.Data["full_name"],
-		"privileges": u.Privileges,
-		"created":    u.Created,
-		"modified":   u.Modified,
+		"id":             u.ID,
+		"username":       u.Username,
+		"email":          u.Email,
+		"email_verified": u.VerifiedEmail != "" && u.VerifiedEmail == u.Email,
+		"enabled":        u.Enabled,
+		"active":         u.Enabled,
+		"full_name":      u.Data["full_name"],
+		"privileges":     u.Privileges,
+		"created":        u.Created,
+		"modified":       u.Modified,
 	}
 }
 

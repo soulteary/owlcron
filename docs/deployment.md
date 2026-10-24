@@ -127,3 +127,7 @@ Stop the daemon before using the administrative CLI. Read the password from a pr
 ```
 
 Input must contain one password of 12–72 bytes, with an optional trailing newline. Leading and trailing spaces are preserved. The legacy positional-password command remains accepted for compatibility, but the standard-input form is preferred.
+
+## Preparing account email
+
+Keep `account_email_enabled` disabled until verification and password-reset support is deployed and tested with your SMTP relay. Choose the public HTTPS `base_app_url` explicitly, including `base_path` when deployed under a subpath; account links must never derive their origin from request headers. Configure a dedicated sender and restrict SMTP credentials to this service. Existing users retain login access without email verification, and administrator password recovery remains available. See [account email policy](configuration.md#account-email-policy) for validation and limits. Public registration remains closed.
