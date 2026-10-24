@@ -112,7 +112,7 @@ Class.subclass( Page.Base, "Page.MyAccount", {
 		if (!app.config.account_email_enabled) return;
 		var password = $('#fe_ma_old_password').val();
 		if (!password) return app.badField('#fe_ma_old_password', 'Enter your current password to verify an email address.');
-		app.api.post('user/request_email_verification', {
+		app.api.postAccountAction('user/request_email_verification', {
 			email: trim($('#fe_ma_email').val()), current_password: password
 		}, function() {
 			$('#fe_ma_old_password').val('');

@@ -115,7 +115,7 @@ Class.subclass( Page.Base, "Page.Login", {
 		if (!action) return;
 		this.pendingEmailAction = null;
 		var self = this;
-		app.api.post('user/verify_email', {user_id:action.userID, token:action.token}, function() {
+		app.api.postAccountAction('user/verify_email', {user_id:action.userID, token:action.token}, function() {
 			self.div.html('<div class="inline_dialog_container"><div class="dialog_title shade-light">Email Verified</div>' +
 				'<div class="dialog_content"><p>Your email address has been verified. Return to your account to continue.</p></div>' +
 				'<div class="dialog_buttons"><a class="button" href="#MyAccount">Continue</a></div></div>');
