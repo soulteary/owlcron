@@ -4,6 +4,7 @@ on:
   pull_request:
     paths: ['**/*.go', 'go.mod', 'go.sum', 'Makefile', 'tests/**', '.github/workflows/**']
   push:
+    branches: [main]
     paths: ['**/*.go', 'go.mod', 'go.sum', 'Makefile', 'tests/**', '.github/workflows/**']
   workflow_dispatch:
 
@@ -26,12 +27,8 @@ jobs:
         with:
           go-version-file: go.mod
           cache-dependency-path: go.sum
-      - name: Static checks
-        run: make vet
       - name: Repeat independent-process failure matrix
         run: make process-integration-repeat
-      - name: Full race regression
-        run: make race
 
   linux-remote-recovery:
     runs-on: ubuntu-24.04
@@ -40,10 +37,35 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Cache remote acceptance compiler and modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ runner.temp }}/owlcron-remote-build/cache
+            ${{ runner.temp }}/owlcron-remote-modules
+          key: ${{ runner.os }}-remote-go1.27.3-${{ hashFiles('go.sum', '**/*.go') }}
+          restore-keys: ${{ runner.os }}-remote-go1.27.3-
+      - uses: docker/setup-buildx-action@v3
+      - name: Build the pinned MinIO test service
+        uses: docker/build-push-action@v6
+        with:
+          context: tests
+          file: tests/Dockerfile.minio-acceptance
+          load: true
+          tags: owlcron-acceptance-minio:ci
+          cache-from: type=gha,scope=owlcron-minio
+          cache-to: type=gha,scope=owlcron-minio,mode=max
       - name: Linux processes and real remote-storage failure matrix
         env:
           OWLCRON_ACCEPTANCE_RESULTS: /tmp/owlcron-linux-evidence
-        run: make linux-acceptance
+          OWLCRON_LINUX_BUILD_DIR: ${{ runner.temp }}/owlcron-remote-build
+          OWLCRON_LINUX_MODULE_CACHE: ${{ runner.temp }}/owlcron-remote-modules
+          OWLCRON_LINUX_S3_IMAGE: owlcron-acceptance-minio:ci
+          # The load-regression shard runs the full Linux race suite and vet.
+          OWLCRON_ACCEPTANCE_SKIP_BASELINE: '1'
+        run: |
+          mkdir -p "$OWLCRON_LINUX_MODULE_CACHE"
+          make linux-acceptance
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -52,21 +74,62 @@ jobs:
           if-no-files-found: warn
 
   linux-load-recovery:
+    name: linux-load-${{ matrix.stage }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        stage: [regression, cluster, capacity-race, capacity-plain, daemon-soak, cluster-soak]
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Bounded capacity, failover RTO and sustained failure profiles
+      - name: Cache load acceptance compiler and modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ runner.temp }}/owlcron-load-build/cache
+            ${{ runner.temp }}/owlcron-load-modules
+          key: ${{ runner.os }}-load-${{ matrix.stage }}-go1.27.3-${{ hashFiles('go.sum', '**/*.go') }}
+          restore-keys: |
+            ${{ runner.os }}-load-${{ matrix.stage }}-go1.27.3-
+      - name: Run and validate one bounded load stage
         env:
           OWLCRON_LOAD_RESULTS: /tmp/owlcron-load-evidence
+          OWLCRON_LINUX_BUILD_DIR: ${{ runner.temp }}/owlcron-load-build
+          OWLCRON_LINUX_MODULE_CACHE: ${{ runner.temp }}/owlcron-load-modules
+          OWLCRON_LOAD_STAGE: ${{ matrix.stage }}
           OWLCRON_SOAK_DURATION: 3m
           OWLCRON_PROCESS_SOAK_DURATION: 3m
         run: make linux-load-acceptance
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: linux-load-recovery-evidence
+          name: linux-load-${{ matrix.stage }}-evidence
           path: /tmp/owlcron-load-evidence
-          if-no-files-found: warn
+          if-no-files-found: error
+
+  linux-load-evidence:
+    name: Complete load evidence
+    needs: linux-load-recovery
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Require every load stage to pass
+        env:
+          STAGE_RESULT: ${{ needs.linux-load-recovery.result }}
+        run: test "$STAGE_RESULT" = success
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: linux-load-*-evidence
+          path: /tmp/owlcron-load-evidence
+          merge-multiple: true
+      - name: Verify the complete matrix from this workflow run
+        # Each shard rejects stale files against its own start time. Downloads
+        # are scoped to this run; the aggregate requires every stage and repeat.
+        run: python3 tests/check_load_evidence.py /tmp/owlcron-load-evidence --matrix-repeat 3 --not-before 0

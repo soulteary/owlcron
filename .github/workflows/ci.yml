@@ -1,5 +1,9 @@
 name: CI
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
 # Push and PR events for one branch share a group; newer runs replace old ones.
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
@@ -26,6 +30,8 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: htdocs-deps/package-lock.json
+      - name: Validate workflow syntax and expressions
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
       - run: make fmt-check vet test build
       - name: Check independent example plugin module
         working-directory: bin/echo-plugin
@@ -48,6 +54,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: npm
+          cache-dependency-path: htdocs-deps/package-lock.json
       - run: npm ci --prefix htdocs-deps
       - run: npm audit --prefix htdocs-deps --audit-level=moderate
       - run: go install golang.org/x/vuln/cmd/govulncheck@v1.9.0

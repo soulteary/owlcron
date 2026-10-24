@@ -63,7 +63,7 @@ def load_records(directory, not_before=None):
     return records
 
 
-def validate_matrix(records, repeat):
+def validate_matrix(records, repeat, selected_stages=None):
     # Separate stages cannot borrow evidence from full regression or an old run.
     for path, record in records:
         if not record.get("platform", "").startswith("linux/"):
@@ -76,7 +76,12 @@ def validate_matrix(records, repeat):
         "daemon-soak": {"soak": (1, True)},
         "cluster-soak": {"cluster_fault_soak": (None, None)},
     }
+    selected = set(stages) if selected_stages is None else set(selected_stages)
+    if not selected or selected - stages.keys():
+        raise ValueError("unknown or empty matrix stage selection")
     for stage, profiles in stages.items():
+        if stage not in selected:
+            continue
         rows = [(path, record) for path, record in records if len(path.parts) == 2 and path.parts[0] == stage]
         for profile, (count, race) in profiles.items():
             matches = [(path, record) for path, record in rows if record["profile"] == profile]
@@ -95,10 +100,13 @@ def main():
     parser.add_argument("directory", type=Path)
     parser.add_argument("--require-profiles", nargs="+", default=[])
     parser.add_argument("--matrix-repeat", type=int)
+    parser.add_argument("--stages", nargs="+", help="validate selected shards; omit for the complete matrix")
     parser.add_argument("--not-before", type=float, help="earliest permitted file mtime, Unix seconds")
     args = parser.parse_args()
     if args.matrix_repeat is not None and (not 1 <= args.matrix_repeat <= 9 or args.not_before is None):
         parser.error("--matrix-repeat requires 1..9 and --not-before for this run")
+    if args.stages is not None and args.matrix_repeat is None:
+        parser.error("--stages requires --matrix-repeat")
     if args.not_before is not None and not math.isfinite(args.not_before):
         parser.error("--not-before must be finite")
     try:
@@ -108,7 +116,7 @@ def main():
         if missing or not records:
             raise ValueError(f"missing profile evidence: {sorted(missing) or 'all'}")
         if args.matrix_repeat is not None:
-            validate_matrix(records, args.matrix_repeat)
+            validate_matrix(records, args.matrix_repeat, args.stages)
     except (ValueError, TypeError, OSError) as error:
         raise SystemExit(str(error)) from error
     print(f"Validated {len(records)} measured profiles; no maximum-capacity or long-soak claim inferred.")

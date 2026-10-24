@@ -73,6 +73,20 @@ class LoadEvidenceTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             module.validate_matrix(self.matrix(), 3)
 
+    def test_shards_validate_only_selected_stages_but_aggregate_requires_all(self):
+        stages = {p.parts[0] for p, _ in self.matrix()}
+        for stage in stages:
+            rows = [(p, r) for p, r in self.matrix() if p.parts[0] == stage]
+            with self.subTest(stage=stage):
+                module.validate_matrix(rows, 2, [stage])
+                with self.assertRaises(ValueError):
+                    module.validate_matrix(rows, 2)
+                with self.assertRaises(ValueError):
+                    module.validate_matrix([], 2, [stage])
+        for invalid in ([], ["typo"]):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                module.validate_matrix(self.matrix(), 2, invalid)
+
     def test_matrix_rejects_wrong_instrumentation_platform_and_nested_borrowing(self):
         for replacement in ({"race_enabled": False}, {"platform": "darwin/arm64"}):
             records = [(p, dict(r, **replacement) if p.parts[0] == "capacity-race" else r)
