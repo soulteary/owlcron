@@ -112,6 +112,8 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 	register("/api/user/login", s.handleUserLogin)
 	register("/api/user/request_email_verification", s.handleRequestEmailVerification)
 	register("/api/user/verify_email", s.handleVerifyEmail)
+	register("/api/user/forgot_password", s.handleForgotPassword)
+	register("/api/user/reset_password", s.handleResetPassword)
 	register("/api/user/logout", s.handleUserLogout)
 	register("/api/user/resume_session", s.handleResumeSession)
 	register("/api/user/create", s.handleUserCreate)

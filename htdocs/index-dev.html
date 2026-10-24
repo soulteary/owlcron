@@ -9,9 +9,10 @@
 			var parts = location.hash.split('?');
 			if (parts[0] !== '#Login') return;
 			var values = new URLSearchParams(parts.slice(1).join('?'));
-			if (values.get('verify') !== '1' || !values.has('token')) return;
-			window.owlcronAccountAction = { purpose: 'verify', userID: values.get('u'), token: values.get('token') };
-			history.replaceState(null, '', location.pathname + location.search + '#Login?verify=1');
+			var purpose = values.get('verify') === '1' ? 'verify' : (values.get('reset') === '1' ? 'reset' : null);
+			if (!purpose || !values.has('token')) return;
+			window.owlcronAccountAction = { purpose: purpose, userID: values.get('u'), token: values.get('token') };
+			history.replaceState(null, '', location.pathname + location.search + '#Login?' + purpose + '=1');
 			if (window.Nav) window.Nav.loc = 'account-action';
 		}
 		captureAccountAction();

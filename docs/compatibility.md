@@ -66,9 +66,13 @@ suffixed with `/v1`). The administrator's user/API-key forms expose these rights
 ## Browser account and administration workflows
 
 Accounts are provisioned by administrators in **Admin → Users**. The login page's
-**Account access help** explains how to request an account or password reset;
-self-service registration and email recovery are unavailable. Old registration
-and recovery links show this help instead of submitting unsupported API requests.
+**Account access help** explains how to request an account or password reset.
+Self-service registration remains unavailable. Email verification and password
+recovery are disabled by default; operators can enable them with the
+[account email policy](configuration.md#account-email-policy). Recovery requires
+an enabled account and a previously verified email. Existing Cronicle recovery
+links are not accepted; request a new OwlCron link. When recovery is disabled,
+old recovery routes show administrator-assisted recovery instructions.
 Signed-in users can update their profile and password in **My Account**, using
 their current password. An administrator can reset another user's password in
 **Admin → Users**. If all administrators are locked out, use the offline
