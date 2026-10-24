@@ -2,6 +2,12 @@
 # Bounded offered-load profiles. A passing run is not maximum-capacity certification.
 set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
+stage=${OWLCRON_LOAD_STAGE:-all}
+case "$stage" in
+    all|regression|cluster|capacity-race|capacity-plain|daemon-soak|cluster-soak) ;;
+    *) echo "Unknown load acceptance stage: $stage" >&2; exit 1 ;;
+esac
+selected() { [[ "$stage" == all || "$stage" == "$1" ]]; }
 command -v docker >/dev/null
 command -v python3 >/dev/null
 run_dir=$(mktemp -d "${TMPDIR:-/tmp}/owlcron-linux-load.XXXXXXXX")
@@ -56,12 +62,17 @@ docker exec "$runner" mkdir -p /results
     docker exec "$runner" sh -c 'test "$(uname -s)" = Linux; uname -srmo; go version; cat /sys/fs/cgroup/cpu.max; cat /sys/fs/cgroup/memory.max; df -T /build /tmp'
     docker image inspect "$image" --format '{{.Id}} {{.Architecture}}'
 } | tee "$results/environment.log"
-docker exec -e OWLCRON_ACCEPTANCE_RESULTS=/results/regression "$runner" \
+if selected regression; then
+    docker exec -e OWLCRON_ACCEPTANCE_RESULTS=/results/regression "$runner" \
     go test -race ./... -count=1 -timeout=360s 2>&1 | tee "$results/regression.log"
-docker exec -e OWLCRON_ACCEPTANCE_RESULTS=/results/cluster "$runner" \
+fi
+if selected cluster; then
+    docker exec -e OWLCRON_ACCEPTANCE_RESULTS=/results/cluster "$runner" \
     go test -race . -run '^TestProcessClusterLoadedConvergence$' -count="$repeat" -timeout=900s -v \
     2>&1 | tee "$results/cluster-repeat.log"
+fi
 for instrumentation in race plain; do
+    selected "capacity-$instrumentation" || continue
     # Keep the array nonempty for Bash 3 with nounset.
     flags=(-count=1)
     if [[ "$instrumentation" == race ]]; then flags=(-race -count=1); fi
@@ -72,15 +83,21 @@ for instrumentation in race plain; do
         "$runner" go test "${flags[@]}" . -run '^TestProcessCapacityProfile$' -timeout=600s -v \
         2>&1 | tee "$results/capacity-$instrumentation.log"
 done
-docker exec -e OWLCRON_ACCEPTANCE_RESULTS=/results/daemon-soak \
+if selected daemon-soak; then
+    docker exec -e OWLCRON_ACCEPTANCE_RESULTS=/results/daemon-soak \
     -e "OWLCRON_SOAK_DURATION=${OWLCRON_SOAK_DURATION:-3m}" "$runner" \
     go test -race . -run '^TestProcessSoakProfile$' -count=1 \
     -timeout="${OWLCRON_LOAD_SOAK_TIMEOUT:-10m}" -v 2>&1 | tee "$results/daemon-soak.log"
-docker exec -e OWLCRON_ACCEPTANCE_RESULTS=/results/cluster-soak \
+fi
+if selected cluster-soak; then
+    docker exec -e OWLCRON_ACCEPTANCE_RESULTS=/results/cluster-soak \
     -e "OWLCRON_PROCESS_SOAK_DURATION=${OWLCRON_PROCESS_SOAK_DURATION:-3m}" "$runner" \
     go test -race . -run '^TestProcessClusterSoak$' -count=1 \
     -timeout="${OWLCRON_LOAD_SOAK_TIMEOUT:-10m}" -v 2>&1 | tee "$results/cluster-soak.log"
-docker exec "$runner" go vet ./... 2>&1 | tee "$results/vet.log"
+fi
+if selected regression; then
+    docker exec "$runner" go vet ./... 2>&1 | tee "$results/vet.log"
+fi
 python3 -m unittest discover -s "$root/tests" -p 'test_load_evidence.py' 2>&1 | tee "$results/evidence-tests.log"
 docker cp "$runner:/results/." "$results/" >/dev/null
 # Also supports a runner started before this script gained the start marker.
@@ -88,5 +105,6 @@ docker cp "$runner:/results/." "$results/" >/dev/null
 if [[ -z "${started_epoch:-}" ]]; then
     started_epoch=$(python3 -c 'import os,sys; print(os.stat(sys.argv[1]).st_mtime)' "$results/environment.log")
 fi
-python3 "$root/tests/check_load_evidence.py" "$results" --matrix-repeat "$repeat" --not-before "$started_epoch" --require-profiles \
-    cluster_load cluster_fault_soak capacity soak | tee "$results/evidence-check.log"
+check_args=(--matrix-repeat "$repeat" --not-before "$started_epoch")
+if [[ "$stage" != all ]]; then check_args+=(--stages "$stage"); fi
+python3 "$root/tests/check_load_evidence.py" "$results" "${check_args[@]}" | tee "$results/evidence-check.log"

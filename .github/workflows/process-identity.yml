@@ -1,9 +1,10 @@
 name: Linux process identity regression
 on:
   push:
-    paths: ['engine/process_identity*', '.github/workflows/process-identity.yml']
+    branches: [main]
+    paths: ['engine/process_identity*', 'websocket/**', '.github/workflows/process-identity.yml']
   pull_request:
-    paths: ['engine/process_identity*', '.github/workflows/process-identity.yml']
+    paths: ['engine/process_identity*', 'websocket/**', '.github/workflows/process-identity.yml']
   workflow_dispatch:
 # Push and PR events for one branch share a group; newer runs replace old ones.
 concurrency:

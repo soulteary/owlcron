@@ -2,6 +2,8 @@
 # Real Linux processes and isolated remote services; no Docker socket in runner.
 set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
+skip_baseline=${OWLCRON_ACCEPTANCE_SKIP_BASELINE:-0}
+[[ "$skip_baseline" == 0 || "$skip_baseline" == 1 ]] || { echo 'OWLCRON_ACCEPTANCE_SKIP_BASELINE must be 0 or 1' >&2; exit 1; }
 command -v docker >/dev/null
 command -v python3 >/dev/null
 run_dir=$(mktemp -d "${TMPDIR:-/tmp}/owlcron-linux-acceptance.XXXXXXXX")
@@ -97,10 +99,13 @@ docker run -d --name "$runner" --label io.owlcron.acceptance=true --network "$ne
     docker exec "$s3" sha256sum /usr/local/bin/minio
     for image in "$go_image" "$s3_image" "$cb_image"; do docker image inspect "$image" --format '{{.Id}} {{.Architecture}}'; done
 } | tee "$results/environment.log"
+# The CI load-regression shard already supplies this baseline. Standalone runs keep it.
+if [[ "$skip_baseline" == 0 ]]; then
 # Baseline has external-service opt-ins cleared: faults below run serially.
 docker exec -e OWLCRON_TEST_S3_ENDPOINT= -e OWLCRON_TEST_COUCHBASE_CONNECTION= \
     -e OWLCRON_TEST_S3_CONTAINER= -e OWLCRON_TEST_COUCHBASE_CONTAINER= "$runner" \
     go test -race ./... -count=1 -timeout=300s | tee "$results/linux-race.log"
+fi
 docker exec "$runner" go test -race ./storage \
     -run '^Test(S3RealStorage|S3RealTransportFaultRecovery|S3RealCommittedResponseLossRecovery|S3RealServerRestartRecovery|CouchbaseRealStorage|CouchbaseRemoteFaultRecovery)$' \
     -count="$repeats" -timeout=1200s -v | tee "$results/remote-storage.log"
@@ -109,4 +114,6 @@ docker exec -e OWLCRON_REMOTE_PROCESS_BACKENDS=S3,Couchbase \
     -e "OWLCRON_REMOTE_COUCHBASE_CONFIG={\"connection_string\":\"couchbase://$couchbase\",\"bucket\":\"owlcron-integration\",\"username\":\"Administrator\",\"password\":\"owlcron-test-secret\"}" \
     "$runner" go test -race . -run '^TestProcessRemoteClusterRecovery$' -count="$repeats" -timeout=1500s -v \
     | tee "$results/remote-process.log"
-docker exec "$runner" go vet ./... | tee "$results/vet.log"
+if [[ "$skip_baseline" == 0 ]]; then
+    docker exec "$runner" go vet ./... | tee "$results/vet.log"
+fi

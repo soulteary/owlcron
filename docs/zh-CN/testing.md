@@ -79,6 +79,12 @@ OWLCRON_SOAK_DURATION=3m OWLCRON_PROCESS_SOAK_DURATION=3m \
 
 [常规 CI](../../.github/workflows/ci.yml)验证 Go 1.27 系列、Node 22、构建、单元测试、安装冒烟、许可证和漏洞检查。[故障验收](../../.github/workflows/process-acceptance.yml)负责进程及 Linux 故障场景。
 
+CI 在 PR 和 `main` 分支推送时运行；功能分支推送不再额外触发一套重复检查。新提交会取消旧任务。依赖和 Docker 镜像层使用缓存，但缓存命中不会跳过测试。
+
+负载验收拆分为六个并行阶段：完整 Linux race 回归、重复集群恢复、启用和关闭 race 的容量测试、单机持续故障、集群持续故障。每个阶段检查本次运行的新鲜证据，最终汇总必须包含全部六个阶段及规定记录。资源限制、重复次数和两组各三分钟的持续测试时长保持不变。完整 race 与 vet 在回归阶段执行一次，远程存储与进程重复测试仍保留各自的故障场景。
+
+复现单个负载阶段时，在 `make linux-load-acceptance` 前设置 `OWLCRON_LOAD_STAGE` 为 `regression`、`cluster`、`capacity-race`、`capacity-plain`、`daemon-soak` 或 `cluster-soak`；省略时仍串行执行完整矩阵。`OWLCRON_ACCEPTANCE_SKIP_BASELINE=1` 仅供同时要求 Linux 回归阶段通过的 CI 使用；独立运行远程验收默认保留基线测试。
+
 工作流文件定义检查方式，实际状态以对应提交的 GitHub Actions 运行记录为准。记录测试结果时注明提交、工具链、资源、后端、命令、退出码和跳过项。
 
 本机日志、失败堆栈、扫描结果和性能数据应放在仓库外，或保留为 CI 附件。仓库中的测试脚本和缺陷回归用例需要保留；会影响用户决策的限制维护在产品文档中，不随临时报告一起移除。
