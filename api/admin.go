@@ -2,9 +2,12 @@ package api
 
 import (
 	"encoding/json"
-	"github.com/soulteary/owlcron/types"
+	"errors"
 	"net/http"
 	"time"
+
+	"github.com/soulteary/owlcron/storage"
+	"github.com/soulteary/owlcron/types"
 )
 
 func (s *Server) handleGetMasterState(w http.ResponseWriter, r *http.Request) {
@@ -38,8 +41,21 @@ func (s *Server) handleUpdateMasterState(w http.ResponseWriter, r *http.Request)
 
 func (s *Server) handleGetActivity(w http.ResponseWriter, r *http.Request) {
 	offset, limit := parseOffsetLimit(r, 0, 100)
-	activity, _ := s.engine.GetActivity(offset, limit)
-	s.sendResponse(w, 0, map[string]interface{}{"rows": activity, "list": map[string]int{"length": len(activity)}}, "")
+	info, err := s.engine.GetStorage().ListGetInfo(r.Context(), "logs/activity")
+	if err != nil && !errors.Is(err, storage.ErrNotFound) {
+		s.sendError(w, 1, "Cannot read activity log")
+		return
+	}
+	var total int64
+	if info != nil {
+		total = info.Length
+	}
+	activity, err := s.engine.GetActivity(offset, limit)
+	if err != nil {
+		s.sendError(w, 1, "Cannot read activity log")
+		return
+	}
+	s.sendResponse(w, 0, map[string]interface{}{"rows": activity, "list": map[string]int64{"length": total}}, "")
 }
 
 func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
