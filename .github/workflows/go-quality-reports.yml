@@ -1,4 +1,4 @@
-name: Go quality reports
+name: Reports / Go Tests and Report Card
 on:
   push:
     tags:
