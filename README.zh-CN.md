@@ -27,7 +27,7 @@ OwlCron 支持通过 Web 界面配置定时任务、按需运行任务、执行�
 
 ## 快速开始
 
-需要 Go、Bun 1.4.2、Python 3 和 make。模块默认建议 Go 1.27.3；使用其他工具链前请阅读[部署要求](docs/zh-CN/deployment.md)。
+需要 Go、Bun 1.4.2、Python 3 和 make。模块最低要求 Go 1.27.3；使用其他工具链前请阅读[部署要求](docs/zh-CN/deployment.md)。
 
 ```sh
 git clone https://github.com/soulteary/owlcron.git

@@ -27,7 +27,7 @@ The project is experimental. Review the [known limitations](docs/limitations.md)
 
 ## Quick start
 
-Install Go, Bun 1.4.2, Python 3, and make. The module recommends Go 1.27.3; see the [deployment requirements](docs/deployment.md) before choosing another toolchain.
+Install Go, Bun 1.4.2, Python 3, and make. The module requires Go 1.27.3 or later; see the [deployment requirements](docs/deployment.md) before choosing another toolchain.
 
 ```sh
 git clone https://github.com/soulteary/owlcron.git

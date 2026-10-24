@@ -5,10 +5,9 @@ English | [简体中文](zh-CN/releases.md)
 ## Supported toolchain and platforms
 
 Go 1.27 is the supported and CI-tested build series. Use Go 1.27.3 or a newer
-security patch in that series. The `go 1.26.0` directive in `go.mod` is the module's
-language baseline, not a promise of support or testing on Go 1.26. The separate
-`toolchain go1.27.3` directive selects the recommended compiler when automatic
-toolchain selection is enabled. Go 1.25 and 1.26 are not in the supported matrix.
+security patch in that series. The `go 1.27.3` directive in `go.mod` is the minimum
+required by the module and its HTTP policy dependency. Go 1.25 and 1.26 are not in
+the supported matrix.
 Frontend/release builds use Bun 1.4.2, Python 3.9 or later, and make.
 
 The release workflow builds and executes Linux amd64 binaries on its native

@@ -1,0 +1,18 @@
+http-kit
+
+The outbound destination policy in outbound/policy.go and outbound/client.go,
+and the original policy regressions in outbound/policy_test.go, are derived from OwlCron's engine/webhook_policy.go at commit
+d4dc3f25a3f6c83deaad3c549f6cd49c4ff24864:
+https://github.com/soulteary/owlcron/blob/d4dc3f25a3f6c83deaad3c549f6cd49c4ff24864/engine/webhook_policy.go
+
+OwlCron is distributed under the MIT License. Its original copyright notices
+and complete license are retained in LICENSE-OWLCRON:
+
+Copyright (c) 2026 soulteary and OwlCron contributors
+Copyright (c) 2015 - 2025 Joseph Huckaby (inherited Cronicle portions)
+
+The extracted policy has been adapted into an independent subpackage, with
+request-time validation in addition to connection-time validation. This source
+attribution does not imply that all other OwlCron code was imported. http-kit's
+Apache-2.0 LICENSE remains applicable to the rest of the project; the retained
+MIT notice and license continue to apply to the derived portions.
