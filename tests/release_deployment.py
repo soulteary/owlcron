@@ -193,7 +193,13 @@ http {{
             request = urllib.request.Request(base + '/api/' + endpoint,
                 data=json.dumps(data or {}).encode(), headers={
                     'Content-Type': 'application/json', 'Origin': origin or f'https://localhost:{public}'})
-            with opener.open(request, timeout=5) as response:
+            try:
+                response = opener.open(request, timeout=5)
+            except urllib.error.HTTPError as error:
+                require(expected != 0 and error.code in (401, 403),
+                        endpoint + ' returned an unexpected HTTP error')
+                return {'code': error.code}, error.headers
+            with response:
                 result = json.load(response)
                 headers = response.headers
             require((result.get('code') == 0) == (expected == 0), endpoint + ' returned unexpected status')
