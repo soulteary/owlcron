@@ -147,6 +147,27 @@ class ReleasePackageTests(unittest.TestCase):
                 self.assertIn('version must use', result.stderr)
                 self.assertFalse(marker.exists())
 
+    def test_published_identity_is_checked_before_executing_the_archive(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            archive = root / 'owlcron-test.tar.gz'
+            marker = root / 'must-not-execute'
+            metadata = json.dumps(dict(version='v0.1.0', commit='a' * 40, target='linux-amd64')).encode()
+            with tarfile.open(archive, 'w:gz') as bundle:
+                for name, data, mode in [('BUILD.json', metadata, 0o644),
+                                         ('owlcron-engine', ('#!/bin/sh\ntouch ' + str(marker) + '\n').encode(), 0o755)]:
+                    entry = tarfile.TarInfo('owlcron-test/' + name)
+                    entry.size, entry.mode = len(data), mode
+                    bundle.addfile(entry, io.BytesIO(data))
+            archive.with_suffix('.gz.sha256').write_text(f'{PACKAGE.sha256(archive)}  {archive.name}\n')
+            for flag, value, expected in [('--expected-version', 'v0.2.0', 'Unexpected published version'),
+                                           ('--expected-commit', 'b' * 40, 'Unexpected published source commit')]:
+                result = subprocess.run([sys.executable, str(ROOT / 'tools/verify_release.py'), str(archive), flag, value],
+                                        capture_output=True, text=True)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(expected, result.stderr)
+                self.assertFalse(marker.exists())
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -6,6 +6,21 @@ Use OwlCron initially for development, evaluation, and controlled environments. 
 
 ## Installation and startup
 
+Linux archive deployments also need system runtime dependencies. Install a CA
+trust store for verified outbound TLS and IANA timezone data for non-UTC event
+zones. Keep `ps` from `procps` available in the service's `PATH`: CPU/memory
+sampling and their configured job limits depend on it. A successful login or
+basic job run does not prove resource monitoring works. On Debian/Ubuntu:
+
+```sh
+sudo apt-get update
+sudo apt-get install --no-install-recommends ca-certificates tzdata procps
+```
+
+The project container already supplies these packages. The binary does not need
+Go, Bun or Node.js, but it is not a replacement for these operating-system data
+files and utilities. Custom plugins need their own interpreters as well.
+
 Source builds require Go, Bun, Python, and make; see [versions and releases](releases.md#supported-toolchain-and-platforms) for supported versions and platforms.
 
 Install the pinned Bun toolchain with `curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.2"`, then verify `bun --version`. Frontend and browser dependencies use separate committed `bun.lock` files; always use `--frozen-lockfile` for reproducible installation. `bunfig.toml` keeps the hoisted layout required by static asset paths and license validation. Node.js and npm are not required for these build and test commands.

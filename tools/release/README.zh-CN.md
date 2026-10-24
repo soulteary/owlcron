@@ -6,6 +6,11 @@
 示例配置、构建元数据、中英文[发行说明](docs/zh-CN/release-notes.md)及第三方许可。请在此目录中执行命令，确保服务可以找到
 前端资源和插件。
 
+Linux 需要系统 CA 证书和 IANA 时区数据；服务的 `PATH` 中应能找到 `procps` 的
+`ps`，用于 CPU/内存监控和任务资源限制。Debian/Ubuntu 应安装
+`ca-certificates tzdata procps`。没有监控工具时普通任务成功，不代表资源限制
+已经验证。自定义脚本也需要解释器，例如 `/bin/sh`。
+
 ```sh
 cp config.json config.local.json
 chmod 600 config.local.json

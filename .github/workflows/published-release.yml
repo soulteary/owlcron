@@ -1,0 +1,75 @@
+name: CI / Published Release
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Published version to download and verify'
+        required: true
+        default: 'v0.1.0-rc.1024'
+        type: string
+  pull_request:
+    paths: ['.github/workflows/published-release.yml', 'tools/verify_release.py', 'tests/release_acceptance.py']
+permissions:
+  contents: read
+concurrency:
+  group: published-release-${{ github.event.release.tag_name || inputs.version || github.head_ref || github.ref }}
+  cancel-in-progress: false
+jobs:
+  download-and-verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    env:
+      VERSION: ${{ github.event.release.tag_name || inputs.version || 'v0.1.0-rc.1024' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Resolve the published release and immutable source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, subprocess
+          version = os.environ['VERSION']
+          if not re.fullmatch(r'v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?', version):
+              raise SystemExit('Invalid release version')
+          repo = os.environ['GITHUB_REPOSITORY']
+          release = json.loads(subprocess.check_output(['gh', 'release', 'view', version, '--repo', repo,
+              '--json', 'tagName,isDraft,assets']))
+          if release['isDraft'] or release['tagName'] != version:
+              raise SystemExit('Expected a published release')
+          archive = f'owlcron-{version}-linux-amd64.tar.gz'
+          names = [item['name'] for item in release['assets']]
+          if names.count(archive) != 1 or names.count(archive + '.sha256') != 1:
+              raise SystemExit('Published Linux archive or checksum missing')
+          commit = subprocess.check_output(['gh', 'api', f'repos/{repo}/commits/{version}', '--jq', '.sha'], text=True).strip()
+          if not re.fullmatch(r'[0-9a-f]{40}', commit):
+              raise SystemExit('Invalid release source commit')
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              output.write(f'RELEASE_COMMIT={commit}\n')
+          PY
+      - name: Download public GitHub release assets
+        run: |
+          mkdir downloaded
+          cd downloaded
+          archive="owlcron-$VERSION-linux-amd64.tar.gz"
+          base="https://github.com/$GITHUB_REPOSITORY/releases/download/$VERSION"
+          curl --fail --location --retry 2 --max-time 120 --max-filesize 134217728 --output "$archive" "$base/$archive"
+          curl --fail --location --retry 2 --max-time 120 --max-filesize 4096 --output "$archive.sha256" "$base/$archive.sha256"
+      - name: Install system runtime dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ca-certificates tzdata procps
+      - name: Verify downloaded installation, bootstrap and recovery
+        run: |
+          python3 tools/verify_release.py "downloaded/owlcron-$VERSION-linux-amd64.tar.gz" \
+            --expected-version "$VERSION" --expected-commit "$RELEASE_COMMIT" --runtime-checks \
+            | tee published-release-check.log
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: published-release-verification
+          path: published-release-check.log
+          if-no-files-found: error
+          retention-days: 14
