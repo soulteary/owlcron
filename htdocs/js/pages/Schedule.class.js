@@ -1713,7 +1713,7 @@ Class.subclass( Page.Base, "Page.Schedule", {
 						case 'textarea':
 							var ta_height = parseInt(param.rows) * 15;
 							html += '<div class="plugin_params_label">' + param.title + '</div>';
-							html += '<div class="plugin_params_content"><textarea id="fe_ee_pp_'+param.id+'" style="width:99%; height:'+ta_height+'px; resize:vertical;" spellcheck="false" onkeydown="return catchTab(this,event)">'+escape_text_field_value(value)+'</textarea></div>';
+							html += '<div class="plugin_params_content"><textarea id="fe_ee_pp_'+param.id+'" style="width:99%; height:'+ta_height+'px; resize:vertical;" spellcheck="false">'+escape_text_field_value(value)+'</textarea></div>';
 						break;
 						
 						case 'checkbox':
