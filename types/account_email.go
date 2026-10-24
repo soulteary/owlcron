@@ -32,6 +32,9 @@ func ValidateAccountEmailConfig(c *Config) error {
 	if strings.TrimSpace(c.SMTPHostname) == "" {
 		return errors.New("account email requires an explicit smtp_hostname")
 	}
+	if strings.EqualFold(strings.TrimSpace(c.SMTPTLSMode), "none") && !c.AccountEmailAllowInsecure {
+		return errors.New("account email requires SMTP TLS (plaintext requires account_email_allow_insecure for local testing)")
+	}
 	if _, err := mail.ParseAddress(c.EmailFrom); err != nil {
 		return errors.New("account email requires a valid explicit email_from")
 	}
