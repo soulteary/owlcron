@@ -19,14 +19,18 @@ smoke:
 GO_BUILD_FLAGS ?=
 LDFLAGS ?=
 DIST_DIR ?= dist
+# Treat release values as data; never expand them through the recipe shell.
+unexport VERSION DIST_DIR
 
 build:
 	go build $(GO_BUILD_FLAGS) -ldflags "$(LDFLAGS)" -o owlcron-engine .
 	go build $(GO_BUILD_FLAGS) -o owlcron-script ./cmd/owlcron-script
 	cd bin/echo-plugin && go build $(GO_BUILD_FLAGS) -o echo-plugin .
 
+release: export OWLCRON_RELEASE_VERSION := $(value VERSION)
+release: export OWLCRON_RELEASE_OUTPUT := $(value DIST_DIR)
 release:
-	python3 tools/package_release.py --version "$(VERSION)" --output "$(DIST_DIR)"
+	python3 tools/package_release.py
 
 test:
 	go test ./... -count=1 -timeout=360s

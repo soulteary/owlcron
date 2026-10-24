@@ -23,24 +23,33 @@ runtime checks are added.
 Install the supported toolchain, then run from the repository root:
 
 ```sh
-npm ci --prefix htdocs-deps
 make release VERSION=v0.0.0-dev
 python3 tools/verify_release.py dist/*.tar.gz
 ```
+
+The packager exports committed `HEAD` into a clean temporary source tree, installs
+the locked frontend dependencies there, and builds only that snapshot. Local
+configuration changes, untracked files and ignored files are excluded. Commit
+intended release changes first; the archive never includes uncommitted edits.
 
 The archive contains the engine, script adapter, Echo Plugin, materialized
 frontend assets, example configuration, installation instructions, and the full
 license directory. It has no dependency on the source checkout or node_modules.
 `BUILD.json` records the version, source commit, build target and toolchain;
-`owlcron-engine version` prints the version and source commit. A commit ending in `-dirty` identifies uncommitted local changes.
-The version command does not load configuration or create runtime files.
+`owlcron-engine version` prints the version and source commit.
+The version command does not load configuration or create runtime files. Some
+Cronicle compatibility responses retain an upstream protocol version; use the
+CLI and `BUILD.json` to identify the OwlCron release.
 
 The adjacent `.tar.gz.sha256` file is compatible with `sha256sum --check` on
 Linux. The verification command checks the digest, extracts to a temporary
 directory, checks executable metadata and the adapter, and runs the existing
 installation smoke test against the extracted frontend and plugin. A digest
 checks file integrity; it is not a signature or independent proof of origin.
-The output directory must not already contain the same archive name.
+The output directory must not already contain the same archive name. Completed
+archives and checksums are staged before final filenames are created. Archive
+checks remain active under optimized Python; unsafe paths and links are rejected
+before any content is extracted or executed.
 
 ## Maintainer release process
 
