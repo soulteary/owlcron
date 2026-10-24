@@ -10,7 +10,7 @@
         "font-awesome": "4.7.0",
         "jquery": "3.5.0",
         "jstimezonedetect": "1.0.7",
-        "mdi": "1.9.33",
+        "mdi": "2.2.43",
         "moment": "2.31.0",
         "moment-timezone": "0.6.5",
         "pixl-class": "^1.0.2",
@@ -53,7 +53,7 @@
 
     "lodash": ["lodash@4.18.1", "", {}, "sha512-dMInicTPVE8d1e5otfwmmjlxkZoUpiVLwyeTdUsi/Caj/gfzzblBcCE5sRHV/AsjuCmxWrte2TNGSYuCeCq+0Q=="],
 
-    "mdi": ["mdi@1.9.33", "https://registry.npmmirror.com/mdi/-/mdi-1.9.33.tgz", {}, "sha512-smW5GTIF7RWPlIMpuWnd7wnhtKRgbQCX8soVBqkyiE/I2SyMIUrSyShsA9f4wFILD/NOIy5rRxAYj1UiR/NmQQ=="],
+    "mdi": ["mdi@2.2.43", "", {}, "sha512-g3m6z4303qieltUM20JL2gdsJZvoVzIzO74qa2XxZ2kg9JPwrPEAgooVhRDHZi1vvRh0gB8Dg+c9XqNdz4jcIg=="],
 
     "moment": ["moment@2.31.0", "", {}, "sha512-0acOTfMiWOheYS4eoWb80yYMb/JLvVv9SHbs2PehaDzfUG0Bw855SKyk0IKTnPGa5+U2bmi3W68l1+sGLX/pvw=="],
 
