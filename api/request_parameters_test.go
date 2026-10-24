@@ -28,7 +28,6 @@ func TestRequestParametersRejectAmbiguousSelectors(t *testing.T) {
 		{"case insensitive target", "", `{"TARGET":"private"}`},
 		{"unicode case fold", "", `{"idſ":["private"]}`},
 		{"query case", "?ID=private", `{}`},
-		{"null object", "?id=private", `null`},
 		{"multiple objects", "", `{} {"id":"private"}`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -45,6 +44,7 @@ func TestRequestParametersPreserveCompatibleInputs(t *testing.T) {
 		name, method, query, body string
 		want                      map[string]interface{}
 	}{
+		{"null read body", http.MethodPost, "?id=allowed", "null", map[string]interface{}{"id": "allowed"}},
 		{"query GET", http.MethodGet, "?id=allowed", "", map[string]interface{}{"id": "allowed"}},
 		{"query POST", http.MethodPost, "?id=allowed", "", map[string]interface{}{"id": "allowed"}},
 		{"equal duplicate scalars", http.MethodPost, "?id=allowed&id=allowed&limit=10&active=true", `{"id":"allowed","limit":10,"active":true}`, map[string]interface{}{"id": "allowed", "limit": float64(10), "active": true}},
