@@ -123,6 +123,16 @@ Node proofs bind roles, both challenges, time, nonce, and the current lease. Clo
 
 Shared-storage write access is equivalent to cluster control. Rotate identities by coordinating public-key registration and restarting affected nodes. Only one public key per hostname is supported, so do not assume overlapping key IDs. Rotate CAs using a planned trust bundle. UDP discovery does not grant authorization.
 
+## Per-node job capacity
+
+Set `max_jobs` on a server group to limit active and reserved jobs on each matching
+node. Zero means unlimited. The strictest positive limit across matching groups
+applies even to direct-host and `local` targets. Admission reserves capacity before
+execution; queued, delayed and multiplex jobs use the same check. Existing jobs
+are not terminated when a limit is lowered. A full node is excluded from new
+selection; an event with no capacity waits only when event queuing is enabled.
+The top-level `max_jobs` continues to limit the whole cluster.
+
 ## Browser theme
 
 The header theme selector supports System, Light and Dark. System follows OS
