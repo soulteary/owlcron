@@ -20,6 +20,9 @@ runtime checks are added.
 
 ## First-release scope
 
+The current candidate is `v0.1.0-rc.1024`; see the bilingual
+[release notes](release-notes.md). Preparing an archive does not publish a release.
+
 The first release targets a single node with familiar Cronicle pages and
 workflows. Run one standalone OwlCron node, validate your events and permissions,
 and review the [compatibility boundary](compatibility.md). Cluster discovery,
@@ -99,8 +102,43 @@ No automatic data rollback guarantee is implied by a version number.
 4. Inspect the draft notes and assets, test the intended deployment and recovery
    path, and publish the draft manually when ready. Do not move published tags.
 
-Pull requests affecting packaging and manual workflow runs validate a
-`v0.0.0-dev` archive without creating a release. Only the draft-creation job has
+Pull requests affecting packaging validate a `v0.0.0-dev` archive; manual runs
+can select an archive version without creating a release. Only the draft-creation job has
 repository write permission; build and verification jobs have read permission.
 The workflow does not add signatures, SBOMs, or provenance attestations, and
 reproducible byte-for-byte archives are not yet guaranteed.
+
+## Prepare the candidate without publishing
+
+After committing the intended changes, build and verify the candidate locally:
+
+```sh
+make release VERSION=v0.1.0-rc.1024
+python3 tools/verify_release.py dist/*.tar.gz
+```
+
+On a Linux host with Nginx and OpenSSL installed, also run the deployment and
+synthetic migration checks against that same archive:
+
+```sh
+go build -trimpath -o owlcron-migrate-check ./cmd/owlcron-migrate-check
+python3 tools/verify_release.py dist/*.tar.gz --deployment-checker ./owlcron-migrate-check
+```
+
+For the supported Linux amd64 package, manually dispatch **Release / Build and
+Package** against the reviewed branch or commit's branch, setting `version` to
+`v0.1.0-rc.1024`. Download the `linux-amd64-release` Actions artifact after all
+checks pass. A manual run has no release-write job and creates neither a tag nor
+a GitHub Release. Verify that the run's source commit matches `BUILD.json`; do
+not substitute a later branch head for the tested commit.
+
+The release workflow performs both checks above, including Nginx at the root
+path and `/tools/cron`, and repeats the basic extracted-runtime acceptance in a
+separate container without build tools. Store logs and artifact digests with the
+workflow run, outside tracked project files. At release time, require green CI
+for the final merged source commit and rebuild if its contents changed.
+
+Before publication, the deployment owner must still check their real hostname,
+certificate chain, proxy/firewall rules, filesystem ownership, business scripts,
+local timezone and any enabled SMTP relay. The synthetic rehearsal cannot attest
+to an existing Cronicle installation or authorize production cutover.

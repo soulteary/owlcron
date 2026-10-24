@@ -120,6 +120,28 @@ prefixed `/ws`. The existing TLS, origin and trusted-proxy requirements still ap
 
 See [operations and metrics](operations.md) for authenticated collection and incident response.
 
+## Candidate deployment acceptance
+
+The [candidate package check](releases.md#prepare-the-candidate-without-publishing)
+starts an extracted archive behind a separate Nginx process, with an ephemeral
+certificate explicitly trusted by its client. It runs at both the root URL and
+`/tools/cron`, verifies the frontend asset graph, Secure/HttpOnly/SameSite cookie
+attributes and cookie paths, authenticates a WSS connection and receives live
+job logs. It also rejects a cross-origin write and a read-only user's run request,
+then checks persisted sessions, history and logs after restart and offline
+restoration to empty storage. Runtime processes, certificates and credentials
+are temporary; an existing installation is never targeted.
+
+For the actual deployment, repeat login, a representative job and live log
+viewing through the public HTTPS URL. Check the certificate chain without
+disabling verification, inspect cookie scope, confirm the backend port is not
+publicly accessible, and verify state after a service restart. Rehearse backup
+restoration in a separate namespace. Check a scheduled execution in the intended
+timezone, including any required DST behavior. If account email is enabled, test
+verification and recovery with a dedicated address through the intended SMTP
+relay; local SMTP fixtures do not validate that relay. Record the artifact digest,
+source commit and outcome privately before approving a cutover.
+
 ## Resetting an administrator password
 
 Stop the daemon before using the administrative CLI. Read the password from a protected secret file instead of placing it in process arguments or shell history:

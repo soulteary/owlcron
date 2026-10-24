@@ -3,16 +3,27 @@
 [English](README.md) | 简体中文
 
 本压缩包包含 `owlcron-engine`、`owlcron-script`、Echo Plugin、前端资源、
-示例配置、构建元数据及第三方许可。请在此目录中执行命令，确保服务可以找到
+示例配置、构建元数据、中英文[发行说明](docs/zh-CN/release-notes.md)及第三方许可。请在此目录中执行命令，确保服务可以找到
 前端资源和插件。
 
 ```sh
-./owlcron-engine version
-./owlcron-engine --config config.json setup
-OWLCRON_ADMIN_USERNAME=admin OWLCRON_ADMIN_PASSWORD='choose-a-strong-password' ./owlcron-engine --config config.json
+cp config.json config.local.json
+chmod 600 config.local.json
 ```
 
-上述密码是占位示例：部署时应生成强密码，并使用受保护的密钥注入方式。
+编辑 `config.local.json`，将 `secret_key` 设为新生成的至少 32 字节随机密钥；独立单节点应设置
+`udp_broadcast_port: -1` 以关闭发现，并为数据、日志和队列选择归服务账号所有的
+持久化目录。将配置文件权限设为 600，再初始化并启动：
+
+```sh
+./owlcron-engine version
+./owlcron-engine --config config.local.json setup
+./owlcron-engine --config config.local.json
+```
+
+使用空存储首次启动后，在可信终端中读取配置的存储目录下 `bootstrap-admin.json`
+中的自动生成管理员凭据。确认登录成功后删除此文件。不要将真实密码写入命令参数
+或命令历史。
 数据和日志目录需要可写并限制访问，升级前做好备份，对外服务应限制访问并配置
 HTTPS。示例配置不代表已经完成生产环境安全加固。
 

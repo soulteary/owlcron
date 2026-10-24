@@ -24,7 +24,8 @@ class ReleasePackageTests(unittest.TestCase):
             root.mkdir()
             for name in ('owlcron-engine', 'owlcron-script', 'LICENSE', 'THIRD_PARTY_NOTICES.md',
                          'THIRD_PARTY_NOTICES.zh-CN.md', 'config.json', 'bin/echo-plugin/echo-plugin',
-                         'tools/release/README.md', 'tools/release/README.zh-CN.md', 'licenses/upstream/LICENSE'):
+                         'tools/release/README.md', 'tools/release/README.zh-CN.md',
+                         'docs/release-notes.md', 'docs/zh-CN/release-notes.md', 'licenses/upstream/LICENSE'):
                 path = root / name
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(name)
@@ -43,6 +44,8 @@ class ReleasePackageTests(unittest.TestCase):
                 self.assertEqual(metadata, dict(version='v0.1.0', commit='a' * 40, target='linux-amd64', go='go1.27.3'))
                 for file in ('owlcron-engine', 'owlcron-script', 'bin/echo-plugin/echo-plugin', 'config.json'):
                     self.assertIsNotNone(bundle.getmember(prefix + file))
+                for file in ('docs/release-notes.md', 'docs/zh-CN/release-notes.md'):
+                    self.assertEqual(bundle.extractfile(prefix + file).read(), file.encode())
             with self.assertRaises(FileExistsError):
                 PACKAGE.archive_distribution(root, archive.parent, 'v0.1.0', 'b' * 40, 'linux-amd64', 'go1.27.3')
 
@@ -57,7 +60,8 @@ class ReleasePackageTests(unittest.TestCase):
             (root / 'htdocs/index.html').write_text('committed frontend')
             for name in ('owlcron-engine', 'owlcron-script', 'LICENSE', 'THIRD_PARTY_NOTICES.md',
                          'THIRD_PARTY_NOTICES.zh-CN.md', 'bin/echo-plugin/echo-plugin',
-                         'tools/release/README.md', 'tools/release/README.zh-CN.md', 'licenses/LICENSE'):
+                         'tools/release/README.md', 'tools/release/README.zh-CN.md',
+                         'docs/release-notes.md', 'docs/zh-CN/release-notes.md', 'licenses/LICENSE'):
                 file = root / name
                 file.parent.mkdir(parents=True, exist_ok=True)
                 file.write_text(name)
@@ -87,7 +91,8 @@ class ReleasePackageTests(unittest.TestCase):
             root.mkdir()
             for name in ('owlcron-engine', 'owlcron-script', 'LICENSE', 'THIRD_PARTY_NOTICES.md',
                          'THIRD_PARTY_NOTICES.zh-CN.md', 'config.json', 'bin/echo-plugin/echo-plugin',
-                         'tools/release/README.md', 'tools/release/README.zh-CN.md', 'licenses/LICENSE',
+                         'tools/release/README.md', 'tools/release/README.zh-CN.md',
+                         'docs/release-notes.md', 'docs/zh-CN/release-notes.md', 'licenses/LICENSE',
                          'htdocs/index.html'):
                 file = root / name
                 file.parent.mkdir(parents=True, exist_ok=True)

@@ -79,6 +79,10 @@ def archive_distribution(root, output, version, commit, target, toolchain):
             shutil.copy2(root / file, package / file)
         for file in ('README.md', 'README.zh-CN.md'):
             shutil.copy2(root / 'tools/release' / file, package / file)
+        for file in ('docs/release-notes.md', 'docs/zh-CN/release-notes.md'):
+            destination = package / file
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(root / file, destination)
         (package / 'bin/echo-plugin').mkdir(parents=True)
         shutil.copy2(root / 'bin/echo-plugin/echo-plugin', package / 'bin/echo-plugin/echo-plugin')
         # Frontend builds use symlinks into node_modules; archives must stand alone.

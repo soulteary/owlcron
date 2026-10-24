@@ -59,6 +59,7 @@ HTTP 服务默认监听所有网卡，`base_app_url` 不限制监听地址。对
 
 ## 文档
 
+- [候选版本发行说明](docs/zh-CN/release-notes.md)：`v0.1.0-rc.1024` 的范围、验证和已知边界。
 - [文档索引](docs/zh-CN/README.md)：按部署、运行任务、运维和开发查找完整指南。
 - [Cronicle 迁移预检](docs/zh-CN/migration.md)与[兼容性](docs/zh-CN/compatibility.md)：迁移前检查数据及行为差异。
 - [贡献指南](CONTRIBUTING.zh-CN.md)与[测试指南](docs/zh-CN/testing.md)：开发流程、检查命令和质量报告。
