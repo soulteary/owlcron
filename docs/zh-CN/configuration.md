@@ -145,3 +145,11 @@ mTLS 使用 `cluster_tls_require_client_cert: true`，要求显式 CA 和每节�
 页眉支持 System、Light、Dark 三种主题。System 跟随系统变化，手动选择保存在
 浏览器本地的 `owlcron.theme`，重新选择 System 可恢复自动模式。浏览器禁止存储
 时使用内存中的偏好，不影响登录。主题属于本地界面设置，不是账号设置。
+
+## 账号邮件策略
+
+账号邮件默认关闭：`account_email_enabled` 默认为 `false`。开启时必须明确配置 `smtp_hostname`、有效的单个 `email_from` 地址以及可信的 HTTPS 绝对地址 `base_app_url`。地址不能包含凭据、查询参数或片段，路径必须与 `base_path` 一致。仅限本地测试使用 `account_email_allow_insecure: true` 允许 HTTP；该选项不会关闭 SMTP 证书验证。
+
+数值为零或省略时使用以下默认值：`account_token_ttl_seconds: 1800`（非零时允许 60–86400）、`account_email_cooldown_seconds: 60`、`account_email_rate_limit: 5`、`account_email_ip_rate_limit: 20`、`account_email_rate_window_seconds: 3600`。冷却时间和窗口最大为 86400 秒，请求限额最大为 100000，负数均被拒绝。
+
+既有邮箱初始状态为未验证。验证仅对当前完全一致的地址有效，邮箱变更后清除验证状态。本策略基础本身尚不提供邮箱验证或密码重置接口。公开注册保持关闭，仍由管理员创建账号和重置密码。

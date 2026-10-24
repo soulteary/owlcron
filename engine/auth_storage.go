@@ -322,6 +322,9 @@ func (e *Engine) ChangeUserInStorage(expected, replacement *types.User) error {
 	} else if replacement.ID != expected.ID || replacement.Username != expected.Username {
 		return fmt.Errorf("account identity cannot change")
 	}
+	if replacement.Email != expected.Email {
+		replacement.VerifiedEmail = ""
+	}
 	if replacement.Created == 0 {
 		replacement.Created = expected.Created
 	}
