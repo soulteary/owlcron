@@ -1,14 +1,34 @@
 # OwlCron
 
+Schedule tasks, run plugins, and inspect execution history and logs from a Web UI.
+
+[![CI](https://github.com/soulteary/owlcron/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/soulteary/owlcron/actions/workflows/ci.yml)
+[![Browser tests](https://github.com/soulteary/owlcron/actions/workflows/browser.yml/badge.svg?branch=main)](https://github.com/soulteary/owlcron/actions/workflows/browser.yml)
+[![Container](https://github.com/soulteary/owlcron/actions/workflows/container.yml/badge.svg?branch=main)](https://github.com/soulteary/owlcron/actions/workflows/container.yml)
+[![Release](https://img.shields.io/github/v/release/soulteary/owlcron)](https://github.com/soulteary/owlcron/releases)
+[![Go](https://img.shields.io/badge/Go-1.27-00ADD8?logo=go&logoColor=white)](docs/releases.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 English | [简体中文](README.zh-CN.md)
 
 OwlCron is a task scheduler written in Go, designed to replace [Cronicle](https://github.com/jhuckaby/Cronicle). It provides a web interface, scheduled and on-demand jobs, plugin execution, job logs, and notifications, with selected compatibility for Cronicle workflows, APIs, and plugin conventions. See [Cronicle compatibility](docs/compatibility.md) for the current migration scope.
 
 The project is experimental. Review the [known limitations](docs/limitations.md), including sustained cluster convergence, remote dispatch acknowledgment, and production capacity, before deploying it.
 
-
-
 ![OwlCron](.github/assets/owlcron-banner.png)
+
+## What you can do
+
+- **Manage jobs**: configure scheduled tasks and run jobs on demand through the Web UI.
+- **Run plugins**: verify the workflow with the Echo Plugin, then connect your own scripts; see [running script files](docs/script-files.md).
+- **Investigate execution**: inspect job history, logs, and notifications, with [operations and metrics](docs/operations.md) for diagnostics.
+- **Evaluate a Cronicle migration**: run the [migration preflight](docs/migration.md) and check the [compatibility scope](docs/compatibility.md) first.
+
+## Choose an installation path
+
+- **Build from source**: follow the steps below for local evaluation and development.
+- **Use a release archive**: read [versions and releases](docs/releases.md) for supported platforms, build metadata, and archive verification; check [GitHub Releases](https://github.com/soulteary/owlcron/releases) for available versions.
+- **Containers and Kubernetes**: follow the [container deployment guide](docs/containers.md) to prepare configuration and persistent data.
 
 ## Quick start
 
