@@ -37,3 +37,7 @@ coverage.out
 /htdocs/css/materialdesignicons*
 /htdocs/fonts/
 /htdocs/socket.io/
+
+# Browser test dependencies and failure artifacts
+/tests/browser/node_modules/
+/tests/browser/test-results/
