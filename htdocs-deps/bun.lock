@@ -8,7 +8,7 @@
         "async": "3.2.6",
         "chart.js": "2.9.4",
         "font-awesome": "4.7.0",
-        "jquery": "3.5.0",
+        "jquery": "4.0.0",
         "jstimezonedetect": "1.0.7",
         "mdi": "1.9.33",
         "moment": "2.31.0",
@@ -47,7 +47,7 @@
 
     "font-awesome": ["font-awesome@4.7.0", "https://registry.npmmirror.com/font-awesome/-/font-awesome-4.7.0.tgz", {}, "sha512-U6kGnykA/6bFmg1M/oT9EkFeIYv7JlX3bozwQJWiiLz6L0w3F5vBVPxHlwyX/vtNq1ckcpRKOB9f2Qal/VtFpg=="],
 
-    "jquery": ["jquery@3.5.0", "https://registry.npmmirror.com/jquery/-/jquery-3.5.0.tgz", {}, "sha512-Xb7SVYMvygPxbFMpTFQiHh1J7HClEaThguL15N/Gg37Lri/qKyhRGZYzHRyLH8Stq3Aow0LsHO2O2ci86fCrNQ=="],
+    "jquery": ["jquery@4.0.0", "", {}, "sha512-TXCHVR3Lb6TZdtw1l3RTLf8RBWVGexdxL6AC8/e0xZKEpBflBsjh9/8LXw+dkNFuOyW9B7iB3O1sP7hS0Kiacg=="],
 
     "jstimezonedetect": ["jstimezonedetect@1.0.7", "", {}, "sha512-ARADHortktl9IZ1tr4GHwGPIAzgz3mLNCbR/YjWtRtc/O0o634O3NeFlpLjv95EvuDA5dc8z6yfgbS8nUc4zcQ=="],
 
