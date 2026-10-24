@@ -189,17 +189,19 @@ http {{
             return subprocess.run([str(binary), '--config', str(config_path), *args],
                 cwd=distribution, env=env, capture_output=True, check=True, timeout=30)
 
-        def api(endpoint, data=None, expected=0, origin=None):
+        def api(endpoint, data=None, expected=0, origin=None, expected_http=200):
             request = urllib.request.Request(base + '/api/' + endpoint,
                 data=json.dumps(data or {}).encode(), headers={
                     'Content-Type': 'application/json', 'Origin': origin or f'https://localhost:{public}'})
             try:
                 response = opener.open(request, timeout=5)
             except urllib.error.HTTPError as error:
-                require(expected != 0 and error.code in (401, 403),
+                require(expected != 0 and error.code == expected_http,
                         endpoint + ' returned an unexpected HTTP error')
+                error.close()
                 return {'code': error.code}, error.headers
             with response:
+                require(response.status == expected_http, endpoint + ' returned an unexpected HTTP status')
                 result = json.load(response)
                 headers = response.headers
             require((result.get('code') == 0) == (expected == 0), endpoint + ' returned unexpected status')
@@ -265,7 +267,7 @@ http {{
             process = start(bootstrap=True)
             login()
             require(check_frontend_assets(base, opener) > 10, 'Incomplete HTTPS frontend graph')
-            api('app/create_event', {}, expected=1, origin='https://attacker.example.invalid')
+            api('app/create_event', {}, expected=1, origin='https://attacker.example.invalid', expected_http=403)
             # Commands and script content are reviewed fixtures, never taken from an arbitrary export.
             script = work / 'reviewed-script.sh'
             script.write_text('#!/bin/sh\nprintf "MIGRATED_SCRIPT_OK\\n"\n')
