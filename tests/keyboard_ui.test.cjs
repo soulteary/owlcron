@@ -104,3 +104,13 @@ test('keyboard actions preserve modifiers used by scheduled run date selection',
  f.key(run,'Enter',{shiftKey:true,ctrlKey:false,altKey:true,metaKey:true});
  const action=f.events[0];assert.equal(action.type,'mouseup');assert.equal(action.shiftKey,true);assert.equal(action.ctrlKey,false);assert.equal(action.altKey,true);assert.equal(action.metaKey,true);
 });
+
+test('horizontal arrows scroll only the focused enhanced region and stop at its bounds',()=>{
+ const f=fixture(),table=f.element('TABLE'),input=f.element('INPUT');
+ table.clientWidth=300;table.scrollWidth=350;table.scrollLeft=0;f.regions.push(table);f.resize();table.focus();
+ assert.equal(f.key(table,'ArrowRight').prevented,true);assert.equal(table.scrollLeft,40);
+ f.key(table,'ArrowRight');assert.equal(table.scrollLeft,50);f.key(table,'ArrowLeft');assert.equal(table.scrollLeft,10);f.key(table,'ArrowLeft');assert.equal(table.scrollLeft,0);
+ assert.equal(f.key(table,'ArrowRight',{shiftKey:true}).prevented,undefined);assert.equal(table.scrollLeft,0);
+ assert.equal(f.key(table,'ArrowDown').prevented,undefined);
+ input.focus();assert.equal(f.key(input,'ArrowRight').prevented,undefined);assert.equal(f.key(table,'ArrowRight').prevented,undefined);
+});
