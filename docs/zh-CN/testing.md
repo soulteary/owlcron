@@ -77,7 +77,7 @@ OWLCRON_SOAK_DURATION=3m OWLCRON_PROCESS_SOAK_DURATION=3m \
 
 ## CI 和证据保存
 
-[常规 CI](../../.github/workflows/ci.yml)验证 Go 1.27 系列、Node 22、构建、单元测试、安装冒烟、许可证和漏洞检查。[故障验收](../../.github/workflows/process-acceptance.yml)负责进程及 Linux 故障场景。
+[CI / Build and Test](../../.github/workflows/ci.yml)验证 Go 1.27 系列、Bun 1.4.2、构建、单元测试、安装冒烟、许可证和漏洞检查。[CI / Process Fault Acceptance](../../.github/workflows/process-acceptance.yml)负责进程及 Linux 故障场景。
 
 CI 在 PR 和 `main` 分支推送时运行；功能分支推送不再额外触发一套重复检查。新提交会取消旧任务。依赖和 Docker 镜像层使用缓存，但缓存命中不会跳过测试。主分支的 Linux 故障矩阵只由 Go 代码及依赖、Makefile、验收与负载脚本和自身工作流触发；纯前端测试或容器配置检查走各自相关的 CI，不再重复运行无关的 Linux 故障场景。
 
@@ -97,6 +97,8 @@ PR 使用 `go test -short` 运行单元测试，并保留静态检查、安全�
 
 Go 质量报告在推送标签、发布 Release 或手动触发时运行，包含竞态检测、覆盖率、独立示例插件检查和 Go Report Card。报告及原始测试记录可从工作流产物下载，保留 14 天。仅当被测提交仍与默认分支一致时才回写稳定报告，否则仅保存为产物。现有 CI 继续检查 PR。
 
-[Go quality reports](https://github.com/soulteary/owlcron/actions/workflows/go-quality-reports.yml)
+[Reports / Go Tests and Report Card](https://github.com/soulteary/owlcron/actions/workflows/go-quality-reports.yml)
 
 可选的[真实浏览器冒烟测试](../../tests/browser/README.zh-CN.md)在 Chromium 中覆盖登录、事件编辑和执行、历史、日志及主题偏好持久化。
+
+工作流显示名称按 `CI /`、`Reports /` 和 `Release /` 分组；文件名保持不变，现有链接仍然有效。README 中的 Go Test Report badge 表示报告工作流的运行状态，不代表覆盖率。Go Report Card badge 来自公共评估服务，可能与工作流生成的报告更新时间不同。工作流生成的覆盖率和质量报告分别保存在 `.github/coverage.svg` 与 `.github/goreportcard.svg`；首次成功回写前，通过工作流产物查看报告。

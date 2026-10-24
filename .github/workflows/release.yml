@@ -1,4 +1,4 @@
-name: Release artifacts
+name: Release / Build and Package
 on:
   pull_request:
     paths: ['htdocs-deps/**', 'tools/bun-lock.mjs', 'tests/check_licenses.py', 'tools/package_release.py', 'tools/verify_release.py', 'tools/release/**', 'tests/test_release_package.py', 'cli/**', 'main.go', 'Makefile', '.github/workflows/release.yml']

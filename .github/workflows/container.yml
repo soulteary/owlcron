@@ -1,4 +1,4 @@
-name: Container and deployment checks
+name: CI / Container and Deployment
 on:
   pull_request:
     paths: ['Dockerfile', '.dockerignore', 'deploy/**', '**/*.go', 'go.mod', 'go.sum', 'htdocs/**', 'htdocs-deps/**', 'tests/**', '.github/workflows/container.yml']
