@@ -29,7 +29,7 @@ func (s *Server) handleForgotPassword(w http.ResponseWriter, r *http.Request) {
 	defer release()
 	req.Email = strings.TrimSpace(req.Email)
 	address, err := mail.ParseAddress(req.Email)
-	if !isValidUsername(req.Username) || err != nil || address.Address != req.Email || len(req.Email) > 254 {
+	if req.Username == "" || len(req.Username) > 50 || err != nil || address.Address != req.Email || len(req.Email) > 254 {
 		s.sendError(w, 1, "Enter a valid username and email address")
 		return
 	}

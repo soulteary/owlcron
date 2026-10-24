@@ -73,3 +73,20 @@ func TestPasswordRecoveryRejectsAmbiguousAndOversizedRequests(t *testing.T) {
 		}
 	}
 }
+
+func TestPasswordRecoveryAcceptsExistingShortUsername(t *testing.T) {
+	eng, handler := securityServer(t)
+	eng.GetConfig().AccountEmailEnabled = true
+	user := &types.User{ID: "short-user", Username: "u", Email: "short@example.test", VerifiedEmail: "short@example.test", Enabled: true}
+	if err := eng.SaveUserToStorage(user); err != nil {
+		t.Fatal(err)
+	}
+	got := securityRequest(t, handler, "/api/user/forgot_password", `{"username":"u","email":"short@example.test"}`, "")
+	if got["code"] != float64(0) {
+		t.Fatal("existing login name rejected")
+	}
+	current, err := eng.LoadUserFromStorage(user.ID)
+	if err != nil || len(current.AccountActions) != 1 {
+		t.Fatal("no recovery action for existing short username")
+	}
+}
