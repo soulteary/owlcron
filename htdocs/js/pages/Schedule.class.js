@@ -1005,8 +1005,8 @@ Class.subclass( Page.Base, "Page.Schedule", {
 		html += get_form_table_row( rc_classes, 'Time Machine', 
 			'<table cellspacing="0" cellpadding="0"><tr>' + 
 				'<td><input type="checkbox" id="fe_ee_rc_enabled" value="1" onChange="$P().toggle_rc_textfield(this.checked)"/></td><td><label for="fe_ee_rc_enabled">Set Event Clock:</label>&nbsp;</td>' + 
-				'<td><input type="text" id="fe_ee_rc_time" style="font-size:13px; width:180px;" disabled="disabled" value="'+$P().rc_get_short_date_time( rc_epoch )+'" data-epoch="' + rc_epoch + '" onFocus="this.blur()" onMouseUp="$P().rc_click()"/></td>' + 
-				'<td><span id="s_ee_rc_reset" class="link addme" style="opacity:0" onMouseUp="$P().reset_rc_time_now()">&laquo; Reset</span></td>' + 
+				'<td><input type="button" id="fe_ee_rc_time" aria-label="Choose event clock date and time" aria-haspopup="dialog" style="font-size:13px; width:180px;" disabled="disabled" value="'+$P().rc_get_short_date_time( rc_epoch )+'" data-epoch="' + rc_epoch + '" onClick="$P().rc_click()"/></td>' +
+				'<td><span id="s_ee_rc_reset" class="link addme" hidden aria-hidden="true" tabindex="-1" onMouseUp="$P().reset_rc_time_now()">&laquo; Reset</span></td>' +
 			'</tr></table>' 
 		);
 		html += get_form_table_caption( rc_classes, 
@@ -1286,7 +1286,6 @@ Class.subclass( Page.Base, "Page.Schedule", {
 	rc_click: function() {
 		// click in 'reset cursor' text field, popup edit dialog
 		var self = this;
-		$('#fe_ee_rc_time').blur();
 		
 		if ($('#fe_ee_rc_enabled').is(':checked')) {
 			var epoch = parseInt( $('#fe_ee_rc_time').data('epoch') );
@@ -1298,7 +1297,6 @@ Class.subclass( Page.Base, "Page.Schedule", {
 				
 				callback: function(rc_epoch) {
 					$('#fe_ee_rc_time').data('epoch', rc_epoch).val( self.rc_get_short_date_time( rc_epoch ) );
-					$('#fe_ee_rc_time').blur();
 				}
 			});
 		}
@@ -1306,6 +1304,7 @@ Class.subclass( Page.Base, "Page.Schedule", {
 	
 	reset_rc_time_now: function() {
 		// reset cursor value to now, from click
+		if (!$('#fe_ee_rc_enabled').is(':checked')) return;
 		var rc_epoch = normalize_time( time_now(), { sec: 0 } );
 		$('#fe_ee_rc_time').data('epoch', rc_epoch).val( this.rc_get_short_date_time( rc_epoch ) );
 	},
@@ -1326,11 +1325,11 @@ Class.subclass( Page.Base, "Page.Schedule", {
 		
 		if (state) {
 			$('#fe_ee_rc_time').removeAttr('disabled').css('cursor', 'pointer');
-			$('#s_ee_rc_reset').fadeTo( 250, 1.0 );
+			$('#s_ee_rc_reset').prop('hidden', false).attr('aria-hidden', 'false').attr('tabindex', '0');
 		}
 		else {
 			$('#fe_ee_rc_time').attr('disabled', 'disabled').css('cursor', 'default');
-			$('#s_ee_rc_reset').fadeTo( 250, 0.0 );
+			$('#s_ee_rc_reset').prop('hidden', true).attr('aria-hidden', 'true').attr('tabindex', '-1');
 			
 			// reset value just in case it changed while field was enabled
 			if (event.id && app.state && app.state.cursors && app.state.cursors[event.id]) {
@@ -1713,7 +1712,7 @@ Class.subclass( Page.Base, "Page.Schedule", {
 						case 'textarea':
 							var ta_height = parseInt(param.rows) * 15;
 							html += '<div class="plugin_params_label">' + param.title + '</div>';
-							html += '<div class="plugin_params_content"><textarea id="fe_ee_pp_'+param.id+'" style="width:99%; height:'+ta_height+'px; resize:vertical;" spellcheck="false" onkeydown="return catchTab(this,event)">'+escape_text_field_value(value)+'</textarea></div>';
+							html += '<div class="plugin_params_content"><textarea id="fe_ee_pp_'+param.id+'" style="width:99%; height:'+ta_height+'px; resize:vertical;" spellcheck="false">'+escape_text_field_value(value)+'</textarea></div>';
 						break;
 						
 						case 'checkbox':

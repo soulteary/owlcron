@@ -10,6 +10,7 @@ import {setTimeout as delay} from 'node:timers/promises';
 import {chromium} from 'playwright';
 import {checkAdminPages} from './admin-pages.mjs';
 import {checkSingleNodePages} from './single-node-pages.mjs';
+import {checkKeyboardPages} from './keyboard-pages.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const work = mkdtempSync(path.join(tmpdir(), 'owlcron-browser-'));
@@ -96,6 +97,11 @@ try {
     headers:{'Content-Type':'application/json','X-Session-ID':login.session_id},
     body:JSON.stringify({id:'browser_smoke',chain:[],chain_error:[]})});
   assert.equal((await emptyChains.json()).code,0);
+  // The API response precedes the WebSocket snapshot used to build the form.
+  await page.waitForFunction(() => {
+    const event = app.schedule.find(event => event.id === 'browser_smoke');
+    return event && Array.isArray(event.chain) && Array.isArray(event.chain_error);
+  });
   await page.goto(base + '/#Schedule?sub=edit_event&id=browser_smoke');
   await page.locator('#fe_ee_title').fill('Browser smoke edited');
   await page.locator('#fe_ee_log_expire_days').fill('7');
@@ -168,6 +174,7 @@ try {
     return [chart.options.scales.x.ticks.color, chart.options.scales.y.grid.color, chart.options.plugins.legend.labels.color];
   }), ['#555555','rgba(0,0,0,0.1)','#555555']);
   await checkSingleNodePages(page, responseFor, {base, session:login.session_id, poll, completedID:id, work});
+  await checkKeyboardPages(page, base, login.session_id);
   assert.deepEqual(errors, [], 'Browser JavaScript errors');
   console.log('Browser smoke passed: account/profile, six admin pages/CRUD, event configuration, rerun/abort/retry/chains, readonly access, history/logs/charts/themes');
 } catch (error) {
