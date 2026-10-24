@@ -21,8 +21,9 @@ onmessage = function(e) {
 	var data = e.data;
 	var default_tz = data.default_tz;
 	var schedule = data.schedule;
-	var state = data.state;
-	var cursors = state.cursors;
+	// Login can render Home before the first scheduler state snapshot arrives.
+	var state = data.state || {};
+	var cursors = state.cursors || {};
 	var categories = data.categories;
 	var plugins = data.plugins;
 	var events = [];

@@ -21,13 +21,21 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// Version and Commit may be set by release builds using Go linker flags.
+var Version = "dev"
+var Commit = "unknown"
+
+func VersionString() string {
+	return fmt.Sprintf("OwlCron %s (commit %s)", Version, Commit)
+}
+
 func Run(args []string, config *types.Config, logger *zap.Logger) (handled bool, err error) {
 	if len(args) == 0 {
 		return false, nil
 	}
 	switch args[0] {
 	case "version":
-		fmt.Println("OwlCron (development build)")
+		fmt.Println(VersionString())
 		return true, nil
 	case "help":
 		printHelp()
@@ -61,7 +69,8 @@ Commands:
   version               Print version
   status                Check if the daemon is running
   setup                 Initialize storage for first run
-  admin <user> <pw>     Create/reset admin account
+  admin <user> --password-stdin
+                        Create/reset admin account from standard input
   export [file]         Export core data (stdout if no file)
   import <file>         Import data from file
   maint                 Run daily storage maintenance
@@ -159,18 +168,35 @@ func cmdSetup(config *types.Config, logger *zap.Logger) (err error) {
 			}
 		}
 	}
-	fmt.Println("Storage initialized. Set OWLCRON_ADMIN_PASSWORD before first startup, or use admin <username> <password>.")
+	fmt.Println("Storage initialized. Set OWLCRON_ADMIN_PASSWORD before first startup, or use admin <username> --password-stdin.")
 	return nil
 }
 
-func cmdAdmin(args []string, config *types.Config, logger *zap.Logger) (err error) {
-	if len(args) < 2 {
-		return fmt.Errorf("usage: admin <username> <password>")
+func cmdAdmin(args []string, config *types.Config, logger *zap.Logger) error {
+	return cmdAdminWithInput(args, config, logger, os.Stdin)
+}
+
+func cmdAdminWithInput(args []string, config *types.Config, logger *zap.Logger, input io.Reader) (err error) {
+	if len(args) != 2 {
+		return fmt.Errorf("usage: admin <username> --password-stdin")
 	}
 	if len(args[0]) < 3 || len(args[0]) > 50 || !regexp.MustCompile(`^[a-zA-Z0-9_.-]+$`).MatchString(args[0]) {
 		return fmt.Errorf("invalid username")
 	}
-	if len(args[1]) < 12 || len(args[1]) > 72 {
+	password := args[1]
+	if password == "--password-stdin" {
+		// A single optional line ending supports secret files without trimming
+		// significant spaces or silently accepting multiple input lines.
+		data, readErr := io.ReadAll(io.LimitReader(input, 75))
+		if readErr != nil {
+			return fmt.Errorf("read password from standard input")
+		}
+		password = strings.TrimSuffix(strings.TrimSuffix(string(data), "\n"), "\r")
+		if strings.ContainsAny(password, "\r\n") {
+			return fmt.Errorf("password input must contain a single line")
+		}
+	}
+	if len(password) < 12 || len(password) > 72 {
 		return fmt.Errorf("password must contain 12-72 bytes")
 	}
 	eng, err := engine.NewEngine(config, logger)
@@ -178,7 +204,7 @@ func cmdAdmin(args []string, config *types.Config, logger *zap.Logger) (err erro
 		return fmt.Errorf("open engine storage: %w", err)
 	}
 	defer finishStorage(eng.GetStorage(), &err)
-	hash, err := bcrypt.GenerateFromPassword([]byte(args[1]), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return fmt.Errorf("hash password: %w", err)
 	}
@@ -212,14 +238,14 @@ func finishStorage(store storage.Storage, commandErr *error) {
 	}
 }
 
-func writeBackupFile(path string, data []byte) error {
+func writeBackupFile(path string, write func(io.Writer) error) error {
 	file, err := os.CreateTemp(filepath.Dir(path), ".owlcron-backup-*")
 	if err != nil {
 		return err
 	}
 	defer os.Remove(file.Name())
 	if err = file.Chmod(0600); err == nil {
-		_, err = file.Write(data)
+		err = write(file)
 	}
 	if err == nil {
 		err = file.Sync()
@@ -247,24 +273,19 @@ func cmdExport(args []string, config *types.Config, logger *zap.Logger) (err err
 		return fmt.Errorf("open storage: %w", err)
 	}
 	defer finishStorage(store, &err)
-	backup, err := storage.Export(context.Background(), store)
-	if err != nil {
-		return fmt.Errorf("export: %w", err)
-	}
-	data, err := json.MarshalIndent(backup, "", "  ")
-	if err != nil {
-		return fmt.Errorf("encode backup: %w", err)
+	count := 0
+	write := func(writer io.Writer) error {
+		var exportErr error
+		count, exportErr = storage.ExportTo(context.Background(), store, writer)
+		return exportErr
 	}
 	if len(args) > 0 && args[0] != "-" {
-		if err = writeBackupFile(args[0], data); err != nil {
+		if err = writeBackupFile(args[0], write); err != nil {
 			return fmt.Errorf("write backup: %w", err)
-		} else {
-			fmt.Printf("Exported %d records to %s\n", len(backup.Records), args[0])
 		}
-	} else {
-		if _, err := fmt.Println(string(data)); err != nil {
-			return fmt.Errorf("write backup to stdout: %w", err)
-		}
+		fmt.Printf("Exported %d records to %s\n", count, args[0])
+	} else if err := write(os.Stdout); err != nil {
+		return fmt.Errorf("write backup to stdout: %w", err)
 	}
 	return nil
 }

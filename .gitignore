@@ -1,6 +1,7 @@
 # Local runtime state and private configuration
 /owlcron-engine
 /owlcron-script
+/owlcron-migrate-check
 /bin/echo-plugin/echo-plugin
 /data/
 /logs/
@@ -37,3 +38,10 @@ coverage.out
 /htdocs/css/materialdesignicons*
 /htdocs/fonts/
 /htdocs/socket.io/
+
+# Release archives
+/dist/
+
+# Browser test dependencies and failure artifacts
+/tests/browser/node_modules/
+/tests/browser/test-results/
