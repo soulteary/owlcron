@@ -62,3 +62,11 @@ copyright headers when minifying or combining assets. This inventory covers
 this repository's current declared Go modules and installed npm dependency tree;
 it does not cover optional external plugin executables or services chosen by a
 deployer, which require their own notices.
+
+## Browser test tooling
+
+The isolated `tests/browser` development tools are not included in the runtime
+image. Exact versions and upstream licenses are recorded in
+[licenses/browser-inventory.json](licenses/browser-inventory.json); license and
+notice copies are preserved under `licenses/browser`. Chromium installed by
+Playwright is a separate test prerequisite and retains its bundled notices.

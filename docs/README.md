@@ -6,6 +6,7 @@ Start with the [project README](../README.md) for a quick setup. English is the 
 
 - [Deployment](deployment.md): installation, credentials, HTTPS, backups, and upgrades.
 - [Configuration](configuration.md): storage, logs, retention, notifications, and cluster identity.
+- [Migration preflight](migration.md): read-only checks for a Cronicle export.
 - [Compatibility](compatibility.md): supported Cronicle behavior and migration to OwlCron.
 - [Architecture](architecture.md): components, persistence, and recovery.
 - [Testing](testing.md): development checks, CI, and fault scenarios.
@@ -16,3 +17,6 @@ For Chinese documentation, open the [Chinese index](zh-CN/README.md). Update bot
 
 - [Containers and Kubernetes](containers.md)
 - [Running script files](script-files.md)
+- [Versions and releases](releases.md): supported toolchain, archive verification, and draft releases.
+
+- [Operations and metrics](operations.md): collection, alerting and recovery runbooks.

@@ -1,0 +1,4 @@
+fixture ordinary log
+{"progress":0.375}
+{"complete":1,"code":0,"description":"fixture complete","perf":{"work":0.2},"chain_data":{"answer":42}}
+tail after completion

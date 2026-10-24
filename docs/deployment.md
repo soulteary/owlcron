@@ -96,7 +96,9 @@ Prefer a stopped, consistent snapshot for Filesystem storage. Use a consistent b
 
 Restore into an isolated environment and check login, jobs, history, and logs before upgrading the deployment. For rollback, retain the previous executable, static assets, plugins, and pre-upgrade snapshot. If formats change, restore the matching snapshot rather than assuming an old binary can read new data. Restore tests must not send duplicate notifications to real recipients.
 
-The project does not yet promise stable release packaging or data-migration compatibility. Validate upgrades, cross-version rollback, and remote-backend disaster recovery against the intended deployment.
+The [release workflow and version policy](releases.md) define verified archive contents and the supported build matrix. Data-migration compatibility is not yet guaranteed. Validate upgrades, cross-version rollback, and remote-backend disaster recovery against the intended deployment.
+
+The CLI streams backup records to the existing `owlcron-storage-v1` format instead of retaining the full export in memory. File exports are written to a private temporary file, synced, and renamed only after completion; errors before the rename preserve the previous destination. A directory-sync failure after the rename reports unconfirmed durability; the new file may already be visible. The key list and largest individual record still consume memory. Standard-output exports can be partial on failure, so check the exit status before using them. Streaming does not make a live backend snapshot consistent.
 
 ## Hosting under a URL prefix
 
@@ -111,3 +113,15 @@ the same cookie path or rely on a proxy to strip the configured prefix.
 The authenticated node transport remains `/cluster/ws` at the root, regardless
 of `base_path`. Restrict its access to cluster nodes; browser traffic uses the
 prefixed `/ws`. The existing TLS, origin and trusted-proxy requirements still apply.
+
+See [operations and metrics](operations.md) for authenticated collection and incident response.
+
+## Resetting an administrator password
+
+Stop the daemon before using the administrative CLI. Read the password from a protected secret file instead of placing it in process arguments or shell history:
+
+```sh
+./owlcron-engine --config config.local.json admin admin --password-stdin < /run/secrets/owlcron-admin-password
+```
+
+Input must contain one password of 12–72 bytes, with an optional trailing newline. Leading and trailing spaces are preserved. The legacy positional-password command remains accepted for compatibility, but the standard-input form is preferred.

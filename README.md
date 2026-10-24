@@ -56,6 +56,8 @@ make fmt-check vet test frontend-test licenses-check docs-check smoke
 
 Run `make race` for race detection. See [testing](docs/testing.md) for Docker-based fault scenarios. The example plugin is a separate Go module; changes to it also require checks in `bin/echo-plugin`.
 
+The optional [real-browser smoke test](tests/browser/README.md) covers login, event editing and execution, history, logs, and theme persistence in Chromium.
+
 ## License
 
 OwlCron's original code uses the [MIT License](LICENSE). Inherited Cronicle code retains its original copyright and MIT terms. Third-party code and fonts retain their respective licenses; see [third-party notices](THIRD_PARTY_NOTICES.md) and `licenses/`.

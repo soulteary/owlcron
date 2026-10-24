@@ -98,6 +98,7 @@ func (s *Server) AuthenticationMiddleware(next http.Handler) http.Handler {
 func skipAuth(path string) bool {
 	publicPaths := []string{
 		"/api/app/ping",
+		"/api/app/ready",
 		"/api/app/status",
 		"/api/app/echo",
 		"/api/app/config",
