@@ -89,16 +89,68 @@ func newProcessFixture(t *testing.T) *processFixture {
 	f.Put(t, "api_keys:"+f.APIKey, &types.APIKey{ID: f.APIKey, Key: f.APIKey, Enabled: true, Privileges: types.Privileges{"admin": true}})
 	return f
 }
+
+// Test servers must not use the kernel's ephemeral client-port range. A closed
+// :0 probe can otherwise be reused by a peer connection before daemon startup.
+var processPorts = struct {
+	sync.Mutex
+	once        sync.Once
+	next        int
+	first, last int
+	err         error
+	used        map[int]bool
+}{next: 10000, used: make(map[int]bool)}
+
 func processFreePort(t *testing.T) int {
 	t.Helper()
-	l, e := net.Listen("tcp", "127.0.0.1:0")
-	if e != nil {
-		t.Fatal(e)
+	processPorts.once.Do(func() {
+		var raw []byte
+		switch runtime.GOOS {
+		case "linux":
+			raw, processPorts.err = os.ReadFile("/proc/sys/net/ipv4/ip_local_port_range")
+		case "darwin":
+			raw, processPorts.err = exec.Command("/usr/sbin/sysctl", "-n", "net.inet.ip.portrange.first", "net.inet.ip.portrange.last").Output()
+		default:
+			processPorts.err = fmt.Errorf("unsupported process-test platform: %s", runtime.GOOS)
+		}
+		if processPorts.err == nil {
+			_, processPorts.err = fmt.Sscan(string(raw), &processPorts.first, &processPorts.last)
+		}
+		if processPorts.err == nil && (processPorts.first < 1 || processPorts.last > 65535 || processPorts.first > processPorts.last) {
+			processPorts.err = fmt.Errorf("invalid ephemeral port range %d..%d", processPorts.first, processPorts.last)
+		}
+	})
+	if processPorts.err != nil {
+		t.Fatalf("read ephemeral client-port range: %v", processPorts.err)
 	}
-	p := l.Addr().(*net.TCPAddr).Port
-	l.Close()
-	return p
+	processPorts.Lock()
+	defer processPorts.Unlock()
+	for attempts := 0; attempts < 65536-1024; attempts++ {
+		port := processPorts.next
+		processPorts.next++
+		if processPorts.next > 65535 {
+			processPorts.next = 1024
+		}
+		if processPorts.used[port] || (port >= processPorts.first && port <= processPorts.last) {
+			continue
+		}
+		listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+		if err != nil {
+			continue
+		}
+		listener.Close()
+		processPorts.used[port] = true
+		t.Cleanup(func() {
+			processPorts.Lock()
+			delete(processPorts.used, port)
+			processPorts.Unlock()
+		})
+		return port
+	}
+	t.Fatal("no unused process-test port outside the ephemeral client range")
+	return 0
 }
+
 func (f *processFixture) Store(t *testing.T) storage.Storage {
 	t.Helper()
 	f.remoteMu.Lock()
@@ -600,5 +652,32 @@ func TestProcessTCPGateConcurrentCutAndResume(t *testing.T) {
 	reply := make([]byte, 8)
 	if _, err = io.ReadFull(c, reply); err != nil || string(reply) != "restored" {
 		t.Fatalf("gate did not recover: %q %v", reply, err)
+	}
+}
+
+func TestProcessPortsStayOutsideClientRange(t *testing.T) {
+	ports := make(chan int, 32)
+	var wg sync.WaitGroup
+	for range 32 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			ports <- processFreePort(t)
+		}()
+	}
+	wg.Wait()
+	close(ports)
+	seen := map[int]bool{}
+	for port := range ports {
+		if seen[port] {
+			t.Fatalf("concurrent fixtures selected the same port: %d", port)
+		}
+		seen[port] = true
+		if port >= processPorts.first && port <= processPorts.last {
+			t.Fatalf("server port %d is inside the ephemeral client range", port)
+		}
+	}
+	if len(seen) != 32 {
+		t.Fatalf("reserved %d distinct ports, want 32", len(seen))
 	}
 }
