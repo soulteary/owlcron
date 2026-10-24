@@ -73,6 +73,7 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 				{"id": "run_events", "title": "Run Events"},
 				{"id": "abort_events", "title": "Abort Events"},
 				{"id": "state_update", "title": "Toggle Scheduler"},
+				{"id": "view_metrics", "title": "View Operational Metrics"},
 				{"id": "create_categories", "title": "Create Categories"},
 				{"id": "update_categories", "title": "Update Categories"},
 				{"id": "delete_categories", "title": "Delete Categories"},

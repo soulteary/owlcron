@@ -41,6 +41,10 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 	register("/api/app/get_notifications", s.handleGetNotifications)
 	register("/api/app/retry_notification", s.handleRetryNotification)
 
+	// Metrics uses explicit HTTP authentication/authorization status codes.
+	mux.HandleFunc("/api/app/metrics", s.handleMetrics)
+	mux.HandleFunc("/api/app/metrics/v1", s.handleMetrics)
+
 	// 状态 API
 	register("/api/app/status", s.handleStatus)
 	register("/api/app/ping", s.handlePing)
