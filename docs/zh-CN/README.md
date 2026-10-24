@@ -13,3 +13,5 @@
 - [贡献指南](../../CONTRIBUTING.zh-CN.md)、[安全策略](../../SECURITY.zh-CN.md)和[第三方声明](../../THIRD_PARTY_NOTICES.zh-CN.md)。
 
 英文文档见 [English index](../README.md)。修改配置、行为、命令或限制时，应同步更新两个版本。
+
+- [运行脚本文件](script-files.md)

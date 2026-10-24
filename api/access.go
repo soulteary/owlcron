@@ -46,6 +46,12 @@ func routePrivilege(path string) (string, bool) {
 	switch name {
 	case "get_notifications", "retry_notification":
 		return "", true
+	case "create_category":
+		return "create_categories", false
+	case "update_category":
+		return "update_categories", false
+	case "delete_category":
+		return "delete_categories", false
 	case "create_event":
 		return "create_events", false
 	case "update_event", "update_job", "update_jobs":
@@ -59,7 +65,7 @@ func routePrivilege(path string) (string, bool) {
 	case "update_master_state":
 		return "state_update", false
 	case "get_api_keys", "get_api_key", "create_api_key", "update_api_key", "delete_api_key",
-		"create_plugin", "update_plugin", "delete_plugin", "create_category", "update_category", "delete_category",
+		"create_plugin", "update_plugin", "delete_plugin",
 		"create_server_group", "update_server_group", "delete_server_group", "check_add_server", "add_server",
 		"remove_server", "restart_server", "shutdown_server", "delete_job", "fetch_delete_job_log", "get_activity", "check_user_exists":
 		return "", true
@@ -317,7 +323,7 @@ func (s *Server) authorizeObjects(path string, auth *AuthContext, params map[str
 			}
 		}
 	}
-	if name == "get_category" && auth.Privileges["cat_limit"] && !auth.Privileges["cat_"+stringParam(params, "id")] {
+	if (name == "get_category" || name == "create_category" || name == "update_category" || name == "delete_category") && auth.Privileges["cat_limit"] && !auth.Privileges["cat_"+stringParam(params, "id")] {
 		return fmt.Errorf("Category access denied")
 	}
 	if name == "get_server_group" && auth.Privileges["grp_limit"] && !auth.Privileges["grp_"+stringParam(params, "id")] {
