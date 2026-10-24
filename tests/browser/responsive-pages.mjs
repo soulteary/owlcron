@@ -52,6 +52,28 @@ export async function checkResponsivePages(page, base, jobID) {
     await fitsViewport(page, 'Confirmation at ' + width);
     await page.locator('#dialog_container .button').filter({hasText:/^Cancel$/}).click();
     await page.locator('#dialog_container').waitFor({state:'hidden'});
+    await page.goto(base + '/#Schedule');
+    await page.locator('#fe_sch_keywords').waitFor();
+    const table = page.locator('#page_Schedule table.data_table').first();
+    if (width <= 375) {
+      assert.equal(await table.evaluate(element => element.scrollWidth > element.clientWidth), true);
+      for (let n = 0; n < 100 && !await table.evaluate(element => element === document.activeElement); n++) {
+        await page.keyboard.press('Tab');
+      }
+      assert.equal(await table.evaluate(element => element === document.activeElement), true, 'Wide table is keyboard reachable');
+      await page.keyboard.press('ArrowRight');
+      await page.waitForFunction(() => document.querySelector('#page_Schedule table.data_table').scrollLeft > 0);
+    }
+    await page.locator('#page_Schedule .link:visible').filter({hasText:/^Run$/}).first().click({modifiers:['Shift']});
+    await page.locator('#dialog_container .dt_fs').first().waitFor();
+    await fitsViewport(page, 'Date/time picker at ' + width);
+    const clipped = await page.locator('#dialog_container select').evaluateAll(elements => elements.filter(element => {
+      const rect = element.getBoundingClientRect();
+      return rect.left < 0 || rect.right > innerWidth;
+    }).length);
+    assert.equal(clipped, 0, 'Date/time controls must fit without horizontal clipping');
+    await page.locator('#dialog_container .button').filter({hasText:/^Cancel$/}).click();
+    await page.locator('#dialog_container').waitFor({state:'hidden'});
   }
   await page.setViewportSize({width:1440, height:1100});
   console.log('Responsive acceptance passed: login, main/admin pages and confirmation at 320, 375 and 768 CSS pixels');
