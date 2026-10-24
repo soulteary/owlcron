@@ -297,6 +297,23 @@ func (jm *JobManager) LaunchRemoteJob(job *types.Job) error {
 	job = types.CloneJob(job)
 	job.Hostname = jm.getHostname()
 	job.LogFile = filepath.Join(jm.engine.config.LogDir, "jobs", job.ID+".log")
+	if jm.engine.storage == nil {
+		return fmt.Errorf("storage not initialized")
+	}
+	// In-memory deduplication is lost on restart. A late launch frame must
+	// never repeat a completed command, including after history retention.
+	if _, err := jm.engine.storage.Get(jm.engine.ctx, "jobs:"+job.ID); err == nil {
+		return nil
+	} else if !errors.Is(err, storage.ErrNotFound) {
+		return fmt.Errorf("check remote job history: %w", err)
+	}
+	// Cleanup writes its tombstone before deleting history. Check it after
+	// a history miss so concurrent retention cannot open a replay window.
+	if deleted, err := jm.engine.IsJobHistoryDeleted(job.ID); err != nil {
+		return fmt.Errorf("check remote job deletion marker: %w", err)
+	} else if deleted {
+		return nil
+	}
 	jm.engine.mu.Lock()
 	if _, ok := jm.engine.activeJobs[job.ID]; ok {
 		jm.engine.mu.Unlock()
