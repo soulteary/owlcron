@@ -20,12 +20,12 @@ class Assets(HTMLParser):
             self.urls.append(attrs['href'])
 
 
-def check_frontend_assets(base_url):
+def check_frontend_assets(base_url, opener=None):
     base_url = base_url.rstrip('/') + '/'
     origin = urlsplit(base_url)
     pending = [base_url, urljoin(base_url, 'js/home-worker.js')]
     checked = set()
-    opener = build_opener(ProxyHandler({}))
+    opener = opener or build_opener(ProxyHandler({}))
     while pending:
         url = urldefrag(pending.pop())[0]
         parsed = urlsplit(url)
