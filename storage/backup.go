@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"path/filepath"
 	"sort"
@@ -46,15 +47,60 @@ func backupRecordData(key string, data []byte) ([]byte, error) {
 }
 
 func Export(ctx context.Context, store Storage) (*Backup, error) {
-	lister, ok := store.(KeyLister)
-	if !ok {
-		return nil, ErrUnsupported
-	}
-	keys, err := lister.ListKeys(ctx)
+	backup := &Backup{Format: "owlcron-storage-v1", Created: time.Now().Unix(), Records: map[string]BackupEntry{}}
+	_, err := exportRecords(ctx, store, func(key string, entry BackupEntry) error {
+		backup.Records[key] = entry
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	backup := &Backup{Format: "owlcron-storage-v1", Created: time.Now().Unix(), Records: map[string]BackupEntry{}}
+	return backup, nil
+}
+
+// ExportTo writes the existing backup format one record at a time. Callers
+// should use a temporary file: failed exports may have written a partial JSON
+// document. Consistency still requires an offline snapshot of the source.
+func ExportTo(ctx context.Context, store Storage, writer io.Writer) (int, error) {
+	if _, err := fmt.Fprintf(writer, `{"format":"owlcron-storage-v1","created":%d,"records":{`, time.Now().Unix()); err != nil {
+		return 0, err
+	}
+	first := true
+	encoder := json.NewEncoder(writer)
+	count, err := exportRecords(ctx, store, func(key string, entry BackupEntry) error {
+		if !first {
+			if _, err := io.WriteString(writer, ","); err != nil {
+				return err
+			}
+		}
+		first = false
+		name, err := json.Marshal(key)
+		if err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintf(writer, "%s:", name); err != nil {
+			return err
+		}
+		return encoder.Encode(entry)
+	})
+	if err != nil {
+		return count, err
+	}
+	_, err = io.WriteString(writer, "}}\n")
+	return count, err
+}
+
+func exportRecords(ctx context.Context, store Storage, visit func(string, BackupEntry) error) (int, error) {
+	lister, ok := store.(KeyLister)
+	if !ok {
+		return 0, ErrUnsupported
+	}
+	keys, err := lister.ListKeys(ctx)
+	if err != nil {
+		return 0, err
+	}
+	count := 0
+	sort.Strings(keys)
 	for _, key := range keys {
 		if strings.HasPrefix(key, "_expire/") || key == "global/master_lease" {
 			continue
@@ -64,11 +110,11 @@ func Export(ctx context.Context, store Storage) (*Backup, error) {
 			continue
 		}
 		if err != nil {
-			return nil, err
+			return 0, err
 		}
 		data, err = backupRecordData(key, data)
 		if err != nil {
-			return nil, err
+			return 0, err
 		}
 		entry := BackupEntry{Data: data}
 		if remote, ok := store.(interface {
@@ -76,15 +122,18 @@ func Export(ctx context.Context, store Storage) (*Backup, error) {
 		}); ok {
 			doc, _, err := remote.readDocument(ctx, key)
 			if err != nil {
-				return nil, err
+				return 0, err
 			}
 			entry.Expires = doc.Expires
 		} else if expiry, err := store.Get(ctx, "_expire/"+key); err == nil {
 			_ = json.Unmarshal(expiry, &entry.Expires)
 		}
-		backup.Records[key] = entry
+		if err := visit(key, entry); err != nil {
+			return count, err
+		}
+		count++
 	}
-	return backup, nil
+	return count, nil
 }
 func Import(ctx context.Context, store Storage, backup *Backup) error {
 	if backup == nil || backup.Format != "owlcron-storage-v1" {

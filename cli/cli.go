@@ -230,14 +230,14 @@ func finishStorage(store storage.Storage, commandErr *error) {
 	}
 }
 
-func writeBackupFile(path string, data []byte) error {
+func writeBackupFile(path string, write func(io.Writer) error) error {
 	file, err := os.CreateTemp(filepath.Dir(path), ".owlcron-backup-*")
 	if err != nil {
 		return err
 	}
 	defer os.Remove(file.Name())
 	if err = file.Chmod(0600); err == nil {
-		_, err = file.Write(data)
+		err = write(file)
 	}
 	if err == nil {
 		err = file.Sync()
@@ -265,24 +265,19 @@ func cmdExport(args []string, config *types.Config, logger *zap.Logger) (err err
 		return fmt.Errorf("open storage: %w", err)
 	}
 	defer finishStorage(store, &err)
-	backup, err := storage.Export(context.Background(), store)
-	if err != nil {
-		return fmt.Errorf("export: %w", err)
-	}
-	data, err := json.MarshalIndent(backup, "", "  ")
-	if err != nil {
-		return fmt.Errorf("encode backup: %w", err)
+	count := 0
+	write := func(writer io.Writer) error {
+		var exportErr error
+		count, exportErr = storage.ExportTo(context.Background(), store, writer)
+		return exportErr
 	}
 	if len(args) > 0 && args[0] != "-" {
-		if err = writeBackupFile(args[0], data); err != nil {
+		if err = writeBackupFile(args[0], write); err != nil {
 			return fmt.Errorf("write backup: %w", err)
-		} else {
-			fmt.Printf("Exported %d records to %s\n", len(backup.Records), args[0])
 		}
-	} else {
-		if _, err := fmt.Println(string(data)); err != nil {
-			return fmt.Errorf("write backup to stdout: %w", err)
-		}
+		fmt.Printf("Exported %d records to %s\n", count, args[0])
+	} else if err := write(os.Stdout); err != nil {
+		return fmt.Errorf("write backup to stdout: %w", err)
 	}
 	return nil
 }
