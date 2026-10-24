@@ -1,5 +1,14 @@
 # OwlCron
 
+通过 Web 界面调度任务、执行插件，并查看执行历史与日志。
+
+[![CI](https://github.com/soulteary/owlcron/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/soulteary/owlcron/actions/workflows/ci.yml)
+[![Browser tests](https://github.com/soulteary/owlcron/actions/workflows/browser.yml/badge.svg?branch=main)](https://github.com/soulteary/owlcron/actions/workflows/browser.yml)
+[![Container](https://github.com/soulteary/owlcron/actions/workflows/container.yml/badge.svg?branch=main)](https://github.com/soulteary/owlcron/actions/workflows/container.yml)
+[![Release](https://img.shields.io/github/v/release/soulteary/owlcron)](https://github.com/soulteary/owlcron/releases)
+[![Go](https://img.shields.io/badge/Go-1.27-00ADD8?logo=go&logoColor=white)](docs/zh-CN/releases.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 [English](README.md) | 简体中文
 
 OwlCron 是一个使用 Go 编写、以替代 [Cronicle](https://github.com/jhuckaby/Cronicle) 为目标的任务调度服务，提供 Web 管理界面、定时和按需任务、插件执行、任务日志及通知，并对 Cronicle 的部分工作流、API 和插件约定提供兼容。迁移范围见 [Cronicle 兼容性](docs/zh-CN/compatibility.md)。
@@ -7,6 +16,19 @@ OwlCron 是一个使用 Go 编写、以替代 [Cronicle](https://github.com/jhuc
 项目目前处于实验性阶段。集群持续收敛、远程派发确认和生产环境容量仍有[已知限制](docs/zh-CN/limitations.md)，请先在隔离环境验证。
 
 ![OwlCron](.github/assets/owlcron-banner.png)
+
+## 主要功能
+
+- **管理任务**：通过 Web 界面配置定时任务和按需执行任务。
+- **执行插件**：使用示例 Echo Plugin 验证流程，再接入自己的脚本；见[运行脚本文件](docs/zh-CN/script-files.md)。
+- **排查执行问题**：查看任务历史、日志和通知，结合[运维与指标](docs/zh-CN/operations.md)进行诊断。
+- **评估 Cronicle 迁移**：先运行[迁移预检](docs/zh-CN/migration.md)，再核对[兼容范围](docs/zh-CN/compatibility.md)。
+
+## 选择安装方式
+
+- **从源码开始**：按下方步骤构建并运行，适合本地体验和开发。
+- **使用发布归档**：阅读[版本与发布](docs/zh-CN/releases.md)，了解支持平台、构建信息和归档校验方法；可用版本见 [GitHub Releases](https://github.com/soulteary/owlcron/releases)。
+- **容器与 Kubernetes**：参照[容器部署指南](docs/zh-CN/containers.md)准备配置和持久化数据。
 
 ## 快速开始
 
