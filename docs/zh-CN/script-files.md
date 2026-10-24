@@ -2,7 +2,10 @@
 
 [English](../script-files.md) | 简体中文
 
-`make build` 会生成 `owlcron-script`。适配器执行管理员配置的固定命令，
+`make build` 会生成 `owlcron-script`。容器镜像已包含
+`/opt/owlcron/owlcron-script`。经审核的脚本应以只读方式挂载（例如挂载到
+`/opt/jobs`），并确保 UID 10001 可读。除 `/bin/sh` 外的解释器需在派生镜像中安装。
+适配器执行管理员配置的固定命令，
 向标准输入传递一行任务 JSON，把脚本的标准输出和错误作为日志，并根据退出码
 生成完成消息。脚本不需要实现插件协议，也不能通过输出 JSON 伪造成功。
 

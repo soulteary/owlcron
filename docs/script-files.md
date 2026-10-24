@@ -2,7 +2,10 @@
 
 English | [简体中文](zh-CN/script-files.md)
 
-Build `owlcron-script` with `make build`. This adapter runs an administrator-selected
+Build `owlcron-script` with `make build`. The container image includes it at
+`/opt/owlcron/owlcron-script`. Mount reviewed scripts read-only (for example at
+`/opt/jobs`) and make them readable by UID 10001. Interpreters beyond `/bin/sh`
+must be installed in a derived image. This adapter runs an administrator-selected
 command, forwards one job JSON line to its stdin, treats stdout/stderr as log data,
 and emits the plugin completion message itself. Ordinary scripts do not need to
 implement the plugin protocol. A script cannot report a false success by printing
