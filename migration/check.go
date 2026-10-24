@@ -278,6 +278,21 @@ func Check(input io.Reader, config io.Reader) (*Report, error) {
 		if event.Category != "" && !ids["categories"][event.Category] {
 			report.add("schedule", number, "unsupported", "missing_category", "Event references a category absent from this export.")
 		}
+		for _, chain := range []struct {
+			ids     []string
+			code    string
+			message string
+		}{
+			{event.GetChainIDs(), "missing_chain", "Event success chain references an event absent from this export."},
+			{event.GetChainErrorIDs(), "missing_chain_error", "Event failure chain references an event absent from this export."},
+		} {
+			for _, id := range chain.ids {
+				if !ids["schedule"][id] {
+					report.add("schedule", number, "unsupported", chain.code, chain.message)
+					break
+				}
+			}
+		}
 		if event.Target != "local" && !ids["server_groups"][event.Target] && !ids["servers"][event.Target] {
 			report.add("schedule", number, "requires_conversion", "missing_target", "Resolve the target to an OwlCron server group or registered hostname.")
 		}
