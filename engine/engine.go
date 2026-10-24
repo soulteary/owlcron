@@ -263,6 +263,9 @@ func (e *Engine) Startup() error {
 	if err := e.RetryHistoryDeletions(e.ctx); err != nil {
 		return fmt.Errorf("recover history cleanup: %w", err)
 	}
+	if err := e.initializeReadiness(); err != nil {
+		return fmt.Errorf("initialize readiness marker: %w", err)
+	}
 	if err := e.comm.Startup(); err != nil {
 		return err
 	}

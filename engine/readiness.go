@@ -9,6 +9,28 @@ import (
 // ReadinessTimeout bounds a storage health check independently of HTTP timeouts.
 const ReadinessTimeout = 2 * time.Second
 
+// readinessProbeKey stores a tiny startup marker for read-only reachability
+// checks. Probing this key never downloads application state.
+const readinessProbeKey = "global/readiness_probe"
+
+// initializeReadiness bounds startup even if a backend ignores cancellation.
+// A delayed write is harmless: every node writes the same constant marker.
+func (e *Engine) initializeReadiness() error {
+	ctx, cancel := context.WithTimeout(e.ctx, ReadinessTimeout)
+	defer cancel()
+	result := make(chan error, 1)
+	go func() { result <- e.storage.Put(ctx, readinessProbeKey, []byte("1")) }()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case err := <-result:
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		return err
+	}
+}
+
 var errNotReady = errors.New("engine is not ready")
 
 type readinessProbe struct {
@@ -31,9 +53,18 @@ func (e *Engine) Readiness(ctx context.Context) error {
 		go func() {
 			probeCtx, cancel := context.WithTimeout(e.ctx, ReadinessTimeout)
 			defer cancel()
-			// Existence is immaterial: an empty namespace is reachable too. Exists
-			// avoids downloading potentially large state records on every probe.
-			_, probe.err = e.storage.Exists(probeCtx, "global/state")
+			// Backends may implement Exists using Get. Startup creates this
+			// tiny marker, so even that implementation has bounded payload.
+			var exists bool
+			exists, probe.err = e.storage.Exists(probeCtx, readinessProbeKey)
+			if probe.err == nil && !exists {
+				probe.err = errNotReady
+			}
+			// A backend may ignore cancellation and return success after the
+			// shared deadline. Never publish that late result as readiness.
+			if err := probeCtx.Err(); err != nil {
+				probe.err = err
+			}
 			e.readinessMu.Lock()
 			e.readinessProbe = nil
 			close(probe.done)

@@ -82,6 +82,13 @@ closed, or when the check fails or exceeds two seconds. Both are public and
 readiness returns only a generic result, without backend error details.
 A healthy worker does not need to hold leadership to be ready. Concurrent
 requests share a storage probe; a stuck backend cannot accumulate probe tasks.
+Startup writes a one-byte marker to the reserved `global/readiness_probe` key
+before starting services, with a two-second deadline. Storage permissions must
+allow writing and reading this key. Subsequent probes only check this small
+marker, without reading application state or writing any data; a missing marker
+is unhealthy. All nodes share the same constant marker, which remains on shutdown.
+A backend result arriving after the two-second probe deadline remains a failure,
+even if it reports success.
 
 The Kubernetes example uses readiness for startup and service routing, and
 liveness for restarts. A storage outage therefore removes the pod from service
