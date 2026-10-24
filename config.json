@@ -1,0 +1,27 @@
+{
+  "base_app_url": "http://localhost:3012",
+  "secret_key": "CHANGE_ME_TO_RANDOM_STRING",
+  "log_dir": "logs",
+  "queue_dir": "queue",
+  "master_ping_freq": 20,
+  "master_ping_timeout": 60,
+  "udp_broadcast_port": 3014,
+  "broadcast_ip": "",
+  "scheduler_startup_grace": 10,
+  "max_jobs": 0,
+  "job_memory_max": 1073741824,
+  "job_memory_sustain": 0,
+  "job_cpu_max": 0,
+  "job_cpu_sustain": 0,
+  "job_log_max_size": 0,
+  "child_kill_timeout": 10,
+  "dead_job_timeout": 120,
+  "job_env": {},
+  "web_hook_text_templates": {
+    "job_start": "Job started on [hostname]: [event_title] [job_details_url]",
+    "job_complete": "Job completed successfully on [hostname]: [event_title] [job_details_url]",
+    "job_failure": "Job failed on [hostname]: [event_title]: Error [code]: [description] [job_details_url]",
+    "job_launch_failure": "Failed to launch scheduled event: [event_title]: [description] [edit_event_url]"
+  }
+}
+
