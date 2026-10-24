@@ -129,9 +129,9 @@
   },
   {
     "name": "jquery",
-    "version": "3.5.0",
+    "version": "4.0.0",
     "license": "MIT",
-    "notices": "licenses/npm/jquery@3.5.0",
+    "notices": "licenses/npm/jquery@4.0.0",
     "files": [
       "LICENSE.txt",
       "README.md"
