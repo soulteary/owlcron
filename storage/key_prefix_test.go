@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -10,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -149,6 +151,119 @@ func TestS3ListKeysPrefixUsesServerPrefixAndPaginates(t *testing.T) {
 				t.Fatalf("list calls %d, get calls %v", lists, gets)
 			}
 		})
+	}
+}
+
+func TestS3CapabilityRecordsRemainInListingAndBackup(t *testing.T) {
+	for _, namespace := range []string{"tenant", ""} {
+		t.Run(namespace, func(t *testing.T) {
+			namespacePrefix := ""
+			if namespace != "" {
+				namespacePrefix = namespace + "/"
+			}
+			records := map[string][]byte{
+				"capability/foo": []byte("probe"),
+				"capability/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": bytes.Repeat([]byte("large application record"), 4096),
+			}
+			objects := map[string][]byte{
+				namespacePrefix + "capability/00000000000000000000000000000000": []byte("probe"),
+				namespacePrefix + "capability/11111111111111111111111111111111": []byte("claim-0"),
+				namespacePrefix + "capability/22222222222222222222222222222222": []byte("claim-7"),
+				namespacePrefix + "capability/33333333333333333333333333333333": []byte("must not overwrite"),
+				namespacePrefix + "capability/44444444444444444444444444444444": []byte("must not replace"),
+				namespacePrefix + s3CapabilityPrefix + "private":                []byte("claim-7"),
+			}
+			for key, data := range records {
+				raw, err := json.Marshal(remoteDocument{Data: data, Revision: "preexisting"})
+				if err != nil {
+					t.Fatal(err)
+				}
+				objects[namespacePrefix+key] = raw
+			}
+			reads := map[string]int{}
+			store := prefixS3Store(t, namespace, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Query().Get("list-type") == "2" {
+					w.Header().Set("Content-Type", "application/xml")
+					fmt.Fprint(w, `<ListBucketResult><IsTruncated>false</IsTruncated>`)
+					for key := range objects {
+						if strings.HasPrefix(key, r.URL.Query().Get("prefix")) {
+							fmt.Fprintf(w, `<Contents><Key>%s</Key></Contents>`, key)
+						}
+					}
+					fmt.Fprint(w, `</ListBucketResult>`)
+					return
+				}
+				key := strings.TrimPrefix(r.URL.Path, "/bucket/")
+				reads[key]++
+				if strings.HasPrefix(key, namespacePrefix+s3CapabilityPrefix) {
+					t.Error("private probe payload was fetched")
+				}
+				data, exists := objects[key]
+				if !exists {
+					t.Errorf("unexpected object request: %s", r.URL)
+					w.WriteHeader(http.StatusNotFound)
+					return
+				}
+				w.Header().Set("ETag", `"version"`)
+				w.Header().Set("Last-Modified", time.Unix(0, 0).UTC().Format(http.TimeFormat))
+				w.Header().Set("Content-Length", fmt.Sprint(len(data)))
+				w.Write(data)
+			}))
+			want := []string{"capability/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "capability/foo"}
+			for _, prefix := range []string{"", "capability/"} {
+				clear(reads)
+				keys, err := store.ListKeysPrefix(context.Background(), prefix)
+				if err != nil || !reflect.DeepEqual(keys, want) {
+					t.Fatalf("prefix %q lost application records: %v %v", prefix, keys, err)
+				}
+				for key := range records {
+					if reads[namespacePrefix+key] != 1 {
+						t.Fatalf("enumeration fetched application payload %q %d times", key, reads[namespacePrefix+key])
+					}
+				}
+			}
+			backup, err := Export(context.Background(), store)
+			if err != nil || len(backup.Records) != len(records) {
+				t.Fatalf("probe filtering lost backup records: %#v %v", backup, err)
+			}
+			for key, data := range records {
+				if !bytes.Equal(backup.Records[key].Data, data) {
+					t.Fatalf("backup changed %q", key)
+				}
+			}
+		})
+	}
+}
+
+func TestS3CapabilityFilterDoesNotHideCorruptApplicationRecords(t *testing.T) {
+	for _, key := range []string{
+		"capability/foo",
+		"capability/0000000000000000000000000000000",
+		"capability/000000000000000000000000000000000",
+		"capability/gggggggggggggggggggggggggggggggg",
+		"capability/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+	} {
+		t.Run(key, func(t *testing.T) {
+			store := prefixS3Store(t, "tenant", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Query().Get("list-type") == "2" {
+					w.Header().Set("Content-Type", "application/xml")
+					fmt.Fprintf(w, `<ListBucketResult><IsTruncated>false</IsTruncated><Contents><Key>tenant/%s</Key></Contents></ListBucketResult>`, key)
+					return
+				}
+				w.Header().Set("ETag", `"version"`)
+				w.Header().Set("Last-Modified", time.Unix(0, 0).UTC().Format(http.TimeFormat))
+				w.Header().Set("Content-Length", "5")
+				fmt.Fprint(w, "probe")
+			}))
+			if _, err := store.ListKeys(context.Background()); err == nil || !strings.Contains(err.Error(), "decode storage document") {
+				t.Fatalf("corrupt application key %q silently hidden: %v", key, err)
+			}
+		})
+	}
+	for _, data := range []string{"not a probe", "claim-8", "claim-00"} {
+		if s3LegacyCapabilityProbe("capability/00000000000000000000000000000000", []byte(data)) {
+			t.Fatalf("non-probe payload %q hidden solely because of its key", data)
+		}
 	}
 }
 

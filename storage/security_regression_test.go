@@ -142,7 +142,7 @@ func (s *recoveryS3Transport) RoundTrip(req *http.Request) (*http.Response, erro
 		}
 		return response(http.StatusOK, data, http.Header{"Etag": []string{etag(data)}})
 	case http.MethodPut:
-		if strings.Contains(key, "/capability/") {
+		if strings.Contains(key, "/"+s3CapabilityPrefix) {
 			s.probeWrites++
 		}
 		if (req.Header.Get("If-None-Match") == "*" && exists) || (req.Header.Get("If-Match") != "" && (!exists || req.Header.Get("If-Match") != etag(data))) {
@@ -178,6 +178,9 @@ func TestS3ConditionalProbeRecoversAfterTransientFailure(t *testing.T) {
 	transport.mu.Lock()
 	probes := transport.probeWrites
 	transport.mu.Unlock()
+	if probes == 0 {
+		t.Fatal("capability check did not write a private probe")
+	}
 	if err := store.compareAndSwap(ctx, "third", []byte("payload"), ""); err != nil {
 		t.Fatal(err)
 	}

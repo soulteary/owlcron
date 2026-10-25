@@ -390,6 +390,8 @@ func TestRedisRealBackupCrossBackend(t *testing.T) {
 				"binary":               {0, 255, '\n', '\r'},
 				"expired":              []byte("expired"),
 				"storage-tombstone":    []byte("deleted"),
+				"capability/foo":       []byte("legitimate application record"),
+				"capability/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": []byte("probe"),
 			} {
 				if err := source.Put(ctx, key, data); err != nil {
 					t.Fatal(err)

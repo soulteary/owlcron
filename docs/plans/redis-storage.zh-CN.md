@@ -229,8 +229,9 @@ redis-kit v1.8.0 已正式发布，OwlCron 已随 [PR #75](https://github.com/so
 
 - 容器前端构建的 Bun 从单独漂移的 1.4.3 对齐到项目、CI 和发行构建已固定的 1.4.2。
 - 双语配置明确非零 DB 需要 `SELECT`，并说明 `HELLO` 的 RESP3 协商与 ACL 拒绝时的 RESP2 回退。现有真实测试账户的权限较宽，不能把它作为最小 ACL 配置已验收的证据。
-- Redis 镜像摘要需要支持 CI 的 Linux amd64；本机 arm64 验收不能代替 amd64 联合工作流执行。
-- 检查能力探针数据能否进入导出，并补充 `Expire` 与 Redis/S3/Couchbase 跨后端恢复覆盖。
+- Redis 镜像改为固定 8.4.7 多架构索引，并在启动前核对 Docker 服务与镜像平台；真实联合恢复矩阵在相关 PR 上也必须通过。
+- Redis 与 S3 的探针移入应用 key 不允许使用的私有路径。旧探针只按精确名称和原始载荷识别，不再过滤合法的 `capability/` 业务记录；回归覆盖导入和重新导出。
+- 补充 `Expire` 写入中断与 Redis/S3/Couchbase 双向恢复，核对二进制、列表、绝对过期时间、分块日志和删除栅栏，并将合法 `capability/` 记录纳入迁移用例。
 
 真实 TLS 验收目前覆盖服务端证书验证及错误 CA、主机名和账户拒绝。虽然配置支持 `tls_cert_file`、`tls_key_file`，框架中的 Redis 使用 `tls-auth-clients no`，尚未真实验收客户端证书认证；不将其宣传为 mTLS 验收完成。本轮完整测试和真实故障结果以当前修正提交的实际运行记录为准。
 
