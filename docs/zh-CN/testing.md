@@ -95,7 +95,7 @@ OWLCRON_SOAK_DURATION=3m OWLCRON_PROCESS_SOAK_DURATION=3m \
 
 ## CI 和证据保存
 
-[CI / Build and Test](../../.github/workflows/ci.yml)验证 Go 1.27 系列、Bun 1.4.2、构建、单元测试、安装冒烟、许可证和漏洞检查。[CI / Process Fault Acceptance](../../.github/workflows/process-acceptance.yml)负责进程及 Linux 故障场景。
+[CI / Build and Test](../../.github/workflows/ci.yml)验证 Go 1.27 系列、Bun 1.4.2、构建、单元测试、安装冒烟、许可证和漏洞检查。[CI / Process Fault Acceptance](../../.github/workflows/process-acceptance.yml)在相关 PR 上执行真实 S3/Couchbase/Redis 恢复矩阵；主分支、定时和手动运行还覆盖重复进程故障与完整 Linux 负载矩阵。
 
 CI 在 PR 和 `main` 分支推送时运行；功能分支推送不再额外触发一套重复检查。新提交会取消旧任务。依赖和 Docker 镜像层使用缓存，但缓存命中不会跳过测试。主分支的 Linux 故障矩阵只由 Go 代码及依赖、Makefile、验收与负载脚本和自身工作流触发；纯前端测试或容器配置检查走各自相关的 CI，不再重复运行无关的 Linux 故障场景。
 

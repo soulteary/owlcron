@@ -117,13 +117,64 @@ func TestRedisRealExistingEnvelopeAndNativeCAS(t *testing.T) {
 	}
 	var cursor uint64
 	for {
-		keys, next, err := store.client.Scan(ctx, cursor, redisGlobLiteral(store.prefix)+"capability/*", 128).Result()
+		keys, next, err := store.client.Scan(ctx, cursor, redisGlobLiteral(store.prefix+redisCapabilityPrefix)+"*", 128).Result()
 		if err != nil || len(keys) != 0 {
 			t.Fatalf("startup leaked capability keys: %v %v", keys, err)
 		}
 		cursor = next
 		if cursor == 0 {
 			break
+		}
+	}
+}
+
+func TestRedisRealCapabilityRecordsBackupRoundTrip(t *testing.T) {
+	store := openRedisRealTestStore(t, redisRealTestConfig(t))
+	source, err := NewFilesystemStorage(&StorageConfig{BaseDir: t.TempDir()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	records := map[string][]byte{
+		"capability/foo": []byte("second"),
+		"capability/redis-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": {0, 1, 255},
+	}
+	for key, data := range records {
+		if err := source.Put(ctx, key, data); err != nil {
+			t.Fatal(err)
+		}
+	}
+	backup, err := Export(ctx, source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Import(ctx, store, backup); err != nil {
+		t.Fatal(err)
+	}
+	for key, payload := range map[string]string{
+		"capability/redis-00000000000000000000000000000000":              "first",
+		"capability/redis-11111111111111111111111111111111":              "second",
+		"capability/redis-22222222222222222222222222222222":              "must-not-write",
+		redisCapabilityPrefix + "redis-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb": "second",
+	} {
+		if err := store.client.Set(ctx, store.prefix+key, payload, 30*time.Second).Err(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want := []string{"capability/foo", "capability/redis-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+	for _, prefix := range []string{"", "capability/"} {
+		keys, err := store.ListKeysPrefix(ctx, prefix)
+		if err != nil || !reflect.DeepEqual(keys, want) {
+			t.Fatalf("prefix %q lost imported application records: %v %v", prefix, keys, err)
+		}
+	}
+	reexported, err := Export(ctx, store)
+	if err != nil || len(reexported.Records) != len(records) {
+		t.Fatalf("Redis re-export lost imported application records: %#v %v", reexported, err)
+	}
+	for key, data := range records {
+		if !bytes.Equal(reexported.Records[key].Data, data) {
+			t.Fatalf("Redis re-export changed %q", key)
 		}
 	}
 }

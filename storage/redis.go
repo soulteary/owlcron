@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -28,6 +29,9 @@ type RedisStorage struct {
 	client *redis.Client
 	prefix string
 }
+
+// Application keys cannot contain a component beginning with a dot.
+const redisCapabilityPrefix = ".capability/"
 
 var (
 	_ Storage          = (*RedisStorage)(nil)
@@ -277,7 +281,7 @@ func (s *RedisStorage) checkCapabilities(ctx context.Context) (outErr error) {
 	if _, err := rand.Read(nonce); err != nil {
 		return err
 	}
-	key := "capability/redis-" + hex.EncodeToString(nonce)
+	key := redisCapabilityPrefix + "redis-" + hex.EncodeToString(nonce)
 	physical := s.prefix + key
 	defer func() {
 		// Cleanup shares the startup budget. Every probe write has a 30-second
@@ -393,6 +397,27 @@ func redisGlobLiteral(value string) string {
 	return strings.NewReplacer("\\", "\\\\", "*", "\\*", "?", "\\?", "[", "\\[", "]", "\\]").Replace(value)
 }
 
+// Older versions put their short-lived probes in a valid application namespace.
+// Match both the exact generated name and its raw payload, so an application
+// envelope using the same name still participates in enumeration and backup.
+func redisLegacyCapabilityProbe(key string, data []byte) bool {
+	nonce, ok := strings.CutPrefix(key, "capability/redis-")
+	if !ok || len(nonce) != 32 {
+		return false
+	}
+	for _, digit := range nonce {
+		if !('0' <= digit && digit <= '9' || 'a' <= digit && digit <= 'f') {
+			return false
+		}
+	}
+	switch string(data) {
+	case "first", "second", "must-not-write":
+		return true
+	default:
+		return false
+	}
+}
+
 func (s *RedisStorage) ListKeys(ctx context.Context) ([]string, error) {
 	return s.ListKeysPrefix(ctx, "")
 }
@@ -413,15 +438,29 @@ func (s *RedisStorage) ListKeysPrefix(ctx context.Context, prefix string) ([]str
 				continue
 			}
 			key := strings.TrimPrefix(physical, s.prefix)
-			if strings.HasPrefix(key, "capability/") || seen[key] {
+			if strings.HasPrefix(key, redisCapabilityPrefix) || seen[key] {
 				continue
 			}
 			// Only matching application keys are read. Tombstones and expired
 			// envelopes stay in Redis for CAS but never enter exports or indexes.
-			if _, err := s.Get(ctx, key); errors.Is(err, ErrNotFound) {
+			if err := validateKey(key); err != nil {
+				return nil, err
+			}
+			data, _, err := s.read(ctx, key)
+			if errors.Is(err, ErrNotFound) {
 				continue
 			} else if err != nil {
 				return nil, err
+			}
+			if redisLegacyCapabilityProbe(key, data) {
+				continue
+			}
+			var doc remoteDocument
+			if err := json.Unmarshal(data, &doc); err != nil {
+				return nil, fmt.Errorf("decode storage document: %w", err)
+			}
+			if doc.Deleted || doc.Expires > 0 && doc.Expires <= time.Now().Unix() {
+				continue
 			}
 			seen[key] = true
 		}

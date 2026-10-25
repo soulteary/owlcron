@@ -44,7 +44,7 @@ func newS3FaultGate(t *testing.T, endpoint string) *s3FaultGate {
 		http.Error(w, "upstream unavailable", http.StatusBadGateway)
 	}
 	proxy.ModifyResponse = func(response *http.Response) error {
-		if gate.mode.Load() == 3 && response.Request.Method == http.MethodPut && !strings.Contains(response.Request.URL.Path, "/capability/") && response.StatusCode >= 200 && response.StatusCode < 300 {
+		if gate.mode.Load() == 3 && response.Request.Method == http.MethodPut && !strings.Contains(response.Request.URL.Path, "/"+s3CapabilityPrefix) && response.StatusCode >= 200 && response.StatusCode < 300 {
 			gate.hits.Add(1)
 			// The backend has acknowledged its write; only the client response is lost.
 			response.Body.Close()
@@ -59,7 +59,7 @@ func newS3FaultGate(t *testing.T, endpoint string) *s3FaultGate {
 	}
 	gate.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mode := gate.mode.Load()
-		if gate.capabilityOnly.Load() && !strings.Contains(r.URL.Path, "/capability/") {
+		if gate.capabilityOnly.Load() && !strings.Contains(r.URL.Path, "/"+s3CapabilityPrefix) {
 			mode = 0
 		}
 		switch mode {
