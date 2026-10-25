@@ -256,7 +256,7 @@ func (s *S3Storage) ListKeys(ctx context.Context) ([]string, error) {
 	return s.ListKeysPrefix(ctx, "")
 }
 func (c *CouchbaseStorage) ListKeys(ctx context.Context) ([]string, error) {
-	scan, err := c.collection.Scan(gocb.NewRangeScanForPrefix(c.prefix), &gocb.ScanOptions{Context: ctx, IDsOnly: true})
+	scan, err := c.collection.Scan(gocb.NewRangeScanForPrefix(c.prefix), c.scanOptions(ctx))
 	if err != nil {
 		return nil, err
 	}

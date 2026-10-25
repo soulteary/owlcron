@@ -161,7 +161,7 @@ func walkBackupKeys(ctx context.Context, store Storage, visit func(string) error
 		}
 		return walk(".", 0)
 	case *CouchbaseStorage:
-		scan, err := s.collection.Scan(gocb.NewRangeScanForPrefix(s.prefix), &gocb.ScanOptions{Context: ctx, IDsOnly: true})
+		scan, err := s.collection.Scan(gocb.NewRangeScanForPrefix(s.prefix), s.scanOptions(ctx))
 		if err != nil {
 			return err
 		}

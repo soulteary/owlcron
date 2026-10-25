@@ -188,14 +188,14 @@ docker exec -e OWLCRON_TEST_S3_ENDPOINT= -e OWLCRON_TEST_COUCHBASE_CONNECTION= -
     go test -race ./... -count=1 -timeout=300s | tee "$results/linux-race.log"
 fi
 docker exec "$runner" go test -race ./storage \
-    -run '^Test(S3RealStorage|S3RealTransportFaultRecovery|S3RealCommittedResponseLossRecovery|S3RealServerRestartRecovery|CouchbaseRealStorage|CouchbaseRemoteFaultRecovery|RedisReal.*)$' \
+    -run '^Test(S3RealStorage|S3RealTransportFaultRecovery|S3RealCommittedResponseLossRecovery|S3RealServerRestartRecovery|CouchbaseRealStorage.*|CouchbaseRemoteFaultRecovery|RedisReal.*)$' \
     -count="$repeats" -timeout=1200s -v | tee "$results/remote-storage.log"
 python3 - "$results/remote-storage.log" "$repeats" <<'VERIFY_REDIS_TESTS'
 from pathlib import Path
 import re
 import sys
 text = Path(sys.argv[1]).read_text()
-for name in ("TestRedisRealStorage", "TestRedisRealExistingEnvelopeAndNativeCAS", "TestRedisRealCapabilityRecordsBackupRoundTrip", "TestRedisRealPrefixIsolation",
+for name in ("TestCouchbaseRealStorageImmediateInventory", "TestRedisRealStorage", "TestRedisRealExistingEnvelopeAndNativeCAS", "TestRedisRealCapabilityRecordsBackupRoundTrip", "TestRedisRealPrefixIsolation",
              "TestRedisRealConstructorDeadlineBudget", "TestRedisRealTLSConnection",
              "TestRedisRealBackupRoundTrip", "TestRedisRealBackupInterruptedImportCanResume", "TestRedisRealBackupTransportRecovery",
              "TestRedisRealBackupExpiryTransportRecovery", "TestRedisRealBackupCrossBackend/S3", "TestRedisRealBackupCrossBackend/Couchbase",
