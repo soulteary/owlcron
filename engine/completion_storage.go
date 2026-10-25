@@ -23,11 +23,22 @@ func (e *Engine) IsJobHistoryDeleted(id string) (bool, error) {
 	return e.storage.Exists(context.Background(), "deleted_jobs:"+id)
 }
 
-func (jm *JobManager) completionSpoolPath(id string) string {
+func (jm *JobManager) legacyCompletionSpoolPath(id string) string {
 	return filepath.Join(jm.engine.config.LogDir, "jobs", id+".completed.json")
 }
+func (jm *JobManager) completionSpoolPath(id string) string {
+	if _, err := os.Lstat(jm.completionJournalPath(id)); err == nil {
+		return jm.completionJournalPath(id)
+	}
+	return jm.legacyCompletionSpoolPath(id)
+}
 func (jm *JobManager) writeCompletionSpool(job *types.Job) error {
-	path := jm.completionSpoolPath(job.ID)
+	if _, err := os.Lstat(jm.completionJournalPath(job.ID)); err == nil {
+		return jm.writeCompletionCheckpoint(job, completionPhaseSealed)
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+	path := jm.legacyCompletionSpoolPath(job.ID)
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 		return err
 	}
@@ -81,12 +92,21 @@ func (jm *JobManager) persistCompletion(job *types.Job) error {
 // retryable. Try to make it durable before contacting the backend again, so a
 // recovered local disk protects the result across a continued backend outage.
 func (jm *JobManager) RetryPendingCompletions() error {
+	return jm.retryPendingCompletions(false)
+}
+
+func (jm *JobManager) retryPendingCompletions(startup bool) error {
 	jm.finishMu.Lock()
 	defer jm.finishMu.Unlock()
 	paths, err := filepath.Glob(filepath.Join(jm.engine.config.LogDir, "jobs", "*.completed.json"))
 	if err != nil {
 		return err
 	}
+	journals, err := filepath.Glob(filepath.Join(jm.engine.config.LogDir, "jobs", "*.completion-wal"))
+	if err != nil {
+		return err
+	}
+	paths = append(journals, paths...)
 	pending := make(map[string]*types.Job)
 	jm.engine.mu.RLock()
 	for id, job := range jm.engine.deadJobs {
@@ -96,30 +116,48 @@ func (jm *JobManager) RetryPendingCompletions() error {
 	}
 	jm.engine.mu.RUnlock()
 	var retryErrors []error
+	seen := make(map[string]bool)
 	for _, path := range paths {
-		raw, err := os.ReadFile(path)
-		if os.IsNotExist(err) {
+		var snapshot *types.Job
+		if isCompletionJournal(path) {
+			snapshot, err = jm.recoverCompletionJournal(path, startup)
+			if err != nil {
+				retryErrors = append(retryErrors, fmt.Errorf("recover completion journal %s: %w", path, err))
+				continue
+			}
+			if snapshot == nil {
+				continue
+			}
+		} else {
+			raw, err := os.ReadFile(path)
+			if os.IsNotExist(err) {
+				continue
+			}
+			if err != nil {
+				retryErrors = append(retryErrors, err)
+				continue
+			}
+			snapshot = &types.Job{}
+			if err = json.Unmarshal(raw, snapshot); err != nil {
+				retryErrors = append(retryErrors, fmt.Errorf("invalid completion spool %s: %w", path, err))
+				continue
+			}
+			if !snapshot.Complete || snapshot.ID == "" || jm.legacyCompletionSpoolPath(snapshot.ID) != path {
+				retryErrors = append(retryErrors, fmt.Errorf("invalid completion spool job: %s", path))
+				continue
+			}
+		}
+		if seen[snapshot.ID] {
 			continue
 		}
-		if err != nil {
-			retryErrors = append(retryErrors, err)
-			continue
-		}
-		var job types.Job
-		if err = json.Unmarshal(raw, &job); err != nil {
-			retryErrors = append(retryErrors, fmt.Errorf("invalid completion spool %s: %w", path, err))
-			continue
-		}
-		if !job.Complete || job.ID == "" || jm.completionSpoolPath(job.ID) != path {
-			retryErrors = append(retryErrors, fmt.Errorf("invalid completion spool job: %s", path))
-			continue
-		}
-		snapshot := &job
-		if current := pending[job.ID]; current != nil {
+		seen[snapshot.ID] = true
+		spooled := true
+		if current := pending[snapshot.ID]; current != nil {
 			snapshot = current
-			delete(pending, job.ID)
+			delete(pending, snapshot.ID)
+			spooled = false
 		}
-		if err := jm.retryPendingCompletion(snapshot, true); err != nil {
+		if err := jm.retryPendingCompletion(snapshot, spooled); err != nil {
 			retryErrors = append(retryErrors, err)
 		}
 	}
@@ -144,6 +182,11 @@ func (jm *JobManager) retryPendingCompletion(job *types.Job, spooled bool) error
 	if !spooled {
 		spoolErr = jm.writeCompletionSpool(job)
 		spooled = spoolErr == nil
+		if !spooled {
+			if info, err := os.Lstat(jm.completionSpoolPath(job.ID)); err == nil && info.Mode().IsRegular() {
+				spooled = true
+			}
+		}
 	}
 	err := jm.persistCompletion(job)
 	if errors.Is(err, ErrJobHistoryDeleted) {
@@ -162,7 +205,7 @@ func (jm *JobManager) retryPendingCompletion(job *types.Job, spooled bool) error
 		jm.engine.AddDeadJob(job)
 	}
 	if spooled {
-		if err = os.Remove(jm.completionSpoolPath(job.ID)); err != nil && !os.IsNotExist(err) {
+		if err = jm.removeCompletionSpool(job.ID); err != nil {
 			return err
 		}
 	}

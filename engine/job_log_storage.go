@@ -27,6 +27,7 @@ func (e *Engine) logHardLimit() int64 {
 }
 
 func (jm *JobManager) jobLogLimit(job *types.Job) func() int64 {
+	jobID, initialLimit := job.ID, job.LogMaxSize
 	inherited := jm.engine.config.JobLogMaxSize
 	if job.Category != "" {
 		if c, ok := jm.engine.GetCategory(job.Category); ok && c.LogMaxSize > 0 {
@@ -34,9 +35,9 @@ func (jm *JobManager) jobLogLimit(job *types.Job) func() int64 {
 		}
 	}
 	return func() int64 {
-		limit := job.LogMaxSize
+		limit := initialLimit
 		jm.engine.mu.RLock()
-		if live := jm.engine.activeJobs[job.ID]; live != nil {
+		if live := jm.engine.activeJobs[jobID]; live != nil {
 			limit = live.LogMaxSize
 		}
 		jm.engine.mu.RUnlock()

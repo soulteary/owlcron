@@ -211,6 +211,27 @@ func (jm *JobManager) newJobLogWriter(file *os.File, limit func() int64, onError
 	return w, err
 }
 
+// Reject oversized allocations before building their in-memory file contents.
+// The eventual writer still checks capacity while holding the budget lock.
+func (e *Engine) checkSpoolWriteSize(size int64) error {
+	b := e.spoolBudget
+	if b == nil {
+		return nil
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if !b.initialized || size > b.maximum-b.used {
+		if err := b.refreshLocked(context.Background()); err != nil {
+			return err
+		}
+	}
+	if size > b.maximum-b.used {
+		b.blocked = true
+		return ErrSpoolCapacityExceeded
+	}
+	return nil
+}
+
 // writeSpoolFile accounts for the temporary replacement as well as the old
 // record until rename. A sync/rename error is reconciled from the final file;
 // an error never causes the previous recovery record to be deleted.

@@ -99,14 +99,9 @@ func processRemoteStorageOutageCompletionSpool(t *testing.T, configure func(...*
 	if err := os.WriteFile(release, nil, 0600); err != nil {
 		t.Fatal(err)
 	}
-	spool := filepath.Join(f.Config.LogDir, "jobs", id+".completed.json")
 	awaitProcess(t, 45*time.Second, "completion durably spooled while storage paused", func() bool {
-		data, err := os.ReadFile(spool)
-		if err != nil {
-			return false
-		}
-		var job map[string]any
-		return json.Unmarshal(data, &job) == nil && job["complete"] == true && job["code"] == float64(0)
+		job, err := readProcessCompletionSpool(f.Config.LogDir, id)
+		return err == nil && job.Complete && job.Code == 0
 	})
 	p.Kill(t)
 	control("unpause")
@@ -121,7 +116,7 @@ func processRemoteStorageOutageCompletionSpool(t *testing.T, configure func(...*
 	if err == nil {
 		t.Fatal("stopped real storage accepted a read")
 	}
-	if _, err := os.Stat(spool); err != nil {
+	if _, err := readProcessCompletionSpool(f.Config.LogDir, id); err != nil {
 		t.Fatal("daemon death discarded completion spool")
 	}
 	control("start")
@@ -138,7 +133,7 @@ func processRemoteStorageOutageCompletionSpool(t *testing.T, configure func(...*
 	ready()
 	f.Start(t)
 	awaitProcess(t, 25*time.Second, "spool, remote log, history and notification recovered", func() bool {
-		if _, err := os.Stat(spool); !os.IsNotExist(err) {
+		if !processCompletionSpoolsRemoved(f.Config.LogDir, id) {
 			return false
 		}
 		r := f.Request(t, "/api/app/get_job_status", map[string]any{"id": id})
