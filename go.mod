@@ -9,7 +9,7 @@ require (
 	github.com/aws/smithy-go v1.28.6
 	github.com/couchbase/gocb/v2 v2.13.0
 	github.com/gorilla/websocket v1.5.3
-	github.com/soulteary/http-kit/v2 v2.0.3-0.20261024164327-7b390f25a5e8
+	github.com/soulteary/http-kit/v2 v2.1.0
 	go.uber.org/zap v1.28.0
 	golang.org/x/crypto v0.58.0
 	golang.org/x/net v0.61.0
