@@ -42,6 +42,12 @@ export async function checkSingleNodePages(page, responseFor, {base, session, po
   await page.waitForFunction(() => ['browser_chain_success', 'browser_chain_error'].every(id =>
     app.schedule.some(event => event.id === id)));
   await okay('app/update_event', {id:'browser_smoke',chain:'',chain_error:''});
+  // The API response precedes the schedule's WebSocket update. Editing the old
+  // array fixture renders API-managed chains without the scalar select controls.
+  await page.waitForFunction(() => {
+    const event = app.schedule.find(event => event.id === 'browser_smoke');
+    return event && event.chain === '' && event.chain_error === '';
+  });
   await page.goto(base + '/#Schedule?sub=edit_event&id=browser_smoke');
   await page.locator('#fe_ee_timezone').selectOption('America/New_York');
   await page.locator('#fe_ee_timing').selectOption('daily');
