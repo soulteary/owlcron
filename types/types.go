@@ -388,6 +388,8 @@ type Config struct {
 	StorageEngine     string                 `json:"storage_engine"`
 	StorageBaseDir    string                 `json:"storage_base_dir"`
 	StorageOptions    map[string]interface{} `json:"storage_options,omitempty"`
+	BlobStorage       *BlobStorageConfig     `json:"blob_storage,omitempty"`
+	JobLogStorage     *JobLogStorageConfig   `json:"job_log_storage,omitempty"`
 	WebHookConfigKeys []string               `json:"web_hook_config_keys,omitempty"`
 	WebHookCustomData map[string]interface{} `json:"web_hook_custom_data,omitempty"`
 }
