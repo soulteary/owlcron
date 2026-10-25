@@ -23,7 +23,11 @@ func notificationTestStore(t *testing.T) storage.Storage {
 }
 func notificationTestQueue(t *testing.T, s storage.Storage, cfg NotificationQueueConfig, deliver func(context.Context, *Notification) error) *NotificationQueue {
 	t.Helper()
-	q, err := NewNotificationQueue(s, cfg, deliver)
+	queueStore, err := newNotificationStore(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	q, err := NewNotificationQueue(queueStore, cfg, deliver)
 	if err != nil {
 		t.Fatal(err)
 	}

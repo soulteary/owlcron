@@ -14,8 +14,9 @@ import (
 	"github.com/couchbase/gocb/v2"
 )
 
-// PrefixKeyLister enumerates live keys in one namespace without scanning other
-// namespaces or fetching their record bodies.
+// PrefixKeyLister enumerates live keys in one namespace. Implementations may
+// read record bodies to check expiry. Enumeration is not a consistent snapshot
+// or a paged API; callers must handle keys changing or disappearing afterward.
 type PrefixKeyLister interface {
 	ListKeysPrefix(context.Context, string) ([]string, error)
 }

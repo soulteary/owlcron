@@ -18,50 +18,15 @@ import (
 const notificationPrefix = "notifications/"
 const notificationPayloadLimit = 256 * 1024
 
-var ErrNotificationConflict = errors.New("notification ID already has different content")
 var errNotificationSkip = errors.New("notification is not due")
 
-type Notification struct {
-	ID          string          `json:"id"`
-	Kind        string          `json:"kind"`
-	Payload     json.RawMessage `json:"payload,omitempty"`
-	ContentHash string          `json:"content_hash"`
-	State       string          `json:"state"`
-	Attempts    int             `json:"attempts"`
-	NextAttempt int64           `json:"next_attempt,omitempty"`
-	LeaseUntil  int64           `json:"lease_until,omitempty"`
-	LeaseToken  string          `json:"lease_token,omitempty"`
-	CreatedAt   int64           `json:"created_at"`
-	UpdatedAt   int64           `json:"updated_at"`
-	LastError   string          `json:"last_error,omitempty"`
-}
-
-type NotificationDeliveryError struct {
-	Err        error
-	Permanent  bool
-	Deferred   bool
-	RetryAfter time.Duration
-}
-
-func (e *NotificationDeliveryError) Error() string {
-	if e.Err == nil {
-		return "notification delivery failed"
-	}
-	return e.Err.Error()
-}
-func (e *NotificationDeliveryError) Unwrap() error { return e.Err }
-
-type NotificationQueueConfig struct {
-	Workers, BatchSize, MaxAttempts                     int
-	DeliveryTimeout, LeaseDuration, RetryBase, RetryMax time.Duration
-}
-
+// NotificationQueue retains the existing notifications/ key layout and record
+// format. Business admission, local spooling and transport selection live in
+// notification_integration.go, outside this persistence and retry mechanism.
 type NotificationQueue struct {
-	store       storage.Storage
-	atomic      storage.AtomicStorage
-	lister      storage.PrefixKeyLister
+	store       NotificationStore
 	cfg         NotificationQueueConfig
-	deliver     func(context.Context, *Notification) error
+	deliver     NotificationDeliverer
 	redactError func(string) string
 	slots       chan struct{}
 	scanMu      sync.Mutex
@@ -69,13 +34,10 @@ type NotificationQueue struct {
 	now         func() time.Time
 }
 
-func NewNotificationQueue(store storage.Storage, cfg NotificationQueueConfig, deliver func(context.Context, *Notification) error) (*NotificationQueue, error) {
-	atomic, ok := store.(storage.AtomicStorage)
-	if !ok {
-		return nil, storage.ErrUnsupported
-	}
-	lister, ok := store.(storage.PrefixKeyLister)
-	if !ok {
+// NewNotificationQueue constructs a queue without starting a background worker.
+// Callers schedule RunOnce and own cancellation and error reporting.
+func NewNotificationQueue(store NotificationStore, cfg NotificationQueueConfig, deliver NotificationDeliverer) (*NotificationQueue, error) {
+	if store == nil {
 		return nil, storage.ErrUnsupported
 	}
 	if deliver == nil {
@@ -105,13 +67,16 @@ func NewNotificationQueue(store storage.Storage, cfg NotificationQueueConfig, de
 	if cfg.Workers < 1 || cfg.Workers > 64 || cfg.BatchSize < 1 || cfg.BatchSize > 10000 || cfg.MaxAttempts < 1 || cfg.MaxAttempts > 100 || cfg.DeliveryTimeout <= 0 || cfg.LeaseDuration <= cfg.DeliveryTimeout || cfg.RetryBase <= 0 || cfg.RetryMax < cfg.RetryBase {
 		return nil, errors.New("invalid notification queue limits")
 	}
-	return &NotificationQueue{store: store, atomic: atomic, lister: lister, cfg: cfg, deliver: deliver, slots: make(chan struct{}, cfg.Workers), now: time.Now}, nil
+	return &NotificationQueue{store: store, cfg: cfg, deliver: deliver, slots: make(chan struct{}, cfg.Workers), now: time.Now}, nil
 }
 
 func notificationKey(id string) string {
 	sum := sha256.Sum256([]byte(id))
 	return notificationPrefix + hex.EncodeToString(sum[:])
 }
+
+// Enqueue durably admits the first payload for an ID and Kind. An uncertain
+// storage result is returned to the caller; replay must use the same identity.
 func (q *NotificationQueue) Enqueue(ctx context.Context, id, kind string, payload any) error {
 	if id == "" || len(id) > 1024 || kind == "" || len(kind) > 64 {
 		return errors.New("invalid notification identity")
@@ -126,7 +91,7 @@ func (q *NotificationQueue) Enqueue(ctx context.Context, id, kind string, payloa
 	hash := sha256.Sum256(append([]byte(kind+"\x00"), data...))
 	digest := hex.EncodeToString(hash[:])
 	now := q.now().UnixNano()
-	err = q.atomic.Update(ctx, notificationKey(id), func(old []byte) ([]byte, error) {
+	err = q.store.Update(ctx, notificationKey(id), func(old []byte) ([]byte, error) {
 		if len(old) > 0 {
 			var existing Notification
 			if err := json.Unmarshal(old, &existing); err != nil {
@@ -164,7 +129,7 @@ func (q *NotificationQueue) List(ctx context.Context, state string, limit int) (
 	if limit <= 0 || limit > 1000 {
 		limit = 100
 	}
-	keys, err := q.lister.ListKeysPrefix(ctx, notificationPrefix)
+	keys, err := q.store.ListKeysPrefix(ctx, notificationPrefix)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +157,7 @@ func (q *NotificationQueue) List(ctx context.Context, state string, limit int) (
 }
 
 func (q *NotificationQueue) RetryDead(ctx context.Context, id string) error {
-	return q.atomic.Update(ctx, notificationKey(id), func(data []byte) ([]byte, error) {
+	return q.store.Update(ctx, notificationKey(id), func(data []byte) ([]byte, error) {
 		if len(data) == 0 {
 			return nil, storage.ErrNotFound
 		}
@@ -214,12 +179,13 @@ func (q *NotificationQueue) RetryDead(ctx context.Context, id string) error {
 	})
 }
 
-// RunOnce scans a bounded rotating batch. Claims are durable and fenced, so
+// RunOnce enumerates the namespace and processes a bounded rotating batch.
+// Enumeration itself is not bounded. Claims are durable and fenced, so
 // multiple processes may run this method against the same storage backend.
 // Delivery is at least once: a crash after acceptance but before durable ack
 // can cause another attempt. Transports should include the stable ID.
 func (q *NotificationQueue) RunOnce(ctx context.Context) error {
-	keys, err := q.lister.ListKeysPrefix(ctx, notificationPrefix)
+	keys, err := q.store.ListKeysPrefix(ctx, notificationPrefix)
 	if err != nil {
 		return err
 	}
@@ -278,7 +244,7 @@ func (q *NotificationQueue) process(ctx context.Context, key string) error {
 	token := hex.EncodeToString(random[:])
 	now := q.now()
 	var claimed Notification
-	err := q.atomic.Update(ctx, key, func(data []byte) ([]byte, error) {
+	err := q.store.Update(ctx, key, func(data []byte) ([]byte, error) {
 		claimed = Notification{}
 		if len(data) == 0 {
 			return nil, errNotificationSkip
@@ -325,7 +291,7 @@ func (q *NotificationQueue) process(ctx context.Context, key string) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
-	return q.atomic.Update(ctx, key, func(data []byte) ([]byte, error) {
+	return q.store.Update(ctx, key, func(data []byte) ([]byte, error) {
 		var n Notification
 		if err := json.Unmarshal(data, &n); err != nil {
 			return nil, err

@@ -27,6 +27,7 @@
 - [运维与指标](operations.md)：采集、告警和恢复流程。
 - [已知限制](limitations.md)：可靠性边界及不支持的场景。
 - [架构](architecture.md)：模块职责、持久化与恢复。
+- [持久投递队列](delivery-queue.md)：存储与投递契约、故障恢复和拆分边界。
 
 ## 参与开发
 

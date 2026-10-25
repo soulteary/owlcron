@@ -217,7 +217,12 @@ func NewEngine(config *types.Config, logger *zap.Logger) (*Engine, error) {
 		return nil, err
 	}
 
-	engine.notifications, err = NewNotificationQueue(engine.storage, NotificationQueueConfig{
+	notificationStore, err := newNotificationStore(engine.storage)
+	if err != nil {
+		cancel()
+		return nil, err
+	}
+	engine.notifications, err = NewNotificationQueue(notificationStore, NotificationQueueConfig{
 		Workers: config.NotificationWorkers, MaxAttempts: config.NotificationMaxAttempts,
 		DeliveryTimeout: time.Duration(max(config.SMTPTimeoutSeconds, 30)) * time.Second,
 		LeaseDuration:   time.Duration(max(config.SMTPTimeoutSeconds, 30)+30) * time.Second,
