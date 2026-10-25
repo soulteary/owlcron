@@ -36,15 +36,25 @@ type Engine struct {
 	multi      *types.MultiServer
 
 	// 组件
-	scheduler           *Scheduler
-	jobManager          *JobManager
-	queue               *Queue
-	comm                *Communication
-	discovery           *Discovery
-	storage             storage.Storage
-	notifications       *NotificationQueue
-	notificationRunning bool
-	notificationSpoolMu sync.Mutex
+	scheduler              *Scheduler
+	jobManager             *JobManager
+	queue                  *Queue
+	comm                   *Communication
+	discovery              *Discovery
+	storage                storage.Storage
+	jobLogs                *storage.JobLogRepository
+	blobStores             *storage.BlobRegistry
+	storageLayout          storage.StorageLayout
+	spoolBudget            *nodeSpoolBudget
+	splitStats             splitStorageStats
+	blobGCCursors          map[string]string
+	blobGCStore            int
+	blobGCMu               sync.Mutex
+	blobMaintenanceRunning bool
+	lastBlobMaintenance    time.Time
+	notifications          *NotificationQueue
+	notificationRunning    bool
+	notificationSpoolMu    sync.Mutex
 
 	// 互斥锁
 	mu                        sync.RWMutex
@@ -171,6 +181,19 @@ func NewEngine(config *types.Config, logger *zap.Logger) (*Engine, error) {
 		eventChan:     make(chan *types.Event, 100),
 		shutdownChan:  make(chan struct{}),
 	}
+	constructed := false
+	defer func() {
+		if constructed {
+			return
+		}
+		cancel()
+		if engine.blobStores != nil {
+			_ = engine.blobStores.Close()
+		}
+		if closer, ok := engine.storage.(interface{ Close() error }); ok {
+			_ = closer.Close()
+		}
+	}()
 
 	// 初始化组件
 	engine.scheduler, err = NewScheduler(engine, logger)
@@ -199,27 +222,16 @@ func NewEngine(config *types.Config, logger *zap.Logger) (*Engine, error) {
 	}
 
 	// 初始化存储系统
-	storageEngine := config.StorageEngine
-	if storageEngine == "" {
-		storageEngine = "Filesystem"
-	}
-	storageBaseDir := config.StorageBaseDir
-	if storageBaseDir == "" {
-		storageBaseDir = "data"
-	}
-	storageConfig := &storage.StorageConfig{
-		Engine:  storageEngine,
-		BaseDir: storageBaseDir,
-		Options: config.StorageOptions,
-	}
-	engine.storage, err = storage.NewStorage(storageConfig)
+	engine.storage, err = storage.OpenConfiguredMetadata(config)
 	if err != nil {
+		return nil, err
+	}
+	if err = engine.initializeLogStorage(ctx); err != nil {
 		return nil, err
 	}
 
 	notificationStore, err := newNotificationStore(engine.storage)
 	if err != nil {
-		cancel()
 		return nil, err
 	}
 	engine.notifications, err = NewNotificationQueue(notificationStore, NotificationQueueConfig{
@@ -228,10 +240,10 @@ func NewEngine(config *types.Config, logger *zap.Logger) (*Engine, error) {
 		LeaseDuration:   time.Duration(max(config.SMTPTimeoutSeconds, 30)+30) * time.Second,
 	}, engine.deliverNotification)
 	if err != nil {
-		cancel()
 		return nil, err
 	}
 	engine.notifications.redactError = engine.RedactSensitiveText
+	constructed = true
 	return engine, nil
 }
 
@@ -251,6 +263,15 @@ func (e *Engine) Startup() error {
 	defer func() { e.mu.Lock(); e.starting = false; e.mu.Unlock() }()
 	if err := e.createDirectories(); err != nil {
 		return err
+	}
+	// Check layout and binding before account, history or recovery mutations.
+	if err := e.validateLogStorage(e.ctx); err != nil {
+		return err
+	}
+	if e.spoolBudget != nil {
+		if err := e.spoolBudget.refresh(e.ctx); err != nil {
+			return fmt.Errorf("inspect local recovery spool: %w", err)
+		}
 	}
 	if err := e.loadStateFromStorage(); err != nil && !errors.Is(err, storage.ErrNotFound) {
 		return err
@@ -357,6 +378,9 @@ func (e *Engine) Shutdown() error {
 			if err := closer.Close(); err != nil {
 				e.shutdownErr = errors.Join(e.shutdownErr, fmt.Errorf("close storage: %w", err))
 			}
+		}
+		if e.blobStores != nil {
+			e.shutdownErr = errors.Join(e.shutdownErr, e.blobStores.Close())
 		}
 		close(e.shutdownChan)
 	})
@@ -548,6 +572,7 @@ func (e *Engine) tick() {
 	e.runNotifications()
 	now := time.Now().Unix()
 	e.runHistoryMaintenanceIfDue(time.Unix(now, 0))
+	e.runSplitMaintenanceIfDue(time.Unix(now, 0))
 
 	e.mu.RLock()
 	isMaster := e.multi.Master

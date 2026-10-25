@@ -261,7 +261,12 @@ func (h *WebSocketHandler) handleNodeMessage(client *ws.Client, message *ws.Mess
 			return
 		}
 		if err := h.engine.GetJobManager().LaunchRemoteJob(&job); err != nil {
-			h.sendError(client, "Job launch failed: "+err.Error())
+			// The socket write only confirms frame delivery. Correlate a refusal
+			// before execution with the master's exact dispatch reservation.
+			h.sendResponse(client, "job_rejected", map[string]interface{}{
+				"id": job.ID, "dispatch_token": job.DispatchToken,
+				"reason": h.engine.RedactSensitiveText("Job launch failed: " + err.Error()),
+			})
 		}
 	case "abort_job":
 		var data struct {

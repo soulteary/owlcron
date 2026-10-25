@@ -58,6 +58,12 @@ func Run(args []string, config *types.Config, logger *zap.Logger) (handled bool,
 		return true, cmdStorageMigrate(args[1:], config, logger)
 	case "storage-repair":
 		return true, cmdStorageRepair(config, logger)
+	case "storage-init":
+		return true, cmdSplitStorageInit(args[1:], config)
+	case "storage-verify":
+		return true, cmdSplitStorageVerify(args[1:], config)
+	case "storage-preflight":
+		return true, cmdStoragePreflight(args[1:], config)
 	}
 	return true, fmt.Errorf("unknown command %q; use help to list commands", args[0])
 }
@@ -77,6 +83,17 @@ Commands:
   storage-cli <action>  Storage operations (get/put/delete/list/list_get)
   storage-migrate <dir> Migrate data to a new storage directory
   storage-repair        Check and repair storage integrity
+  storage-init --offline
+                        Initialize a fresh split storage namespace
+  storage-verify        Verify all referenced split log objects
+  storage-preflight --offline
+                        Check an offline source before backup or migration
+  export --offline [file]
+                        Export a complete split backup when blob_storage is set
+  import --offline <file>
+                        Restore a complete split backup into a fresh namespace
+  storage-migrate --offline --target-config <file> [--resume]
+                        Copy legacy data into split storage without changing source
   help                  Show this help
 
 Usage:
@@ -124,6 +141,9 @@ func cmdSetup(config *types.Config, logger *zap.Logger) (err error) {
 	}
 	defer finishStorage(store, &err)
 	ctx := context.Background()
+	if err := validateStorageCommandMutation(ctx, store, config); err != nil {
+		return err
+	}
 	hostname := config.Hostname
 	if hostname == "" {
 		hostname, _ = os.Hostname()
@@ -268,6 +288,9 @@ func writeBackupFile(path string, write func(io.Writer) error) error {
 	return dir.Sync()
 }
 func cmdExport(args []string, config *types.Config, logger *zap.Logger) (err error) {
+	if config.BlobStorage != nil {
+		return cmdSplitExport(args, config)
+	}
 	store, err := openStorage(config)
 	if err != nil {
 		return fmt.Errorf("open storage: %w", err)
@@ -344,6 +367,9 @@ func readBackup(data []byte) (*storage.Backup, error) {
 	return &backup, nil
 }
 func cmdImport(args []string, config *types.Config, logger *zap.Logger) (err error) {
+	if config.BlobStorage != nil {
+		return cmdSplitImport(args, config)
+	}
 	if len(args) < 1 {
 		return fmt.Errorf("usage: import <file>")
 	}
@@ -372,6 +398,9 @@ func cmdMaint(config *types.Config, logger *zap.Logger) (err error) {
 		return fmt.Errorf("open storage: %w", err)
 	}
 	defer finishStorage(store, &err)
+	if err := validateStorageCommandMutation(context.Background(), store, config); err != nil {
+		return err
+	}
 	if err = storage.UpdateList(context.Background(), store, "logs/activity", func(items []interface{}) ([]interface{}, error) {
 		if len(items) > 10000 {
 			return items[:10000], nil
@@ -418,9 +447,15 @@ Actions:
 		if len(args) < 3 {
 			return fmt.Errorf("usage: storage-cli put <key> <file>")
 		}
+		if err := guardSplitStorageKey(ctx, store, config, args[1]); err != nil {
+			return err
+		}
 		data, err := os.ReadFile(args[2])
 		if err != nil {
 			return fmt.Errorf("read value: %w", err)
+		}
+		if err := guardSplitStorageValue(args[1], data); err != nil {
+			return err
 		}
 		if err := store.Put(ctx, args[1], data); err != nil {
 			return fmt.Errorf("put %s: %w", args[1], err)
@@ -430,6 +465,9 @@ Actions:
 	case "delete":
 		if len(args) < 2 {
 			return fmt.Errorf("usage: storage-cli delete <key>")
+		}
+		if err := guardSplitStorageKey(ctx, store, config, args[1]); err != nil {
+			return err
 		}
 		if err := store.Delete(ctx, args[1]); err != nil {
 			return fmt.Errorf("delete %s: %w", args[1], err)
@@ -463,6 +501,11 @@ Actions:
 }
 
 func cmdStorageMigrate(args []string, config *types.Config, logger *zap.Logger) (err error) {
+	for _, arg := range args {
+		if arg == "--target-config" || arg == "--offline" || arg == "--resume" {
+			return cmdSplitStorageMigrate(args, config)
+		}
+	}
 	if len(args) < 1 {
 		return fmt.Errorf("usage: storage-migrate <target-dir>")
 	}
@@ -495,6 +538,9 @@ func cmdStorageRepair(config *types.Config, logger *zap.Logger) (err error) {
 
 	defer finishStorage(store, &err)
 	ctx := context.Background()
+	if err := validateStorageCommandMutation(ctx, store, config); err != nil {
+		return err
+	}
 	lists := []string{"users", "api_keys", "categories", "plugins", "server_groups", "servers", "events", "logs/activity", "logs/completed"}
 
 	repaired := 0
@@ -557,17 +603,5 @@ func cmdStorageRepair(config *types.Config, logger *zap.Logger) (err error) {
 }
 
 func openStorage(config *types.Config) (storage.Storage, error) {
-	eng := config.StorageEngine
-	if eng == "" {
-		eng = "Filesystem"
-	}
-	baseDir := config.StorageBaseDir
-	if baseDir == "" {
-		baseDir = "data"
-	}
-	return storage.NewStorage(&storage.StorageConfig{
-		Engine:  eng,
-		BaseDir: baseDir,
-		Options: config.StorageOptions,
-	})
+	return storage.OpenConfiguredMetadata(config)
 }

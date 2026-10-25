@@ -32,6 +32,7 @@ type JobManager struct {
 	logger          *zap.Logger
 	mu              sync.RWMutex
 	finishMu        sync.Mutex
+	remoteLaunchMu  sync.Mutex
 	logMu           sync.Mutex
 	logLocks        [64]sync.Mutex
 	logUploadSlots  chan struct{}
@@ -109,6 +110,9 @@ func (jm *JobManager) LaunchQueuedJob(event *types.Event, timestamp int64, token
 func (jm *JobManager) launchJobWithToken(event *types.Event, timestamp int64, token string) ([]string, error) {
 	if jm.engine.ctx.Err() != nil {
 		return nil, fmt.Errorf("engine is shutting down")
+	}
+	if err := jm.engine.checkLogAdmission(jm.engine.ctx); err != nil {
+		return nil, err
 	}
 	if !jm.engine.EnsureLeadership() {
 		return nil, fmt.Errorf("current node does not own leadership")
@@ -254,7 +258,7 @@ func (jm *JobManager) dispatchJob(job *types.Job) {
 		jm.launchLocalJob(job)
 	} else if err := jm.sendJobToRemoteServer(job.Hostname, job); err != nil {
 		job.Code = 1
-		job.Description = err.Error()
+		job.Description = boundedCompletionDiagnostic(err.Error())
 		jm.finishLocalJob(job)
 	}
 }
@@ -288,10 +292,29 @@ func (jm *JobManager) createJob(event *types.Event, hostname string, timestamp i
 
 // LaunchRemoteJob executes the authenticated master's immutable job snapshot.
 func (jm *JobManager) LaunchRemoteJob(job *types.Job) error {
+	if job == nil || job.ID == "" || !regexp.MustCompile(`^[a-zA-Z0-9_-]+$`).MatchString(job.ID) {
+		return fmt.Errorf("invalid remote job")
+	}
+	// Serialize admission with duplicate frames. Once a job is accepted, a
+	// later quota/backend failure must not report that same execution refused.
+	jm.remoteLaunchMu.Lock()
+	locked := true
+	defer func() {
+		if locked {
+			jm.remoteLaunchMu.Unlock()
+		}
+	}()
+	jm.engine.mu.RLock()
+	_, active := jm.engine.activeJobs[job.ID]
+	_, completed := jm.engine.deadJobs[job.ID]
+	jm.engine.mu.RUnlock()
+	if active || completed {
+		return nil
+	}
 	if jm.engine.ctx.Err() != nil {
 		return fmt.Errorf("engine is shutting down")
 	}
-	if job == nil || job.Detached || job.ID == "" || job.Command == "" || !regexp.MustCompile(`^[a-zA-Z0-9_-]+$`).MatchString(job.ID) {
+	if job.Detached || job.Command == "" {
 		return fmt.Errorf("invalid remote job")
 	}
 	job = types.CloneJob(job)
@@ -314,6 +337,9 @@ func (jm *JobManager) LaunchRemoteJob(job *types.Job) error {
 	} else if deleted {
 		return nil
 	}
+	if err := jm.engine.checkLogAdmission(jm.engine.ctx); err != nil {
+		return err
+	}
 	jm.engine.mu.Lock()
 	if _, ok := jm.engine.activeJobs[job.ID]; ok {
 		jm.engine.mu.Unlock()
@@ -325,11 +351,14 @@ func (jm *JobManager) LaunchRemoteJob(job *types.Job) error {
 	}
 	jm.engine.activeJobs[job.ID] = types.CloneJob(job)
 	jm.engine.mu.Unlock()
+	jm.remoteLaunchMu.Unlock()
+	locked = false
 	jm.launchLocalJob(job)
 	return nil
 }
 func (jm *JobManager) launchLocalJob(input *types.Job) {
 	job := types.CloneJob(input)
+	jobID := job.ID
 	if job.LogFile == "" {
 		job.LogFile = filepath.Join(jm.engine.config.LogDir, "jobs", job.ID+".log")
 	}
@@ -363,7 +392,7 @@ func (jm *JobManager) launchLocalJob(input *types.Job) {
 		cancel()
 		job.Code = 1
 		job.AbortReason = "Failed to persist active job"
-		job.Description = err.Error()
+		job.Description = boundedCompletionDiagnostic(err.Error())
 		jm.finishLocalJob(job)
 		return
 	}
@@ -399,13 +428,9 @@ func (jm *JobManager) launchLocalJob(input *types.Job) {
 				case <-timeoutDone:
 					return
 				case <-ticker.C:
-					current, ok := jm.engine.LookupJob(job.ID)
+					current, ok := jm.engine.LookupJob(jobID)
 					if ok && current.Timeout > 0 && time.Since(time.Unix(0, int64(current.TimeStart*1e9))) >= time.Duration(current.Timeout)*time.Second {
-						jm.engine.mu.Lock()
-						if live := jm.engine.activeJobs[job.ID]; live != nil {
-							live.AbortReason = fmt.Sprintf("Exceeded maximum run time (%d seconds)", current.Timeout)
-						}
-						jm.engine.mu.Unlock()
+						_, _ = jm.prepareJobAbort(jobID, fmt.Sprintf("Exceeded maximum run time (%d seconds)", current.Timeout))
 						cancel()
 						return
 					}
@@ -415,14 +440,14 @@ func (jm *JobManager) launchLocalJob(input *types.Job) {
 
 		if err := jm.createLogFile(job); err != nil {
 			job.Code = 1
-			job.Description = err.Error()
+			job.Description = boundedCompletionDiagnostic(err.Error())
 			jm.finishLocalJob(job)
 			return
 		}
 		logFile, err := os.OpenFile(job.LogFile, os.O_APPEND|os.O_WRONLY, 0600)
 		if err != nil {
 			job.Code = 1
-			job.Description = err.Error()
+			job.Description = boundedCompletionDiagnostic(err.Error())
 			jm.finishLocalJob(job)
 			return
 		}
@@ -441,22 +466,18 @@ func (jm *JobManager) launchLocalJob(input *types.Job) {
 		if err := configureCredential(proc, job); err != nil {
 			logFile.Close()
 			job.Code = 1
-			job.Description = err.Error()
+			job.Description = boundedCompletionDiagnostic(err.Error())
 			jm.finishLocalJob(job)
 			return
 		}
-		logWriter, writerErr := newBoundedLogWriter(logFile, jm.jobLogLimit(job), func(err error) {
-			jm.engine.mu.Lock()
-			if current := jm.engine.activeJobs[job.ID]; current != nil {
-				current.AbortReason = err.Error()
-			}
-			jm.engine.mu.Unlock()
+		logWriter, writerErr := jm.newJobLogWriter(logFile, jm.jobLogLimit(job), func(err error) {
+			_, _ = jm.prepareJobAbort(jobID, boundedCompletionDiagnostic(err.Error()))
 			cancel()
 		})
 		if writerErr != nil {
 			logFile.Close()
 			job.Code = 1
-			job.Description = writerErr.Error()
+			job.Description = boundedCompletionDiagnostic(writerErr.Error())
 			jm.finishLocalJob(job)
 			return
 		}
@@ -479,10 +500,17 @@ func (jm *JobManager) launchLocalJob(input *types.Job) {
 			if !jm.engine.config.AllowEventUpdatesFromJobs {
 				delete(data, "update_event")
 			}
-			applyPluginUpdate(job, data)
-			if err := jm.publishJob(job); err != nil {
-				cancel()
+			candidate := types.CloneJob(job)
+			applyPluginUpdate(candidate, data)
+			if err := jm.publishJob(candidate); err != nil {
+				if !candidate.Complete || errors.Is(err, errCompletionCheckpoint) {
+					_, _ = jm.prepareJobAbort(jobID, "Cannot preserve completion recovery checkpoint")
+					cancel()
+					return
+				}
+				jm.logger.Warn("Completed plugin result retained locally during storage outage", zap.String("job_id", jobID), zap.Error(err))
 			}
+			job = candidate
 		})
 		if proc.Process != nil {
 			_ = syscall.Kill(-proc.Process.Pid, syscall.SIGKILL)
@@ -499,7 +527,7 @@ func (jm *JobManager) launchLocalJob(input *types.Job) {
 		// Abort metadata is owned by the API/monitor and copied back after the child exits.
 		jm.engine.mu.RLock()
 		if current := jm.engine.activeJobs[job.ID]; current != nil {
-			job.AbortReason = current.AbortReason
+			job.AbortReason = boundedCompletionDiagnostic(current.AbortReason)
 			cp := types.CloneJob(current)
 			job.CPU = cp.CPU
 			job.Mem = cp.Mem
@@ -511,7 +539,7 @@ func (jm *JobManager) launchLocalJob(input *types.Job) {
 		jm.engine.mu.RUnlock()
 		if runErr != nil {
 			job.Code = 1
-			job.Description = runErr.Error()
+			job.Description = boundedCompletionDiagnostic(runErr.Error())
 			var exit *exec.ExitError
 			if errors.As(runErr, &exit) {
 				job.Code = exit.ExitCode()
@@ -529,10 +557,8 @@ func (jm *JobManager) launchLocalJob(input *types.Job) {
 			job.Code = 1
 			job.Description = "Job Aborted: " + job.AbortReason
 		}
-		// Release ownership before a retry reserves this same job ID.
-		jm.mu.Lock()
-		delete(jm.running, job.ID)
-		jm.mu.Unlock()
+		// finishLocalJob releases execution ownership under finishMu, after
+		// maintenance can no longer mistake a live report for crash recovery.
 		jm.finishLocalJob(job)
 	}()
 }
@@ -629,6 +655,20 @@ func (jm *JobManager) publishJob(job *types.Job) error {
 		snapshot.Mem = cp.Mem
 		snapshot.FlaggedTime = current.FlaggedTime
 	}
+	jm.engine.mu.Unlock()
+	if err := jm.ensureCompletionReservation(snapshot); err != nil {
+		return fmt.Errorf("%w: %w", errCompletionCheckpoint, err)
+	}
+	if snapshot.Hostname == "local" || snapshot.Hostname == jm.getHostname() {
+		phase := completionPhaseActive
+		if snapshot.Complete {
+			phase = completionPhaseReported
+		}
+		if err := jm.writeCompletionCheckpoint(snapshot, phase); err != nil {
+			return fmt.Errorf("%w: %w", errCompletionCheckpoint, err)
+		}
+	}
+	jm.engine.mu.Lock()
 	jm.engine.activeJobs[job.ID] = types.CloneJob(snapshot)
 	jm.engine.mu.Unlock()
 	if err := jm.persistActiveJob(snapshot); err != nil {
@@ -647,6 +687,17 @@ func (jm *JobManager) CompleteRemoteJob(job *types.Job) bool {
 
 // finishLocalJob 完成本地任务
 func (jm *JobManager) finishLocalJob(job *types.Job) {
+	jm.finishJob(job, "")
+}
+
+func (jm *JobManager) finishRejectedRemoteJob(hostname, id, token, reason string) {
+	if token == "" {
+		return
+	}
+	jm.finishJob(&types.Job{ID: id, Hostname: hostname, Code: 1, Description: reason}, token)
+}
+
+func (jm *JobManager) finishJob(job *types.Job, rejectedToken string) {
 	jm.finishMu.Lock()
 	locked := true
 	defer func() {
@@ -654,6 +705,21 @@ func (jm *JobManager) finishLocalJob(job *types.Job) {
 			jm.finishMu.Unlock()
 		}
 	}()
+	if rejectedToken != "" {
+		// Check while holding the same lock that completes/retries a job. Old
+		// refusals, another worker's IDs and already-finished attempts are inert.
+		jm.engine.mu.RLock()
+		current := jm.engine.activeJobs[job.ID]
+		if current == nil || current.Complete || current.Hostname != job.Hostname || current.DispatchToken != rejectedToken {
+			jm.engine.mu.RUnlock()
+			return
+		}
+		reason := job.Description
+		job = types.CloneJob(current)
+		jm.engine.mu.RUnlock()
+		job.Code = 1
+		job.Description = reason
+	}
 	jm.mu.Lock()
 	delete(jm.running, job.ID)
 	jm.mu.Unlock()
@@ -663,9 +729,9 @@ func (jm *JobManager) finishLocalJob(job *types.Job) {
 			mergeRuntimeJob(job, current)
 		}
 		if current.AbortReason != "" {
-			job.AbortReason = current.AbortReason
+			job.AbortReason = boundedCompletionDiagnostic(current.AbortReason)
 			job.Code = 1
-			job.Description = "Job Aborted: " + current.AbortReason
+			job.Description = "Job Aborted: " + job.AbortReason
 		}
 	}
 	jm.engine.mu.RUnlock()
@@ -716,6 +782,7 @@ func (jm *JobManager) finishLocalJob(job *types.Job) {
 		retryJob.TimeEnd = 0
 		retryJob.Elapsed = 0
 		retryJob.PID = 0
+		retryJob.DispatchToken = ""
 		retryJob.Progress = 0
 		retryJob.CPU = nil
 		retryJob.Mem = nil
@@ -736,12 +803,13 @@ func (jm *JobManager) finishLocalJob(job *types.Job) {
 		return
 	}
 
-	if err := jm.writeCompletionSpool(job); err != nil {
-		job.StorageError = err.Error()
-		jm.logger.Error("Failed to save recovery spool", zap.Error(err))
+	job.StorageError = ""
+	spoolErr := jm.writeCompletionSpool(job)
+	if spoolErr != nil {
+		jm.logger.Error("Failed to save recovery spool", zap.Error(spoolErr))
 	}
 	if err := jm.persistCompletion(job); err != nil {
-		job.StorageError = err.Error()
+		job.StorageError = errors.Join(spoolErr, err).Error()
 		jm.logger.Error("Completion persistence pending recovery", zap.String("job_id", job.ID), zap.Error(err))
 	} else {
 		job.StorageError = ""
@@ -751,7 +819,7 @@ func (jm *JobManager) finishLocalJob(job *types.Job) {
 			}
 		}
 		if job.StorageError == "" {
-			_ = os.Remove(jm.completionSpoolPath(job.ID))
+			_ = jm.removeCompletionSpool(job.ID)
 		}
 	}
 
@@ -877,17 +945,12 @@ func (jm *JobManager) finishJobStorage(job *types.Job) error {
 
 // AbortJob 中止任务
 func (jm *JobManager) AbortJob(jobID string, reason string) error {
-	jm.engine.mu.Lock()
-	job, ok := jm.engine.activeJobs[jobID]
-	if ok {
-		job.AbortReason = reason
-	}
-	jm.engine.mu.Unlock()
-	if !ok {
-		return fmt.Errorf("job not found: %s", jobID)
+	job, recoveryErr := jm.prepareJobAbort(jobID, reason)
+	if job == nil {
+		return recoveryErr
 	}
 	if job.Hostname != "local" && job.Hostname != jm.getHostname() {
-		return jm.engine.comm.SendToSlave(job.Hostname, "abort_job", map[string]interface{}{"id": jobID, "reason": reason})
+		return errors.Join(recoveryErr, jm.engine.comm.SendToSlave(job.Hostname, "abort_job", map[string]interface{}{"id": jobID, "reason": job.AbortReason}))
 	}
 	jm.mu.RLock()
 	cancel := jm.running[jobID]
@@ -896,7 +959,7 @@ func (jm *JobManager) AbortJob(jobID string, reason string) error {
 		return fmt.Errorf("job is not running: %s", jobID)
 	}
 	cancel()
-	return nil
+	return recoveryErr
 }
 
 // MonitorAllActiveJobs 监控所有活动任务
@@ -1241,7 +1304,7 @@ func (jm *JobManager) createLogFile(job *types.Job) error {
 	// 写入日志头
 	header := fmt.Sprintf("# Job ID: %s\n# Event Title: %s\n# Hostname: %s\n# Date/Time: %s\n\n",
 		job.ID, job.EventTitle, job.Hostname, time.Now().Format(time.RFC3339))
-	writer, err := newBoundedLogWriter(file, jm.jobLogLimit(job), nil)
+	writer, err := jm.newJobLogWriter(file, jm.jobLogLimit(job), nil)
 	if err != nil {
 		_ = file.Close()
 		return err

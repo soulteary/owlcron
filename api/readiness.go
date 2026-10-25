@@ -16,3 +16,15 @@ func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{"code": 0})
 }
+
+// handleStartup separates initialization from transient storage readiness.
+func (s *Server) handleStartup(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	if err := s.engine.StartupReadiness(); err != nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"code": 1, "description": "Service unavailable"})
+		return
+	}
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{"code": 0})
+}

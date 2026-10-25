@@ -48,6 +48,13 @@ func (e *Engine) RedactSensitiveText(text string) string {
 		text = replaceWebHookSecret(text, string(e.webHookSigner.secret))
 	}
 	if e != nil && e.config != nil {
+		if e.config.BlobStorage != nil {
+			for _, store := range e.config.BlobStorage.Stores {
+				for _, secret := range []string{store.AccessKey, store.SecretKey, store.SessionToken} {
+					text = replaceWebHookSecret(text, secret)
+				}
+			}
+		}
 		cfg := reflect.ValueOf(e.config).Elem()
 		typ := cfg.Type()
 		for i := 0; i < cfg.NumField(); i++ {

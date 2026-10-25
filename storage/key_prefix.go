@@ -155,7 +155,7 @@ func (c *CouchbaseStorage) ListKeysPrefix(ctx context.Context, prefix string) ([
 	if err := validateKeyPrefix(prefix); err != nil {
 		return nil, err
 	}
-	scan, err := c.collection.Scan(gocb.NewRangeScanForPrefix(c.prefix+prefix), &gocb.ScanOptions{Context: ctx, IDsOnly: true})
+	scan, err := c.collection.Scan(gocb.NewRangeScanForPrefix(c.prefix+prefix), c.scanOptions(ctx))
 	if err != nil {
 		return nil, err
 	}

@@ -45,6 +45,23 @@ func (e *Engine) Readiness(ctx context.Context) error {
 	if !e.ready.Load() || e.draining.Load() || e.ctx.Err() != nil {
 		return errNotReady
 	}
+	err := e.storageReadiness(ctx)
+	if !e.ready.Load() || e.draining.Load() || e.ctx.Err() != nil {
+		return errNotReady
+	}
+	return err
+}
+
+// StartupReadiness deliberately makes no remote calls. An initialized process
+// remains alive to renew leases and retry uploads during a blob outage.
+func (e *Engine) StartupReadiness() error {
+	if !e.ready.Load() || e.draining.Load() || e.ctx.Err() != nil {
+		return errNotReady
+	}
+	return nil
+}
+
+func (e *Engine) storageReadiness(ctx context.Context) error {
 	e.readinessMu.Lock()
 	probe := e.readinessProbe
 	if probe == nil {
@@ -59,6 +76,12 @@ func (e *Engine) Readiness(ctx context.Context) error {
 			exists, probe.err = e.storage.Exists(probeCtx, readinessProbeKey)
 			if probe.err == nil && !exists {
 				probe.err = errNotReady
+			}
+			if probe.err == nil && e.blobStores != nil {
+				probe.err = e.blobStores.Readiness(probeCtx, e.storageLayout.NamespaceID)
+			}
+			if probe.err == nil && e.spoolBudget != nil {
+				probe.err = e.spoolBudget.admit()
 			}
 			// A backend may ignore cancellation and return success after the
 			// shared deadline. Never publish that late result as readiness.
@@ -82,9 +105,6 @@ func (e *Engine) Readiness(ctx context.Context) error {
 	case <-timer.C:
 		return context.DeadlineExceeded
 	case <-probe.done:
-		if !e.ready.Load() || e.draining.Load() || e.ctx.Err() != nil {
-			return errNotReady
-		}
 		return probe.err
 	}
 }

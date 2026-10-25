@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/couchbase/gocb/v2"
@@ -17,6 +18,8 @@ type CouchbaseStorage struct {
 	collection *gocb.Collection
 	prefix     string
 	durability gocb.DurabilityLevel
+	mutationMu sync.Mutex
+	mutations  map[uint64]gocb.MutationToken
 }
 
 func NewCouchbaseStorage(config *StorageConfig) (*CouchbaseStorage, error) {
@@ -67,20 +70,54 @@ func (c *CouchbaseStorage) read(ctx context.Context, key string) ([]byte, string
 }
 func (c *CouchbaseStorage) compareAndSwap(ctx context.Context, key string, data []byte, version string) error {
 	var err error
+	var result *gocb.MutationResult
 	if version == "" {
-		_, err = c.collection.Insert(c.prefix+key, data, &gocb.InsertOptions{Context: ctx, Transcoder: gocb.NewRawBinaryTranscoder(), DurabilityLevel: c.durability})
+		result, err = c.collection.Insert(c.prefix+key, data, &gocb.InsertOptions{Context: ctx, Transcoder: gocb.NewRawBinaryTranscoder(), DurabilityLevel: c.durability})
 	} else {
 		cas, e := strconv.ParseUint(version, 10, 64)
 		if e != nil {
 			return e
 		}
-		_, err = c.collection.Replace(c.prefix+key, data, &gocb.ReplaceOptions{Context: ctx, Cas: gocb.Cas(cas), Transcoder: gocb.NewRawBinaryTranscoder(), DurabilityLevel: c.durability})
+		result, err = c.collection.Replace(c.prefix+key, data, &gocb.ReplaceOptions{Context: ctx, Cas: gocb.Cas(cas), Transcoder: gocb.NewRawBinaryTranscoder(), DurabilityLevel: c.durability})
 	}
 	if errors.Is(err, gocb.ErrCasMismatch) || errors.Is(err, gocb.ErrDocumentExists) || errors.Is(err, gocb.ErrDocumentNotFound) {
 		return ErrConflict
 	}
+	if err == nil && result != nil {
+		c.rememberMutation(result.MutationToken())
+	}
 	return err
 }
+
+func (c *CouchbaseStorage) rememberMutation(token *gocb.MutationToken) {
+	if token == nil || token.BucketName() == "" {
+		return
+	}
+	c.mutationMu.Lock()
+	defer c.mutationMu.Unlock()
+	if c.mutations == nil {
+		c.mutations = make(map[uint64]gocb.MutationToken)
+	}
+	previous, found := c.mutations[token.PartitionID()]
+	if !found || previous.PartitionUUID() != token.PartitionUUID() || previous.SequenceNumber() < token.SequenceNumber() {
+		c.mutations[token.PartitionID()] = *token
+	}
+}
+
+func (c *CouchbaseStorage) scanOptions(ctx context.Context) *gocb.ScanOptions {
+	// Range scans read persisted snapshots. Without a mutation barrier, an
+	// immediate backup after a successful restore can silently omit new keys.
+	// Keep only the newest token per vBucket, so long-lived nodes have bounded
+	// bookkeeping and concurrent writes never mutate an in-flight scan's state.
+	c.mutationMu.Lock()
+	tokens := make([]gocb.MutationToken, 0, len(c.mutations))
+	for _, token := range c.mutations {
+		tokens = append(tokens, token)
+	}
+	c.mutationMu.Unlock()
+	return &gocb.ScanOptions{Context: ctx, IDsOnly: true, ConsistentWith: gocb.NewMutationState(tokens...)}
+}
+
 func (c *CouchbaseStorage) Close() error { return c.cluster.Close(nil) }
 
 func couchbaseDurability(value string) (gocb.DurabilityLevel, error) {

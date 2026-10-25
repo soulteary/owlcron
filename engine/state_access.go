@@ -192,7 +192,10 @@ func (jm *JobManager) removeActiveJobStorage(id string) {
 // RecoverJobs records interrupted work as failed instead of silently losing it or
 // re-executing commands whose side effects may already have happened.
 func (jm *JobManager) RecoverJobs() error {
-	if err := jm.RetryPendingCompletions(); err != nil {
+	if err := jm.recoverActiveCompletionJournals(); err != nil {
+		return err
+	}
+	if err := jm.retryPendingCompletions(true); err != nil {
 		return err
 	}
 	if jm.engine.storage == nil {
@@ -351,6 +354,13 @@ func (e *Engine) UpdateActiveJob(id string, updates map[string]interface{}) (*ty
 		return nil, fmt.Errorf("progress must be between zero and one")
 	}
 	job.UpdateVersion = current.UpdateVersion + 1
+	e.mu.Unlock()
+	// Reserve recovery space before accepting larger runtime metadata. Disk I/O
+	// must not hold the engine state lock used by heartbeats and leadership.
+	if err := e.jobManager.checkpointRuntimeJob(job); err != nil {
+		return nil, err
+	}
+	e.mu.Lock()
 	e.activeJobs[id] = types.CloneJob(job)
 	e.mu.Unlock()
 	if err := e.jobManager.persistActiveJob(job); err != nil {

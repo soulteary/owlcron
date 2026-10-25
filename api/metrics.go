@@ -52,4 +52,24 @@ func (s *Server) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	for _, gauge := range gauges {
 		_, _ = fmt.Fprintf(w, "# HELP %s %s\n# TYPE %s gauge\n%s %d\n", gauge.name, gauge.help, gauge.name, gauge.name, gauge.value)
 	}
+	if snapshot.SplitStorage {
+		for _, sample := range []struct {
+			name, help, kind string
+			value            int64
+		}{
+			{"owlcron_spool_bytes", "Last reconciled local job log and recovery spool bytes.", "gauge", snapshot.SpoolBytes},
+			{"owlcron_spool_limit_bytes", "Configured node recovery spool byte budget.", "gauge", snapshot.SpoolLimitBytes},
+			{"owlcron_spool_admission_blocked", "Whether local spool pressure pauses new admissions.", "gauge", int64(boolGauge(snapshot.SpoolBlocked))},
+			{"owlcron_blob_put_total", "Immutable object upload attempts.", "counter", snapshot.BlobPutTotal},
+			{"owlcron_blob_get_total", "Immutable object read attempts.", "counter", snapshot.BlobGetTotal},
+			{"owlcron_blob_errors_total", "Observed immutable object I/O errors.", "counter", snapshot.BlobErrorTotal},
+			{"owlcron_blob_gc_scanned_total", "Objects inspected by background log collection.", "counter", snapshot.BlobGCScanned},
+			{"owlcron_blob_gc_deleted_total", "Unreferenced objects deleted by background log collection.", "counter", snapshot.BlobGCDeleted},
+			{"owlcron_blob_gc_errors_total", "Collection passes reporting an error.", "counter", snapshot.BlobGCErrors},
+		} {
+			_, _ = fmt.Fprintf(w, "# HELP %s %s\n# TYPE %s %s\n%s %d\n", sample.name, sample.help, sample.name, sample.kind, sample.name, sample.value)
+		}
+		_, _ = fmt.Fprintf(w, "# HELP owlcron_blob_put_seconds_total Total time spent in object upload attempts.\n# TYPE owlcron_blob_put_seconds_total counter\nowlcron_blob_put_seconds_total %.9f\n", float64(snapshot.BlobPutNanos)/1e9)
+	}
+
 }
