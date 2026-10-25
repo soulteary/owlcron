@@ -40,7 +40,23 @@ make process-integration
 make process-integration-repeat
 ```
 
-这些入口使用实际 daemon 进程、Filesystem 后端、SIGKILL、网络分区和 TLS 节点连接，不需要外部 S3/Couchbase 服务。重复入口会运行三次所选用例。
+这些入口使用实际 daemon 进程、Filesystem 后端、SIGKILL、网络分区和 TLS 节点连接，不需要外部 S3/Couchbase/Redis 服务。重复入口会运行三次所选用例。
+
+## Redis 集成与 TLS
+
+```sh
+OWLCRON_TEST_REDIS_ADDR=localhost:6379 \
+  OWLCRON_TEST_REDIS_USERNAME=owlcron \
+  OWLCRON_TEST_REDIS_PASSWORD=owlcron-test-secret make redis-integration
+OWLCRON_TEST_REDIS_TLS_ADDR=localhost:6380 \
+  OWLCRON_TEST_REDIS_TLS_CA_FILE=/path/to/redis-ca.crt \
+  OWLCRON_TEST_REDIS_USERNAME=owlcron \
+  OWLCRON_TEST_REDIS_PASSWORD=owlcron-test-secret make redis-tls-integration
+```
+
+使用隔离的 Redis 8.4+ 实例。`make redis-integration` 要求设置 `OWLCRON_TEST_REDIS_ADDR`，覆盖存储契约和 CLI 备份恢复，并使用该服务运行 API `TestSingleNodeSystemLifecycle/Redis`，以及 engine `TestClusterAuthenticatedDispatchAndReconnect/Redis` 和 `TestPrimaryOutageAutomaticTakeoverPreservesCursor/Redis`。
+
+TLS 入口可单独选择运行，必须同时设置 `OWLCRON_TEST_REDIS_TLS_ADDR` 和 `OWLCRON_TEST_REDIS_TLS_CA_FILE`，复用 `OWLCRON_TEST_REDIS_USERNAME`、`OWLCRON_TEST_REDIS_PASSWORD`。服务端证书的 Subject Alternative Name 必须包含 `localhost`；测试会验证该名称和指定 CA。
 
 ## Linux 与远程存储故障
 
@@ -48,11 +64,13 @@ make process-integration-repeat
 make linux-acceptance
 ```
 
-需要 Docker、Python 3、可下载的镜像和 Go 依赖。脚本创建本次运行专属的 MinIO、Couchbase 和网络，不发布宿主端口，不向测试容器挂载 Docker socket。测试使用可丢弃的专用凭据，结束后清理自己创建的服务。
+需要 Docker、Python 3、可下载的镜像和 Go 依赖。脚本创建本次运行专属的 MinIO、Couchbase、Redis 8.4+ 和网络，不发布宿主端口，不向测试容器挂载 Docker socket。测试使用可丢弃的专用凭据，结束后清理自己创建的服务。
+
+同一个 Redis 实例同时监听明文端口 6379 和 TLS 端口 6380。每次运行生成有效期一天的自签 CA 和服务端证书，服务端证书 SAN 包含 `localhost`。证书文件保存在本次运行目录中，以只读方式挂载给测试 runner。Redis 使用 AOF、`appendfsync always` 和 `noeviction`；关闭默认 ACL 用户，命名测试用户禁止执行脚本。完整 Linux 验收必须通过 Redis 集成、TLS 和故障用例，跳过用例会导致验收失败。
 
 `OWLCRON_ACCEPTANCE_RESULTS` 指定外部结果目录；`OWLCRON_ACCEPTANCE_COUNT` 设置 1–3 次重复。镜像和构建缓存选项见 [run-linux-acceptance.sh](../../tests/run-linux-acceptance.sh)。不要让两次测试控制同一组服务。
 
-已有专用测试服务时可使用 `make remote-storage-faults` 或 `make remote-process-integration`。前者要求 S3、Couchbase 端点及对应容器控制标识，后者要求后端列表和配置 JSON；完整变量名见 [Makefile](../../Makefile) 与脚本。未配置的远程用例会跳过，跳过不表示真实服务已通过。
+已有专用测试服务时可使用 `make remote-storage-faults` 或 `make remote-process-integration`。前者要求 S3、Couchbase、Redis 端点及对应容器控制标识，后者要求后端列表和配置 JSON；完整变量名见 [Makefile](../../Makefile) 与脚本。直接运行 Go 测试时，未配置的远程用例会跳过；跳过不表示真实服务已通过。
 
 ## 负载与持续故障
 

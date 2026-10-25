@@ -17,7 +17,7 @@ import (
 // Exercise the same authenticated API, scheduler and plugin lifecycle against
 // each real backend. Remote tests opt in to disposable integration services.
 func TestSingleNodeSystemLifecycle(t *testing.T) {
-	for _, backend := range []string{"Filesystem", "S3", "Couchbase"} {
+	for _, backend := range []string{"Filesystem", "S3", "Couchbase", "Redis"} {
 		t.Run(backend, func(t *testing.T) {
 			dir := t.TempDir()
 			cfg := &types.Config{Hostname: "system-test", HTTPPort: 3012, StorageEngine: backend, StorageBaseDir: filepath.Join(dir, "data"), LogDir: filepath.Join(dir, "logs"), QueueDir: filepath.Join(dir, "queue"), SecretKey: "integration-secret-0123456789abcdef", MasterPingTimeout: 60, SchedulerStartupGrace: 3600}
@@ -35,6 +35,12 @@ func TestSingleNodeSystemLifecycle(t *testing.T) {
 					t.Skip("set OWLCRON_TEST_COUCHBASE_CONNECTION")
 				}
 				cfg.StorageOptions = map[string]interface{}{"connection_string": connection, "bucket": "owlcron-integration", "username": "Administrator", "password": "owlcron-test-secret", "prefix": prefix + ":"}
+			case "Redis":
+				addr := os.Getenv("OWLCRON_TEST_REDIS_ADDR")
+				if addr == "" {
+					t.Skip("set OWLCRON_TEST_REDIS_ADDR for Redis 8.4+ lifecycle tests")
+				}
+				cfg.StorageOptions = map[string]interface{}{"addr": addr, "username": os.Getenv("OWLCRON_TEST_REDIS_USERNAME"), "password": os.Getenv("OWLCRON_TEST_REDIS_PASSWORD"), "prefix": prefix + ":"}
 			}
 			makeEngine := func() (*engine.Engine, http.Handler) {
 				e, err := engine.NewEngine(cfg, zap.NewNop())

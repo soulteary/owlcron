@@ -238,7 +238,7 @@ func TestTimingCompatibilityAcrossTimezoneAndDST(t *testing.T) {
 	}
 }
 func TestClusterAuthenticatedDispatchAndReconnect(t *testing.T) {
-	for _, backend := range []string{"Filesystem", "S3", "Couchbase"} {
+	for _, backend := range []string{"Filesystem", "S3", "Couchbase", "Redis"} {
 		t.Run(backend, func(t *testing.T) { exerciseClusterDispatchAndReconnect(t, backend) })
 	}
 }
@@ -265,6 +265,14 @@ func configureSchedulingBackend(t *testing.T, e *Engine, backend string) {
 		options["connection_string"] = connection
 		options["username"] = "Administrator"
 		options["password"] = "owlcron-test-secret"
+	case "Redis":
+		addr := os.Getenv("OWLCRON_TEST_REDIS_ADDR")
+		if addr == "" {
+			t.Skip("set OWLCRON_TEST_REDIS_ADDR for Redis 8.4+ cluster tests")
+		}
+		options["addr"] = addr
+		options["username"] = os.Getenv("OWLCRON_TEST_REDIS_USERNAME")
+		options["password"] = os.Getenv("OWLCRON_TEST_REDIS_PASSWORD")
 	}
 	store, err := storage.NewStorage(&storage.StorageConfig{Engine: backend, Options: options})
 	if err != nil {
@@ -546,7 +554,7 @@ func TestLeadershipLeaseFencesAnotherInstanceAfterExpiry(t *testing.T) {
 	}
 }
 func TestPrimaryOutageAutomaticTakeoverPreservesCursor(t *testing.T) {
-	for _, backend := range []string{"Filesystem", "S3", "Couchbase"} {
+	for _, backend := range []string{"Filesystem", "S3", "Couchbase", "Redis"} {
 		t.Run(backend, func(t *testing.T) { exercisePrimaryOutage(t, backend) })
 	}
 }

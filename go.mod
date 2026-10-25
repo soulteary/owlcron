@@ -5,8 +5,10 @@ go 1.27.3
 require (
 	github.com/couchbase/gocb/v2 v2.13.0
 	github.com/gorilla/websocket v1.5.3
+	github.com/redis/go-redis/v9 v9.23.0
 	github.com/soulteary/http-kit/v2 v2.1.0
 	github.com/soulteary/otterio-sdk/v7 v7.3.3
+	github.com/soulteary/redis-kit v1.7.4-0.20261025030452-be10f8cf6ec7
 	go.uber.org/zap v1.28.0
 	golang.org/x/crypto v0.58.0
 	golang.org/x/net v0.61.0
@@ -39,6 +41,7 @@ require (
 	go.opentelemetry.io/otel/log v1.47.0 // indirect
 	go.opentelemetry.io/otel/metric v1.47.0 // indirect
 	go.opentelemetry.io/otel/trace v1.47.0 // indirect
+	go.uber.org/atomic v1.12.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/text v0.43.0 // indirect

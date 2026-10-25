@@ -12,7 +12,7 @@ For startup, proxy configuration, and administrator initialization, see [deploym
 - `base_app_url`: the external application URL used for generated links. It does not restrict the listening address or replace HTTP/WebSocket origin checks against the incoming request host.
 - `http_port`: the HTTP port, default 3012. The service listens on all interfaces; restrict access with a firewall or proxy.
 - `secret_key`: a random secret of at least 32 bytes, also configurable through `OWLCRON_SECRET_KEY`. Protect configuration and key files.
-- `storage_engine`: `Filesystem`, `S3`, or `Couchbase`. The local default is Filesystem.
+- `storage_engine`: `Filesystem`, `S3`, `Couchbase`, or `Redis`. The local default is Filesystem.
 - `storage_base_dir`: the Filesystem data directory, default `data`.
 - `log_dir` and `queue_dir`: local job logs and recovery queues, default `logs` and `queue`.
 - `udp_broadcast_port`: discovery port. Set it to `-1` to disable discovery. Discovery does not replace node authentication.
@@ -21,11 +21,12 @@ The JSON blocks below are configuration fragments, not complete deployment files
 
 ## Storage, backups, and recovery
 
-Supported backends are Filesystem, S3, and Couchbase:
+Supported backends are Filesystem, S3, Couchbase, and Redis:
 
 - Filesystem uses cross-process exclusive locking, atomic replacement after synchronization, and a multi-record redo journal. In-process lock waits respect cancellation; an HTTP timeout does not roll back a commit already in progress. Set `shared_storage` explicitly when multiple nodes use the same directory. The mount must support the required locks and atomic replacement; do not assume every NFS implementation does.
 - S3 must implement `If-Match`, `If-None-Match`, and concurrent conditional writes correctly. The engine probes support before its first modification and rejects incompatible services. Credentials need object read/write and prefix-list permissions for the test and application namespaces.
 - Couchbase uses SDK CAS. Startup recovery and complete enumeration require a 7.6+ server with range scans and appropriate permissions. Remote backends do not provide cross-key ACID transactions; canonical records and indexes use retryable, idempotent updates.
+- Redis requires a single Redis 8.4+ instance, using native `SET NX`/`SET IFEQ` rather than Lua. Startup verifies the version and read/write/CAS/enumeration permissions. Documents, JSON lists, logical expiry, deletion fences, and backup format are unchanged.
 
 For S3, configure `bucket` in `storage_options`. Set `access_key`, `secret_key`, and optional `session_token`, or use `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_SESSION_TOKEN`. Missing access or secret keys are rejected. `region` defaults to `us-east-1`, and `prefix` defaults to `owlcron`; keeping the same bucket and prefix preserves access to existing records.
 
@@ -36,6 +37,28 @@ Event loading traverses all pages and preserves the previous in-memory snapshot 
 After a forced daemon termination, restart recovery verifies execution tokens and kernel process identity, reclaims verified process groups, and marks interrupted jobs failed. It does not resume or repeat plugins. `OWLCRON_JOB_TOKEN` is reserved. An unverifiable live legacy PID prevents startup and requires operator review; never kill a process based only on a reused PID. Preserve OS identity and process-inspection permissions across restarts. Plugins that deliberately detach or remove the marker are outside this recovery contract; detached execution is unsupported.
 
 See [architecture](architecture.md) for completion commits, worker acknowledgments, and log recovery. Persist `log_dir` and `queue_dir`; buffered log tails are not guaranteed to survive. Use job IDs or business keys for plugin idempotency and stable message identifiers for recipient deduplication. See [deployment](deployment.md#backups-upgrades-and-rollback) for backup and import procedures.
+
+### Redis connection and durability
+
+```json
+{
+  "storage_engine": "Redis",
+  "storage_options": {
+    "addr": "127.0.0.1:6379",
+    "username": "owlcron",
+    "db": 0,
+    "prefix": "owlcron:"
+  }
+}
+```
+
+`addr` is required. `username`/`password` can fall back to `REDIS_USERNAME`/`REDIS_PASSWORD`; the example expects the password from the environment. Use a unique `prefix` per deployment (default `owlcron:`). `db` defaults to 0. `pool_size` defaults to a base pool size of 10; `min_idle_conns` defaults to min(5, pool_size) and cannot exceed it. Multiple OwlCron nodes must use the same DB and prefix. Sentinel/Cluster options are rejected.
+
+Enable verified TLS with `tls: true`; optionally set `tls_ca_file` and `tls_server_name`. For mutual TLS provide both `tls_cert_file` and `tls_key_file`. TLS is at least 1.2 and cannot skip verification. Store credentials outside version control. Connection options `dial_timeout_ms`, `read_timeout_ms`, `write_timeout_ms`, `pool_timeout_ms`, and `startup_timeout_ms` are positive integer milliseconds, with defaults 5000, 3000, 3000, 4000, and 10000. Client transport retries are disabled. Cancellation or a lost reply can leave a write's result uncertain; neither becomes a version conflict or an automatic replay.
+
+The account needs connection/authentication, `PING`, `INFO server`, `GET`, `SET`, `SCAN`, and `UNLINK` permissions for the namespace and temporary capability probes; it does not need Lua, CONFIG, ACL administration, or flush commands. Restrict administrative commands separately. Key ACL patterns do not make SCAN hide other key names; use a dedicated database/instance when those names are sensitive.
+
+Use `maxmemory-policy noeviction`, AOF, and a persistent Redis data volume. The crash acceptance profile uses `appendfsync always`; `everysec` permits a recent-write loss window. Application startup checks capabilities, not server persistence settings. A single Redis instance remains an availability single point. Redis also holds job log chunks, so provision memory and AOF disk capacity accordingly. Expiry remains logical: expired records and small backend tombstones are not automatically removed from Redis. Retention is not a hard memory quota. Persist OwlCron's local `log_dir` and `queue_dir` as well, and follow the offline backup/restore procedure in [deployment](deployment.md#backups-upgrades-and-rollback).
 
 ### Retention and log limits
 
@@ -58,7 +81,7 @@ Completion writes small per-job history indexes instead of rewriting all history
 
 Logs use 64 KiB chunks and a manifest, uploading incrementally from the durable offset. Failures retain local content. Defaults are four concurrent uploads and a 30-second synchronization timeout. The per-job hard limit defaults to 64 MiB; zero selects that default, and the maximum is 1 GiB. Event and category limits cannot exceed the hard cap. Exceeding it or failing a disk write terminates the job.
 
-Log APIs accept byte `offset` and `limit`, defaulting to 64 KiB with a 1 MiB maximum. Decode `log_base64` as raw bytes and follow `next_offset`; `eof` describes only the current snapshot. GET `get_job_log` or `get_live_job_log` with `stream=1&download=1` streams a download. The interface displays roughly the most recent 1 MiB without limiting full downloads. Legacy Filesystem/S3 logs support bounded reads; legacy single-object Couchbase binary logs require offline migration and do not support range reads.
+Log APIs accept byte `offset` and `limit`, defaulting to 64 KiB with a 1 MiB maximum. Decode `log_base64` as raw bytes and follow `next_offset`; `eof` describes only the current snapshot. GET `get_job_log` or `get_live_job_log` with `stream=1&download=1` streams a download. The interface displays roughly the most recent 1 MiB without limiting full downloads. Legacy Filesystem/S3 logs support bounded reads; legacy single-object Couchbase binary logs and legacy logs imported into Redis require offline migration and do not support range reads.
 
 ## Login, proxies, and HTTP limits
 

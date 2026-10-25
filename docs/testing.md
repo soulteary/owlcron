@@ -40,7 +40,23 @@ make process-integration
 make process-integration-repeat
 ```
 
-These targets use real daemon processes, Filesystem storage, SIGKILL, network partitions, and TLS node connections without external S3/Couchbase services. The repeat target runs the selected cases three times.
+These targets use real daemon processes, Filesystem storage, SIGKILL, network partitions, and TLS node connections without external S3/Couchbase/Redis services. The repeat target runs the selected cases three times.
+
+## Redis integration and TLS
+
+```sh
+OWLCRON_TEST_REDIS_ADDR=localhost:6379 \
+  OWLCRON_TEST_REDIS_USERNAME=owlcron \
+  OWLCRON_TEST_REDIS_PASSWORD=owlcron-test-secret make redis-integration
+OWLCRON_TEST_REDIS_TLS_ADDR=localhost:6380 \
+  OWLCRON_TEST_REDIS_TLS_CA_FILE=/path/to/redis-ca.crt \
+  OWLCRON_TEST_REDIS_USERNAME=owlcron \
+  OWLCRON_TEST_REDIS_PASSWORD=owlcron-test-secret make redis-tls-integration
+```
+
+Use an isolated Redis 8.4+ instance. `make redis-integration` requires `OWLCRON_TEST_REDIS_ADDR` and covers storage contracts and CLI backup/restore. It also runs API `TestSingleNodeSystemLifecycle/Redis` and engine `TestClusterAuthenticatedDispatchAndReconnect/Redis` and `TestPrimaryOutageAutomaticTakeoverPreservesCursor/Redis` against that service.
+
+The TLS target is a separate opt-in check. It requires both `OWLCRON_TEST_REDIS_TLS_ADDR` and `OWLCRON_TEST_REDIS_TLS_CA_FILE` and reuses `OWLCRON_TEST_REDIS_USERNAME` and `OWLCRON_TEST_REDIS_PASSWORD`. The server certificate must contain `localhost` in its Subject Alternative Name; the test verifies that name and the supplied CA.
 
 ## Linux and remote-storage faults
 
@@ -48,11 +64,13 @@ These targets use real daemon processes, Filesystem storage, SIGKILL, network pa
 make linux-acceptance
 ```
 
-Docker, Python 3, downloadable images, and Go dependencies are required. The script creates dedicated MinIO and Couchbase services and a network for this run. It publishes no host ports and mounts no Docker socket into test containers. Test credentials are disposable; the script cleans up its own services.
+Docker, Python 3, downloadable images, and Go dependencies are required. The script creates dedicated MinIO, Couchbase, and Redis 8.4+ services and a network for this run. It publishes no host ports and mounts no Docker socket into test containers. Test credentials are disposable; the script cleans up its own services.
+
+The same Redis instance listens on plain port 6379 and TLS port 6380. Each run generates a self-signed CA and a server certificate valid for one day, with `localhost` in the server certificate SAN. Certificate files stay in that run's directory and are mounted read-only into the test runner. Redis uses AOF with `appendfsync always` and `noeviction`; the default ACL user is disabled, and the named test user cannot run scripts. Full Linux acceptance requires the Redis integration, TLS, and fault cases to pass and rejects skipped cases.
 
 `OWLCRON_ACCEPTANCE_RESULTS` selects an external results directory; `OWLCRON_ACCEPTANCE_COUNT` selects 1–3 repetitions. See [run-linux-acceptance.sh](../tests/run-linux-acceptance.sh) for image and cache options. Never let two test runs control the same services.
 
-For dedicated services you provision yourself, use `make remote-storage-faults` or `make remote-process-integration`. The first requires S3/Couchbase endpoints and container control identifiers; the second requires the backend list and JSON configurations. See the [Makefile](../Makefile) and scripts for exact variable names. Unconfigured remote tests skip; a skip is not a successful real-service test.
+For dedicated services you provision yourself, use `make remote-storage-faults` or `make remote-process-integration`. The first requires S3/Couchbase/Redis endpoints and container control identifiers; the second requires the backend list and JSON configurations. See the [Makefile](../Makefile) and scripts for exact variable names. Unconfigured direct Go remote tests skip; a skip is not a successful real-service test.
 
 ## Load and sustained faults
 

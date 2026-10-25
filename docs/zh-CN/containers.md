@@ -32,6 +32,8 @@ docker run -d --name owlcron --read-only \
 确认登录后删除该敏感文件，禁止上传支持日志或 CI 产物。公网部署前遵循
 [管理员初始化和 HTTPS 部署](deployment.md)。
 
+使用 Redis 后端时，单独运行 Redis 8.4+，为其配置持久数据卷、AOF 和 noeviction。向 OwlCron 提供连接凭据，只读挂载所需 TLS CA／客户端证书，并保留 OwlCron 日志、队列卷。见[Redis 配置](configuration.md#redis-连接与持久化)。应用镜像不会启动 Redis 或配置其持久化。
+
 ## Kubernetes
 
 `deploy/kubernetes/owlcron.json` 是 kubectl 支持的 JSON 清单：使用 `apps/v1`

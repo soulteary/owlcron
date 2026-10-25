@@ -23,9 +23,16 @@ import (
 func processRemoteStorageOutageCompletionSpool(t *testing.T, configure func(...*processFixture)) {
 	f := newProcessFixture(t)
 	configure(f)
-	variable := "OWLCRON_TEST_S3_CONTAINER"
-	if f.Config.StorageEngine == "Couchbase" {
+	var variable string
+	switch f.Config.StorageEngine {
+	case "S3":
+		variable = "OWLCRON_TEST_S3_CONTAINER"
+	case "Couchbase":
 		variable = "OWLCRON_TEST_COUCHBASE_CONTAINER"
+	case "Redis":
+		variable = "OWLCRON_TEST_REDIS_CONTAINER"
+	default:
+		t.Fatalf("unsupported remote outage backend %q", f.Config.StorageEngine)
 	}
 	container := os.Getenv(variable)
 	if container == "" {
@@ -103,7 +110,11 @@ func processRemoteStorageOutageCompletionSpool(t *testing.T, configure func(...*
 	})
 	p.Kill(t)
 	control("unpause")
-	control("stop")
+	if f.Config.StorageEngine == "Redis" {
+		control("kill") // Real SIGKILL, after daemon death, with AOF-backed storage.
+	} else {
+		control("stop")
+	}
 	ctx, cancel = context.WithTimeout(context.Background(), 700*time.Millisecond)
 	_, err = store.Get(ctx, "events:storage-outage")
 	cancel()
@@ -158,9 +169,21 @@ func processRemoteStorageOutageCompletionSpool(t *testing.T, configure func(...*
 
 func processRemoteContainerControl(t *testing.T, container string) func(string) {
 	t.Helper()
+	if container == "" {
+		t.Fatal("isolated service control requires an explicit container")
+	}
+	validateAction := func(action string) {
+		t.Helper()
+		switch action {
+		case "inspect", "pause", "unpause", "stop", "start", "restart", "kill":
+		default:
+			t.Fatalf("unsupported isolated service action %q", action)
+		}
+	}
 	if dir := os.Getenv("OWLCRON_TEST_CONTROL_DIR"); dir != "" {
 		request := func(action string) {
 			t.Helper()
+			validateAction(action)
 			var nonce [16]byte
 			if _, err := rand.Read(nonce[:]); err != nil {
 				t.Fatal(err)
@@ -251,6 +274,7 @@ func processRemoteContainerControl(t *testing.T, container string) func(string) 
 		t.Fatal("refusing to fault storage container without io.owlcron.acceptance=true")
 	}
 	return func(action string) {
+		validateAction(action)
 		if action == "unpause" || action == "start" {
 			if err := json.Unmarshal(request("GET", "/json"), &inspection); err != nil {
 				t.Fatal(err)
@@ -265,6 +289,19 @@ func processRemoteContainerControl(t *testing.T, container string) func(string) 
 		suffix := "/" + action
 		if action == "stop" || action == "restart" {
 			suffix += fmt.Sprint("?t=1")
+		}
+		if action == "kill" {
+			allowed := false
+			for _, variable := range []string{"OWLCRON_TEST_REDIS_CONTAINER", "OWLCRON_TEST_S3_CONTAINER", "OWLCRON_TEST_COUCHBASE_CONTAINER"} {
+				allowed = allowed || os.Getenv(variable) == container
+			}
+			if !allowed {
+				t.Fatal("SIGKILL requires a container explicitly registered by this acceptance run")
+			}
+			if err := json.Unmarshal(request("GET", "/json"), &inspection); err != nil || inspection.Config.Labels["io.owlcron.acceptance"] != "true" {
+				t.Fatal("SIGKILL target no longer belongs to this acceptance run")
+			}
+			suffix += "?signal=KILL"
 		}
 		request("POST", suffix)
 	}

@@ -12,7 +12,7 @@
 - `base_app_url`：生成链接使用的外部访问地址，不控制网络监听范围，也不替代 HTTP/WebSocket 根据请求 Host 执行的跨来源检查。
 - `http_port`：HTTP 服务端口，默认 3012。服务监听所有网卡，外部访问控制由防火墙或代理负责。
 - `secret_key`：至少 32 字节的随机秘密，也可由 `OWLCRON_SECRET_KEY` 提供。所有配置和密钥文件应限制访问。
-- `storage_engine`：`Filesystem`、`S3` 或 `Couchbase`；本地默认使用 Filesystem。
+- `storage_engine`：`Filesystem`、`S3`、`Couchbase` 或 `Redis`；本地默认使用 Filesystem。
 - `storage_base_dir`：Filesystem 数据目录，默认 `data`。
 - `log_dir`、`queue_dir`：本机任务日志和恢复队列目录，默认分别为 `logs`、`queue`。
 - `udp_broadcast_port`：发现广播端口；设为 `-1` 禁用发现。发现不代替节点认证。
@@ -21,11 +21,12 @@
 
 ## 存储、备份与故障恢复
 
-支持 Filesystem、S3 和 Couchbase：
+支持 Filesystem、S3、Couchbase 和 Redis：
 
 - Filesystem 使用跨进程排他文件锁、同步后原子替换和多记录 redo journal。进程内锁等待遵守取消；已经开始提交的操作不能靠 HTTP 超时回滚。共享目录用于多节点时必须明确配置 `shared_storage`，挂载必须满足文件锁和原子替换语义；不能假设所有 NFS 实现均满足这些要求。
 - S3 要求真正支持 `If-Match`、`If-None-Match` 及并发条件写入，首次修改前会探测，不支持的兼容服务会被拒绝。账户需要测试及实际命名空间的对象读写和前缀列举权限。
 - Couchbase 使用 SDK CAS；启动恢复与完整枚举需要支持 range scan 的 7.6+ 服务及相应权限。远程后端不提供跨 key ACID 事务，应用采用可重试、幂等的规范记录与索引更新。
+- Redis 要求单实例 Redis 8.4+，使用原生 `SET NX`/`SET IFEQ`，不执行 Lua。启动验证版本及读写、CAS、枚举权限，记录、JSON 列表、逻辑过期、删除栅栏和备份格式保持不变。
 
 S3 在 `storage_options` 中配置 `bucket`。设置 `access_key`、`secret_key` 和可选的 `session_token`，或使用环境变量 `AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY`、`AWS_SESSION_TOKEN`。缺少 access 或 secret key 会被拒绝。`region` 默认是 `us-east-1`，`prefix` 默认是 `owlcron`；沿用相同的 bucket 和 prefix 可继续访问已有记录。
 
@@ -36,6 +37,28 @@ S3 在 `storage_options` 中配置 `bucket`。设置 `access_key`、`secret_key`
 执行中的任务遇到 daemon 强杀后，重启核对执行 token 和内核启动身份，再回收已验证的进程组并将任务标记为中断失败。不会自动续跑或重做插件。`OWLCRON_JOB_TOKEN` 是保留环境变量。无法验证的旧版存活 PID 会阻止启动，需人工核查；不要盲目杀死同号 PID。保持重启前后的 OS 身份和进程检查权限一致。主动脱离进程组或删除标记的插件不在该恢复约定内，detached 执行配置也不受支持。
 
 完成提交、worker 确认及日志恢复机制见[架构](architecture.md)。`log_dir` 和 `queue_dir` 必须持久化；内存缓冲中的日志尾部不保证恢复。插件应使用 Job ID 或业务键实现幂等，通知接收方应按稳定消息标识去重。备份及导入操作见[部署指南](deployment.md#备份升级与回滚)。
+
+### Redis 连接与持久化
+
+```json
+{
+  "storage_engine": "Redis",
+  "storage_options": {
+    "addr": "127.0.0.1:6379",
+    "username": "owlcron",
+    "db": 0,
+    "prefix": "owlcron:"
+  }
+}
+```
+
+`addr` 必填。`username`／`password` 可回退到 `REDIS_USERNAME`／`REDIS_PASSWORD`；示例通过环境变量提供密码。每个部署使用独立 `prefix`，默认 `owlcron:`，`db` 默认 0。`pool_size` 默认基础连接池大小为 10；`min_idle_conns` 默认 min(5, pool_size)，不能超过 pool_size。同一 OwlCron 集群的节点必须共用 DB 和 prefix；Sentinel／Cluster 选项会被拒绝。
+
+通过 `tls: true` 开启证书验证，可设置 `tls_ca_file` 和 `tls_server_name`；双向 TLS 同时提供 `tls_cert_file`、`tls_key_file`。最低 TLS 1.2，不支持跳过验证。凭据不得进入版本控制。`dial_timeout_ms`、`read_timeout_ms`、`write_timeout_ms`、`pool_timeout_ms`、`startup_timeout_ms` 均为正整数毫秒，默认依次为 5000、3000、3000、4000、10000。客户端传输重试禁用；取消或响应丢失可能使写入结果不确定，不会被当作版本冲突并自动重放。
+
+账户需要连接认证、`PING`、`INFO server`、`GET`、`SET`、`SCAN`、`UNLINK` 权限，key 范围覆盖业务命名空间和临时能力探测 key；不需要 Lua、CONFIG、ACL 管理或 flush 权限。另行限制管理命令。key ACL 规则不会让 SCAN 隐藏其他 key 名；名称敏感时使用独立 DB／实例。
+
+使用 `maxmemory-policy noeviction`、AOF 和持久 Redis 数据卷。崩溃验收配置为 `appendfsync always`；`everysec` 存在最近写入丢失窗口。应用启动检查操作能力，不核验服务端持久化配置。单实例 Redis 本身仍是可用性单点。Redis 还保存任务日志块，须同时规划内存和 AOF 磁盘容量。过期仍为逻辑过期，过期记录和小型底层墓碑不会自动从 Redis 删除；保留策略不等于内存硬配额。OwlCron 本机 `log_dir`、`queue_dir` 也要持久化，离线备份恢复步骤见[部署文档](deployment.md#备份升级与回滚)。
 
 ### 保留清理与日志限制
 
@@ -58,7 +81,7 @@ S3 在 `storage_options` 中配置 `bucket`。设置 `access_key`、`secret_key`
 
 日志使用 64KiB 块和 manifest，按持久偏移增量上传；失败保留本地内容。默认最多 4 个上传并行，单次同步超时 30 秒。单任务硬上限默认 64MiB，配置 0 仍使用默认，最大 1GiB；事件或分类设置不能超过硬上限。超限或磁盘写入失败会终止任务。
 
-日志 API 支持字节 `offset`、`limit`，默认 64KiB、最大 1MiB。通过 `log_base64` 合并原始字节，依 `next_offset` 继续读取；`eof` 只表示当前快照末尾。GET `get_job_log`／`get_live_job_log` 使用 `stream=1&download=1` 可流式下载；界面仅保留最近约 1MiB 显示，不影响完整下载。旧 Filesystem/S3 日志支持有界读取；旧 Couchbase 单块二进制日志须离线迁移，不支持范围读取。
+日志 API 支持字节 `offset`、`limit`，默认 64KiB、最大 1MiB。通过 `log_base64` 合并原始字节，依 `next_offset` 继续读取；`eof` 只表示当前快照末尾。GET `get_job_log`／`get_live_job_log` 使用 `stream=1&download=1` 可流式下载；界面仅保留最近约 1MiB 显示，不影响完整下载。旧 Filesystem/S3 日志支持有界读取；旧 Couchbase 单块二进制日志及导入 Redis 的旧日志须离线迁移，不支持范围读取。
 
 ## 登录、代理与 HTTP 边界
 

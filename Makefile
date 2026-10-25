@@ -1,4 +1,4 @@
-.PHONY: build test race vet frontend frontend-test integration process-integration process-integration-repeat linux-acceptance remote-storage-faults remote-process-integration linux-load-acceptance capacity-acceptance soak-acceptance cluster-load-acceptance fmt-check licenses-check licenses-update docs-check smoke release
+.PHONY: build test race vet frontend frontend-test integration redis-integration redis-tls-integration redis-storage-faults process-integration process-integration-repeat linux-acceptance remote-storage-faults remote-process-integration linux-load-acceptance capacity-acceptance soak-acceptance cluster-load-acceptance fmt-check licenses-check licenses-update docs-check smoke release
 
 docs-check:
 	python3 tests/check_docs.py
@@ -50,10 +50,25 @@ frontend-test:
 integration:
 	@test -n "$$OWLCRON_TEST_S3_ENDPOINT" || (echo "Set OWLCRON_TEST_S3_ENDPOINT" >&2; exit 1)
 	@test -n "$$OWLCRON_TEST_COUCHBASE_CONNECTION" || (echo "Set OWLCRON_TEST_COUCHBASE_CONNECTION" >&2; exit 1)
+	@test -n "$$OWLCRON_TEST_REDIS_ADDR" || (echo "Set OWLCRON_TEST_REDIS_ADDR" >&2; exit 1)
 	go test -race ./... -count=1 -timeout=240s
 
+# Explicit Redis entry points fail when the real service is missing.
+redis-integration:
+	@test -n "$$OWLCRON_TEST_REDIS_ADDR" || (echo "Set OWLCRON_TEST_REDIS_ADDR" >&2; exit 1)
+	go test -race ./storage ./cli -run '^TestRedisReal' -count=1 -timeout=360s
+	go test -race ./api ./engine -run '^Test(SingleNodeSystemLifecycle|ClusterAuthenticatedDispatchAndReconnect|PrimaryOutageAutomaticTakeoverPreservesCursor)$$/^Redis$$' -count=1 -timeout=240s
+
+redis-tls-integration:
+	@test -n "$$OWLCRON_TEST_REDIS_TLS_ADDR" && test -n "$$OWLCRON_TEST_REDIS_TLS_CA_FILE" || (echo "Set OWLCRON_TEST_REDIS_TLS_ADDR and OWLCRON_TEST_REDIS_TLS_CA_FILE" >&2; exit 1)
+	go test -race ./storage -run '^TestRedisRealTLSConnection$$' -count=1 -timeout=120s
+
+redis-storage-faults:
+	@test -n "$$OWLCRON_TEST_REDIS_ADDR" && test -n "$$OWLCRON_TEST_REDIS_CONTAINER" || (echo "Configure a labeled isolated Redis service and its control identifier" >&2; exit 1)
+	go test -race ./storage -run '^TestRedisReal(TransportFaultRecovery|CommittedResponseLossRecovery|ServerSIGKILLRecovery)$$' -count=1 -timeout=240s
+
 # Real daemon processes, SIGKILL, TCP partitions, TLS cluster takeover and recovery.
-# Self-contained Filesystem backend; external S3/Couchbase services are not required.
+# Self-contained Filesystem backend; external remote services are not required.
 process-integration:
 	go test -race . -run '^TestProcess(SIGKILL|Cluster)' -count=1 -timeout=300s
 
@@ -65,11 +80,12 @@ linux-acceptance:
 	bash tests/run-linux-acceptance.sh
 
 remote-storage-faults:
-	@test -n "$$OWLCRON_TEST_S3_ENDPOINT" && test -n "$$OWLCRON_TEST_COUCHBASE_CONNECTION" && test -n "$$OWLCRON_TEST_S3_CONTAINER" && test -n "$$OWLCRON_TEST_COUCHBASE_CONTAINER" || (echo "Configure both isolated remote services and their control identifiers" >&2; exit 1)
-	go test -race ./storage -run '^Test(S3RealStorage|S3RealTransportFaultRecovery|S3RealCommittedResponseLossRecovery|S3RealServerRestartRecovery|CouchbaseRealStorage|CouchbaseRemoteFaultRecovery)$$' -count=1 -timeout=600s
+	@test -n "$$OWLCRON_TEST_S3_ENDPOINT" && test -n "$$OWLCRON_TEST_COUCHBASE_CONNECTION" && test -n "$$OWLCRON_TEST_REDIS_ADDR" && test -n "$$OWLCRON_TEST_S3_CONTAINER" && test -n "$$OWLCRON_TEST_COUCHBASE_CONTAINER" && test -n "$$OWLCRON_TEST_REDIS_CONTAINER" || (echo "Configure all three isolated remote services and their control identifiers" >&2; exit 1)
+	@test -n "$$OWLCRON_TEST_REDIS_TLS_ADDR" && test -n "$$OWLCRON_TEST_REDIS_TLS_CA_FILE" || (echo "Configure Redis TLS and its trusted CA file" >&2; exit 1)
+	go test -race ./storage -run '^Test(S3RealStorage|S3RealTransportFaultRecovery|S3RealCommittedResponseLossRecovery|S3RealServerRestartRecovery|CouchbaseRealStorage|CouchbaseRemoteFaultRecovery|RedisReal.*)$$' -count=1 -timeout=900s
 
 remote-process-integration:
-	@test -n "$$OWLCRON_REMOTE_PROCESS_BACKENDS" || (echo "Set OWLCRON_REMOTE_PROCESS_BACKENDS=S3,Couchbase and matching configuration" >&2; exit 1)
+	@test -n "$$OWLCRON_REMOTE_PROCESS_BACKENDS" || (echo "Set OWLCRON_REMOTE_PROCESS_BACKENDS=S3,Couchbase,Redis and matching configuration" >&2; exit 1)
 	go test -race . -run '^TestProcessRemoteClusterRecovery$$' -count=1 -timeout=900s
 
 linux-load-acceptance:

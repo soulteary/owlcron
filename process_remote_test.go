@@ -19,7 +19,7 @@ import (
 func TestProcessRemoteClusterRecovery(t *testing.T) {
 	raw := os.Getenv("OWLCRON_REMOTE_PROCESS_BACKENDS")
 	if raw == "" {
-		t.Skip("set OWLCRON_REMOTE_PROCESS_BACKENDS=S3,Couchbase for real remote-storage acceptance")
+		t.Skip("set OWLCRON_REMOTE_PROCESS_BACKENDS=S3,Couchbase,Redis for real remote-storage acceptance")
 	}
 	if testing.Short() {
 		t.Fatal("explicit remote process acceptance cannot run with -short")
@@ -33,6 +33,8 @@ func TestProcessRemoteClusterRecovery(t *testing.T) {
 			engine, variable = name, "OWLCRON_REMOTE_S3_CONFIG"
 		case "Couchbase":
 			engine, variable = name, "OWLCRON_REMOTE_COUCHBASE_CONFIG"
+		case "Redis":
+			engine, variable = name, "OWLCRON_REMOTE_REDIS_CONFIG"
 		default:
 			t.Fatalf("unsupported remote process backend %q", name)
 		}

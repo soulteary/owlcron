@@ -17,6 +17,7 @@ The project is experimental. Review the [known limitations](docs/limitations.md)
 - **Manage jobs**: configure scheduled tasks and run jobs on demand through the Web UI.
 - **Run plugins**: verify the workflow with the Echo Plugin, then connect your own scripts; see [running script files](docs/script-files.md).
 - **Investigate execution**: inspect job history, logs, and notifications, with [operations and metrics](docs/operations.md) for diagnostics.
+- **Choose storage**: use Filesystem, S3, Couchbase, or single-instance Redis 8.4+; see [storage configuration](docs/configuration.md#redis-connection-and-durability).
 - **Evaluate a Cronicle migration**: run the [migration preflight](docs/migration.md) and check the [compatibility scope](docs/compatibility.md) first.
 
 ## Choose an installation path

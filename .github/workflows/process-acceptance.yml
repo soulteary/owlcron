@@ -50,7 +50,7 @@ jobs:
 
   linux-remote-recovery:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -73,7 +73,7 @@ jobs:
           tags: owlcron-acceptance-minio:ci
           cache-from: type=gha,scope=owlcron-minio
           cache-to: type=gha,scope=owlcron-minio,mode=max
-      - name: Linux processes and real remote-storage failure matrix
+      - name: Linux processes, Redis TLS and real S3, Couchbase and Redis 8.4 failures
         env:
           OWLCRON_ACCEPTANCE_RESULTS: /tmp/owlcron-linux-evidence
           OWLCRON_LINUX_BUILD_DIR: ${{ runner.temp }}/owlcron-remote-build
