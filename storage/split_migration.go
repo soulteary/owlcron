@@ -441,6 +441,9 @@ func MigrateLegacyToSplit(ctx context.Context, source, target Storage, registry 
 					return ErrUnsupported
 				}
 				_, total, err = r.GetRange(ctx, key, 0, 0)
+				if errors.Is(err, ErrNotFound) {
+					return nil
+				}
 				if err != nil {
 					return err
 				}

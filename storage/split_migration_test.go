@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -119,6 +121,82 @@ func (s *interruptedMigrationTarget) Put(ctx context.Context, key string, data [
 		return errors.New("injected interrupted copy")
 	}
 	return s.FilesystemStorage.Put(ctx, key, data)
+}
+
+func TestSplitMigrationSkipsExpiredLegacyPayload(t *testing.T) {
+	for _, resume := range []bool{false, true} {
+		t.Run(fmt.Sprintf("resume=%t", resume), func(t *testing.T) {
+			ctx := context.Background()
+			source, payload := makeLegacyMigrationSource(t)
+			const expiredKey = "job_logs:expired"
+			expiredPayload := []byte("expired legacy log\n")
+			if err := source.Put(ctx, expiredKey, expiredPayload); err != nil {
+				t.Fatal(err)
+			}
+			if err := source.Expire(ctx, expiredKey, time.Now().Unix()-1); err != nil {
+				t.Fatal(err)
+			}
+			// Filesystem inventories still contain expired payload files. There
+			// is no manifest or deletion fence to bypass their range read.
+			for _, key := range []string{JobLogManifestKey("expired"), "deleted_jobs:expired", "deleted_job_logs:expired"} {
+				if _, err := source.Get(ctx, key); !errors.Is(err, ErrNotFound) {
+					t.Fatalf("unexpected expired log metadata %s: %v", key, err)
+				}
+			}
+			if _, _, err := source.GetRange(ctx, expiredKey, 0, 0); !errors.Is(err, ErrNotFound) {
+				t.Fatalf("legacy payload did not expire: %v", err)
+			}
+			path := filepath.Join(source.baseDir, expiredKey+".json")
+			if raw, err := os.ReadFile(path); err != nil || !bytes.Equal(raw, expiredPayload) {
+				t.Fatalf("expired payload file missing: %q %v", raw, err)
+			}
+			target := newSplitBackupFixture(t, false)
+			var namespace string
+			if resume {
+				fault := &interruptedMigrationTarget{FilesystemStorage: target.meta, failKey: "users:user", fail: true}
+				if _, err := MigrateLegacyToSplit(ctx, source, fault, target.registry, SplitMigrationOptions{Offline: true}); err == nil || fault.fail {
+					t.Fatalf("migration did not reach injected interruption: %v", err)
+				}
+				layout, err := LoadStorageLayout(ctx, target.meta)
+				if err != nil || layout.Phase != "migrating" {
+					t.Fatalf("interrupted target visible: %+v %v", layout, err)
+				}
+				namespace = layout.NamespaceID
+			}
+			result, err := MigrateLegacyToSplit(ctx, source, target.meta, target.registry, SplitMigrationOptions{Offline: true, Resume: resume})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if result.Logs != 3 || resume && result.Namespace != namespace {
+				t.Fatalf("unexpected migration result: %+v", result)
+			}
+			layout, err := ValidateStorageLayout(ctx, target.meta, target.registry)
+			if err != nil {
+				t.Fatal(err)
+			}
+			repo, err := NewJobLogRepository(target.meta, target.registry.Stores(), JobLogRepositoryOptions{Namespace: layout.NamespaceID, WriteStore: "logs", WriteFormat: 2})
+			if err != nil {
+				t.Fatal(err)
+			}
+			for id, want := range map[string][]byte{"legacy": []byte("old complete log\n"), "v1": payload} {
+				if got, m, err := repo.Read(ctx, id, 0, len(want)); err != nil || !bytes.Equal(got, want) || !m.Final {
+					t.Fatalf("valid log %s did not migrate: %+v %v", id, m, err)
+				}
+			}
+			if _, err := repo.Info(ctx, "expired"); !errors.Is(err, ErrNotFound) {
+				t.Fatalf("expired legacy log revived: %v", err)
+			}
+			if _, err := target.meta.Get(ctx, expiredKey); !errors.Is(err, ErrNotFound) {
+				t.Fatalf("expired payload copied into metadata: %v", err)
+			}
+			if got, err := target.meta.Get(ctx, "users:user"); err != nil || string(got) != `{"id":"user"}` {
+				t.Fatalf("valid metadata did not migrate: %q %v", got, err)
+			}
+			if raw, err := os.ReadFile(path); err != nil || !bytes.Equal(raw, expiredPayload) {
+				t.Fatalf("migration changed expired source file: %q %v", raw, err)
+			}
+		})
+	}
 }
 
 func TestSplitMigrationResumeAcceptsOnlyRecordedExpiry(t *testing.T) {
