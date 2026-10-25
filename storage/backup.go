@@ -114,6 +114,9 @@ func exportRecords(ctx context.Context, store Storage, visit func(string, Backup
 		if err != nil {
 			return 0, err
 		}
+		if err := rejectSplitBackupRecord(key, data); err != nil {
+			return 0, err
+		}
 		entry := BackupEntry{Data: data}
 		if remote, ok := store.(interface {
 			readDocument(context.Context, string) (remoteDocument, string, error)
@@ -137,9 +140,15 @@ func Import(ctx context.Context, store Storage, backup *Backup) error {
 	if backup == nil || backup.Format != "owlcron-storage-v1" {
 		return fmt.Errorf("unsupported backup format")
 	}
+	if err := rejectSplitBackup(ctx, store); err != nil {
+		return err
+	}
 	records := make(map[string]BackupEntry, len(backup.Records))
 	for key, entry := range backup.Records {
 		if err := validateKey(key); err != nil {
+			return err
+		}
+		if err := rejectSplitBackupRecord(key, entry.Data); err != nil {
 			return err
 		}
 		if key == "global/master_lease" {
