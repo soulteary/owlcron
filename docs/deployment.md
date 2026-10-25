@@ -100,7 +100,7 @@ If both `cluster_tls_cert_file` and `cluster_tls_key_file` are configured, the a
 
 - Run as a dedicated non-root service account. Restrict configuration and data directories to that account.
 - Grant plugin and job administration only to trusted users. The example plugin is for testing, not isolation.
-- Use least-privilege credentials for WebHooks, SMTP, S3, and Couchbase. Verify TLS and restrict outbound access.
+- Use least-privilege credentials for WebHooks, SMTP, S3, Couchbase, and Redis. Verify TLS and restrict outbound access.
 - Cluster nodes use WSS, node authentication, and optional mTLS at `/cluster/ws` on the same listening port. A reverse proxy does not replace those checks. See [configuration](configuration.md) and restrict node access to cluster members.
 - Set `udp_broadcast_port: -1` if discovery is unnecessary. Do not expose discovery ports publicly.
 - Configure concurrency, CPU, memory, log size, and retention for your workload, and monitor disk usage. Per-job limits are not a node-wide disk quota.
@@ -115,7 +115,7 @@ Restore into an isolated environment and check login, jobs, history, and logs be
 
 The [release workflow and version policy](releases.md) define verified archive contents and the supported build matrix. Data-migration compatibility is not yet guaranteed. Validate upgrades, cross-version rollback, and remote-backend disaster recovery against the intended deployment.
 
-Run `export`, `import`, and `storage-migrate` only after stopping all nodes to obtain a consistent snapshot; see `./owlcron-engine help` for arguments. Backups include canonical records, history, logs, cursors, queues, and tombstones, but exclude initial plaintext passwords and transient leadership leases/generations. Import overwrites matching keys without deleting extra destination records, so prefer an empty namespace. Failed remote per-key restores can retry the same backup.
+Run `export`, `import`, and `storage-migrate` only after stopping all nodes to obtain a consistent snapshot; see `./owlcron-engine help` for arguments. Backups include canonical records, history, logs, cursors, queues, and tombstones, but exclude initial plaintext passwords and transient leadership leases/generations. Import overwrites matching keys without deleting extra destination records, so prefer an empty namespace. For Redis, stop every OwlCron writer, restore into an empty namespace, and verify records, expiry, cursors, logs, and deletion fences before restarting any node. Redis AOF recovery does not replace OwlCron exports or persistent local queue/log directories. Failed remote per-key restores can retry the same backup.
 
 The CLI streams backup records to the existing `owlcron-storage-v1` format instead of retaining the full export in memory. File exports are written to a private temporary file, synced, and renamed only after completion; errors before the rename preserve the previous destination. A directory-sync failure after the rename reports unconfirmed durability; the new file may already be visible. The key list and largest individual record still consume memory. Standard-output exports can be partial on failure, so check the exit status before using them. Streaming does not make a live backend snapshot consistent.
 

@@ -21,7 +21,7 @@ def main():
     args = parser.parse_args()
     directory = Path(args.directory).resolve(strict=True)
     allowed = frozenset(args.container)
-    actions = {"inspect", "pause", "unpause", "stop", "start", "restart"}
+    actions = {"inspect", "pause", "unpause", "stop", "start", "restart", "kill"}
     running = True
 
     def stop(*_):
@@ -73,6 +73,9 @@ def main():
                     arguments = [action]
                     if action in {"stop", "restart"}:
                         arguments += ["--time", "1"]
+                    if action == "kill":
+                        # The IPC peer cannot choose a signal or another target.
+                        arguments += ["--signal", "KILL"]
                     docker(*arguments, name)
                 result = {"ok": True, "labels": labels}
             except (ValueError, KeyError, TypeError, UnicodeError, OSError, subprocess.SubprocessError):

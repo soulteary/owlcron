@@ -45,6 +45,8 @@ func newProcessLoadProfile(t *testing.T, name string, concurrency, events int) *
 			variable = "OWLCRON_REMOTE_S3_CONFIG"
 		case "Couchbase":
 			variable = "OWLCRON_REMOTE_COUCHBASE_CONFIG"
+		case "Redis":
+			variable = "OWLCRON_REMOTE_REDIS_CONFIG"
 		default:
 			t.Fatal("invalid OWLCRON_LOAD_BACKEND")
 		}

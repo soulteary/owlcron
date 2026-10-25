@@ -86,7 +86,7 @@ func newRemoteContainerControl(t *testing.T, container string) func(*testing.T, 
 		return func(t *testing.T, action string) {
 			t.Helper()
 			switch action {
-			case "pause", "unpause", "stop", "start", "restart":
+			case "pause", "unpause", "stop", "start", "restart", "kill":
 			default:
 				t.Fatalf("unsupported isolated-service control action %q", action)
 			}
@@ -131,13 +131,27 @@ func newRemoteContainerControl(t *testing.T, container string) func(*testing.T, 
 	return func(t *testing.T, action string) {
 		t.Helper()
 		switch action {
-		case "pause", "unpause", "stop", "start", "restart":
+		case "pause", "unpause", "stop", "start", "restart", "kill":
 		default:
 			t.Fatalf("unsupported isolated-service control action %q", action)
 		}
 		suffix := ""
 		if action == "stop" || action == "restart" {
 			suffix = "?t=1"
+		}
+		if action == "kill" {
+			allowed := false
+			for _, variable := range []string{"OWLCRON_TEST_REDIS_CONTAINER", "OWLCRON_TEST_S3_CONTAINER", "OWLCRON_TEST_COUCHBASE_CONTAINER"} {
+				allowed = allowed || os.Getenv(variable) == container
+			}
+			if !allowed {
+				t.Fatal("SIGKILL requires a container explicitly registered by this acceptance run")
+			}
+			// Revalidate the ownership label immediately before the destructive action.
+			if err := json.Unmarshal(request(t, http.MethodGet, containerPath+"/json"), &inspection); err != nil || inspection.Config.Labels["io.owlcron.acceptance"] != "true" {
+				t.Fatal("SIGKILL target no longer belongs to this acceptance run")
+			}
+			suffix = "?signal=KILL"
 		}
 		request(t, http.MethodPost, containerPath+"/"+action+suffix)
 	}
@@ -150,7 +164,7 @@ func TestRemoteContainerControlFileProtocol(t *testing.T) {
 	t.Setenv("OWLCRON_TEST_CONTROL_DIR", dir)
 	stop := make(chan struct{})
 	done := make(chan struct{})
-	actions := make(chan string, 3)
+	actions := make(chan string, 4)
 	errs := make(chan error, 1)
 	go func() {
 		defer close(done)
@@ -216,7 +230,8 @@ func TestRemoteContainerControlFileProtocol(t *testing.T) {
 	control := newRemoteContainerControl(t, "isolated-test-service")
 	control(t, "pause")
 	control(t, "unpause")
-	for _, want := range []string{"inspect", "pause", "unpause"} {
+	control(t, "kill")
+	for _, want := range []string{"inspect", "pause", "unpause", "kill"} {
 		if got := <-actions; got != want {
 			t.Fatalf("action %q, want %q", got, want)
 		}

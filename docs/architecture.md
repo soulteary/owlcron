@@ -15,13 +15,13 @@ See [compatibility](compatibility.md) for supported Cronicle behavior and migrat
 - [Scheduler](../engine/scheduler.go): event snapshots, minute scheduling, persistent cursors, catch-up, and event queues.
 - [JobManager](../engine/job_manager.go): target selection, concurrency reservations, plugin processes, resource limits, cancellation, retries, and completion archival.
 - [Communication](../engine/communication.go) and [node message handling](../engine/websocket_handler.go): authentication, heartbeats, remote dispatch, completion replay, and acknowledgments.
-- [Storage](../storage/storage.go): Filesystem, S3, and Couchbase records, lists, atomic updates, and backups.
+- [Storage](../storage/storage.go): Filesystem, S3, Couchbase, and Redis records, lists, atomic updates, and backups.
 
 An `Event` is configuration, a `Job` is an execution snapshot, and a `Plugin` defines an administrator-approved executable. Queued and remote work retains the parameters accepted at admission time; later event edits must not change an accepted job's execution semantics.
 
 ## Persistence and consistency
 
-Filesystem uses cancellable in-process locking and a cross-process exclusive file lock. Writes synchronize temporary files before atomic replacement. A durable redo journal recovers multi-record transactions. Reads take the same lock, so throughput and mount latency affect the whole node. S3 uses conditional requests; Couchbase uses CAS. Backend capability, timeouts, and conditional conflicts must be handled explicitly.
+Filesystem uses cancellable in-process locking and a cross-process exclusive file lock. Writes synchronize temporary files before atomic replacement. A durable redo journal recovers multi-record transactions. Reads take the same lock, so throughput and mount latency affect the whole node. S3 uses conditional requests; Couchbase uses CAS. Redis requires a single Redis 8.4+ instance and uses native SET NX/IFEQ with the same document envelope, logical expiry, and tombstones; the adapter does not execute Lua. Transport errors are not CAS conflicts, and writes are not implicitly replayed. Backend capability, timeouts, and conditional conflicts must be handled explicitly.
 
 Persistent state includes:
 

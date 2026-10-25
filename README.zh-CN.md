@@ -17,6 +17,7 @@ OwlCron 支持通过 Web 界面配置定时任务、按需运行任务、执行�
 - **管理任务**：通过 Web 界面配置定时任务和按需执行任务。
 - **执行插件**：使用示例 Echo Plugin 验证流程，再接入自己的脚本；见[运行脚本文件](docs/zh-CN/script-files.md)。
 - **排查执行问题**：查看任务历史、日志和通知，结合[运维与指标](docs/zh-CN/operations.md)进行诊断。
+- **选择存储**：使用 Filesystem、S3、Couchbase 或单实例 Redis 8.4+；见[存储配置](docs/zh-CN/configuration.md#redis-连接与持久化)。
 - **评估 Cronicle 迁移**：先运行[迁移预检](docs/zh-CN/migration.md)，再核对[兼容范围](docs/zh-CN/compatibility.md)。
 
 ## 选择安装方式

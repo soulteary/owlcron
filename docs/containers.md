@@ -38,6 +38,8 @@ Without an initial password, retrieve the sensitive bootstrap file from
 `/var/lib/owlcron/data/bootstrap-admin.json` through a trusted local terminal,
 verify login and delete it. Do not put this file in support logs or CI artifacts.
 
+For Redis storage, run a separate Redis 8.4+ instance with its own persistent data volume, AOF and noeviction policy. Supply the Redis credentials to OwlCron, mount any TLS CA/client certificates read-only, and retain OwlCron log/queue volumes. See [Redis configuration](configuration.md#redis-connection-and-durability). The application image does not start Redis or configure its persistence.
+
 ## Kubernetes
 
 The manifest is JSON, a format accepted by `kubectl apply -f`. It uses current

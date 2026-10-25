@@ -89,6 +89,8 @@ remote dispatch and recovery; metrics do not establish exactly-once execution.
 
 Record backup success and age in the backup system and regularly rehearse isolated restores. Follow [deployment and rollback](deployment.md#backups-upgrades-and-rollback) for shutdown requirements, backup scope, import behavior, and verification steps.
 
+With Redis, monitor memory, rejected writes, AOF disk space/fsync errors and scan latency externally. Preserve noeviction and the chosen AOF durability policy. Expiry is logical, and small deletion tombstones remain: do not remove fences or evict keys to relieve memory pressure. Pause new work, expand capacity and use the documented retention/offline recovery procedures.
+
 ## Account email and password recovery
 
 Public registration stays disabled. Enable `account_email_enabled` only after

@@ -27,11 +27,11 @@ OwlCron 的目标是通过 Go 实现替代 Cronicle，并通过一定程度的�
 
 ## 存储、历史与日志
 
-- Filesystem、S3、Couchbase 使用 Go 引擎自己的记录、索引和备份格式。它们不是 Pixl 旧库迁移器，不能假设可直接打开 Cronicle 的已有磁盘库。
+- Filesystem、S3、Couchbase、Redis 使用 Go 引擎自己的记录、索引和备份格式。它们不是 Pixl 旧库迁移器，不能假设可直接打开 Cronicle 的已有磁盘库。
 - 集群节点须共享支持所需原子更新语义的同一存储 namespace；Filesystem 集群须显式启用 `shared_storage`，且底层文件系统必须满足进程间锁及持久化要求。独立磁盘目录不能构成共享集群存储。
 - 历史按任务 ID 幂等写入，保留清理使用持久删除标记协调恢复。清理和保留配置须结合业务需要设置，不应把默认值当成容量规划。
 - 日志按 64 KiB 分块，增量上传并记录已提交偏移；读取默认 64 KiB、最大 1 MiB。完整日志需遍历游标或使用流式下载，旧客户端不能再假设一次请求返回全部日志。默认单任务硬上限为 64 MiB。
-- 旧 Filesystem/S3 日志保留读取兼容路径；旧 Couchbase 二进制日志需离线迁移。
+- 旧 Filesystem/S3 日志保留读取兼容路径；旧 Couchbase 二进制日志及导入 Redis 的旧单块日志需离线迁移。Redis 保留当前分块日志及 owlcron-storage-v1 备份格式；仅支持单实例 Redis 8.4+，不使用 Lua，不支持 Sentinel 或 Cluster。
 - 后端故障时，本机 completion spool、日志及通知队列参与恢复；相应目录必须持久保存。强杀前尚未落盘的数据不保证恢复。存储请求超时意味着结果未确认，不能据此认定写入从未提交。
 
 ## 集群与故障语义

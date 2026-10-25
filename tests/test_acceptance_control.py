@@ -31,9 +31,12 @@ with open(os.environ["FAKE_DOCKER_LOG"], "a") as log:
 state_path = Path(os.environ["FAKE_DOCKER_STATE"])
 state = json.loads(state_path.read_text())
 if args == ["inspect", "owned-service"]:
-    print(json.dumps([{"Config": {"Labels": {"io.owlcron.acceptance": "true"}}, "State": state}]))
+    print(json.dumps([{"Config": {"Labels": {"io.owlcron.acceptance": "false" if state.get("Unowned") else "true"}}, "State": state}]))
 elif args == ["pause", "owned-service"]:
     state["Paused"] = True
+    state_path.write_text(json.dumps(state))
+elif args == ["kill", "--signal", "KILL", "owned-service"]:
+    state["Running"] = False
     state_path.write_text(json.dumps(state))
 else:
     sys.exit(97)
@@ -109,6 +112,7 @@ else:
 
     def test_container_and_action_authority(self):
         for payload in ({"container": "unrelated-service", "action": "pause"},
+                        {"container": "unrelated-service", "action": "kill"},
                         {"container": "owned-service", "action": "exec"},
                         {"container": "owned-service", "action": "rm"}):
             with self.subTest(payload=payload):
@@ -120,6 +124,15 @@ else:
         mutations = [entry for entry in self.read_log() if entry[0] != "inspect"]
         self.assertEqual(mutations, [["pause", "owned-service"]])
         self.stop_controller()
+
+    def test_kill_uses_sigkill_and_checks_ownership_again(self):
+        self.assertTrue(self.request({"container": "owned-service", "action": "kill",
+                                      "signal": "TERM"})["ok"])
+        mutations = [entry for entry in self.read_log() if entry[0] != "inspect"]
+        self.assertEqual(mutations, [["kill", "--signal", "KILL", "owned-service"]])
+        self.state.write_text(json.dumps({"Running": True, "Paused": False, "Unowned": True}))
+        self.assertFalse(self.request({"container": "owned-service", "action": "kill"})["ok"])
+        self.assertEqual([entry for entry in self.read_log() if entry[0] != "inspect"], mutations)
 
 
 if __name__ == "__main__":

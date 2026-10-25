@@ -27,11 +27,11 @@ See [configuration](configuration.md), [deployment](deployment.md), and [known l
 
 ## Storage, history, and logs
 
-- Filesystem, S3, and Couchbase use OwlCron's own records, indexes, and backup format. They are not migration adapters for an existing Pixl storage directory.
+- Filesystem, S3, Couchbase, and Redis use OwlCron's own records, indexes, and backup format. They are not migration adapters for an existing Pixl storage directory.
 - Cluster nodes must share one namespace with the required atomic update semantics. Filesystem clusters must explicitly enable `shared_storage` and use a filesystem with suitable inter-process locks and durability. Separate local directories do not form shared cluster storage.
 - History writes are idempotent by job ID. Durable deletion markers coordinate retention with recovery. Set retention for your workload rather than treating defaults as capacity planning.
 - Logs use 64 KiB chunks and committed offsets. Reads default to 64 KiB and are capped at 1 MiB per request. Follow cursors or stream downloads for complete logs; one response need not contain the whole log. The default per-job hard limit is 64 MiB.
-- Legacy Filesystem/S3 logs retain a read-compatibility path. Legacy Couchbase binary logs require offline migration.
+- Legacy Filesystem/S3 logs retain a read-compatibility path. Legacy Couchbase binary logs and legacy single-object logs imported into Redis require offline migration. Redis preserves the current chunked log format and owlcron-storage-v1 backups; only single-instance Redis 8.4+ is supported, without Lua, Sentinel, or Cluster.
 - During backend outages, local completion spools, logs, and notification queues participate in recovery. Persist these directories. Data not written before a forced termination is not guaranteed to survive. A timeout means the result is unconfirmed, not that the write was never committed.
 
 ## Cluster and failure semantics

@@ -16,6 +16,14 @@
     ]
   },
   {
+    "module": "github.com/redis/go-redis/v9",
+    "version": "v9.23.0",
+    "notices": "licenses/go/github.com__redis__go-redis__v9@v9.23.0",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
     "module": "github.com/soulteary/http-kit/v2",
     "version": "v2.1.0",
     "notices": "licenses/go/github.com__soulteary__http-kit__v2@v2.1.0",
@@ -32,6 +40,14 @@
     "files": [
       "LICENSE",
       "NOTICE"
+    ]
+  },
+  {
+    "module": "github.com/soulteary/redis-kit",
+    "version": "v1.7.4-0.20261025032353-973602e1662b",
+    "notices": "licenses/go/github.com__soulteary__redis-kit@v1.7.4-0.20261025032353-973602e1662b",
+    "files": [
+      "LICENSE"
     ]
   },
   {
@@ -268,6 +284,14 @@
     "notices": "licenses/go/go.opentelemetry.io__otel__trace@v1.47.0",
     "files": [
       "LICENSE"
+    ]
+  },
+  {
+    "module": "go.uber.org/atomic",
+    "version": "v1.12.0",
+    "notices": "licenses/go/go.uber.org__atomic@v1.12.0",
+    "files": [
+      "LICENSE.txt"
     ]
   },
   {

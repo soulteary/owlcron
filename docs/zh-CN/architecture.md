@@ -17,13 +17,13 @@ Go 模块位于仓库根目录，工具链要求以 [go.mod](../../go.mod) 为�
 - [Scheduler](../../engine/scheduler.go)：事件快照、分钟调度、持久游标、catch-up 和事件队列。
 - [JobManager](../../engine/job_manager.go)：目标选择、并发预留、插件进程、资源检查、取消重试及完成归档。
 - [Communication](../../engine/communication.go) 与 [节点消息处理](../../engine/websocket_handler.go)：认证连接、心跳、远程派发、完成重放及确认。
-- [Storage](../../storage/storage.go)：Filesystem、S3、Couchbase 的记录、列表、原子更新及备份接口。
+- [Storage](../../storage/storage.go)：Filesystem、S3、Couchbase、Redis 的记录、列表、原子更新及备份接口。
 
 `Event` 是配置，`Job` 是一次执行的快照，`Plugin` 定义管理员允许执行的程序。队列和远程执行保存准入时的参数，后续事件修改不应替换已接纳任务的执行语义。
 
 ## 存储与一致性
 
-Filesystem 使用可取消的进程内锁和跨进程排他文件锁，写入先同步临时文件再原子替换。多记录事务通过持久 redo journal 恢复；读取也参与同一锁，因此吞吐与挂载延迟会影响整个节点。S3 使用条件请求，Couchbase 使用 CAS；后端能力、操作超时及条件冲突必须按错误处理。
+Filesystem 使用可取消的进程内锁和跨进程排他文件锁，写入先同步临时文件再原子替换。多记录事务通过持久 redo journal 恢复；读取也参与同一锁，因此吞吐与挂载延迟会影响整个节点。S3 使用条件请求，Couchbase 使用 CAS。Redis 要求单实例 Redis 8.4+，使用原生 SET NX/IFEQ，保留相同文档封装、逻辑过期和墓碑；适配器不执行 Lua。传输错误不等于 CAS 冲突，写入不会隐式重放；后端能力、操作超时及条件冲突必须按错误处理。
 
 主要持久状态包括：
 

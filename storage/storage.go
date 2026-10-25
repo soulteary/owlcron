@@ -52,7 +52,7 @@ type Transaction interface {
 
 // StorageConfig 存储配置
 type StorageConfig struct {
-	Engine  string                 `json:"engine"` // Filesystem, Couchbase, S3
+	Engine  string                 `json:"engine"` // Filesystem, Couchbase, S3, Redis
 	BaseDir string                 `json:"base_dir,omitempty"`
 	Options map[string]interface{} `json:"options,omitempty"`
 }
@@ -69,6 +69,8 @@ func NewStorage(config *StorageConfig) (Storage, error) {
 		return NewCouchbaseStorage(config)
 	case "S3":
 		return NewS3Storage(config)
+	case "Redis":
+		return NewRedisStorage(config)
 	default:
 		return nil, errors.New("unknown storage engine: " + config.Engine)
 	}
