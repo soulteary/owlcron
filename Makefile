@@ -1,4 +1,4 @@
-.PHONY: build test race vet frontend frontend-test integration redis-integration redis-tls-integration redis-storage-faults process-integration process-integration-repeat linux-acceptance remote-storage-faults remote-process-integration linux-load-acceptance capacity-acceptance soak-acceptance cluster-load-acceptance fmt-check licenses-check licenses-update docs-check smoke release
+.PHONY: build test race vet frontend frontend-test integration redis-integration redis-tls-integration redis-mtls-integration redis-acl-integration redis-storage-faults process-integration process-integration-repeat linux-acceptance remote-storage-faults remote-process-integration linux-load-acceptance capacity-acceptance soak-acceptance cluster-load-acceptance fmt-check licenses-check licenses-update docs-check smoke release
 
 docs-check:
 	python3 tests/check_docs.py
@@ -62,6 +62,16 @@ redis-integration:
 redis-tls-integration:
 	@test -n "$$OWLCRON_TEST_REDIS_TLS_ADDR" && test -n "$$OWLCRON_TEST_REDIS_TLS_CA_FILE" || (echo "Set OWLCRON_TEST_REDIS_TLS_ADDR and OWLCRON_TEST_REDIS_TLS_CA_FILE" >&2; exit 1)
 	go test -race ./storage -run '^TestRedisRealTLSConnection$$' -count=1 -timeout=120s
+
+redis-mtls-integration:
+	@test -n "$$OWLCRON_TEST_REDIS_TLS_ADDR" && test -n "$$OWLCRON_TEST_REDIS_TLS_CA_FILE" && test -n "$$OWLCRON_TEST_REDIS_TLS_CERT_FILE" && test -n "$$OWLCRON_TEST_REDIS_TLS_KEY_FILE" && test -n "$$OWLCRON_TEST_REDIS_TLS_BAD_CERT_FILE" && test -n "$$OWLCRON_TEST_REDIS_TLS_BAD_KEY_FILE" || (echo "Configure the required-client-certificate Redis endpoint and trusted/untrusted client certificates" >&2; exit 1)
+	go test -race ./storage -run '^TestRedisReal(TLSConnection|MTLSClientAuthentication)$$' -count=1 -timeout=180s
+
+redis-acl-integration:
+	@test -n "$$OWLCRON_TEST_REDIS_ADDR" && test -n "$$OWLCRON_TEST_REDIS_MINIMAL_USERNAME" && test -n "$$OWLCRON_TEST_REDIS_MINIMAL_PASSWORD" && test -n "$$OWLCRON_TEST_REDIS_MINIMAL_PREFIX" && test -n "$$OWLCRON_TEST_REDIS_MINIMAL_DB" && test -n "$$OWLCRON_TEST_REDIS_NOSELECT_USERNAME" && test -n "$$OWLCRON_TEST_REDIS_NOSELECT_PASSWORD" || (echo "Configure the strict ACL and companion no-SELECT users" >&2; exit 1)
+	@test -n "$$OWLCRON_TEST_REDIS_USERNAME" && test -n "$$OWLCRON_TEST_REDIS_PASSWORD" || (echo "Configure the isolated fixture observer account for namespace canaries" >&2; exit 1)
+	@test -n "$$OWLCRON_TEST_REDIS_TLS_ADDR" && test -n "$$OWLCRON_TEST_REDIS_TLS_CA_FILE" && test -n "$$OWLCRON_TEST_REDIS_TLS_CERT_FILE" && test -n "$$OWLCRON_TEST_REDIS_TLS_KEY_FILE" || (echo "Configure client-certificate TLS for the combined minimal-ACL case" >&2; exit 1)
+	go test -race ./storage -run '^TestRedisRealMinimalACL$$' -count=1 -timeout=180s
 
 redis-storage-faults:
 	@test -n "$$OWLCRON_TEST_REDIS_ADDR" && test -n "$$OWLCRON_TEST_REDIS_CONTAINER" || (echo "Configure a labeled isolated Redis service and its control identifier" >&2; exit 1)

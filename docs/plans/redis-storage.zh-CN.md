@@ -1,6 +1,6 @@
 # Redis 单实例存储支持计划
 
-状态：单实例 Redis 8.4+ 原生 CAS 已随 [OwlCron PR #74](https://github.com/soulteary/owlcron/pull/74) 合并，保持既有数据与备份格式。客户端前置能力已随 redis-kit v1.8.0 正式发布；[OwlCron PR #75](https://github.com/soulteary/owlcron/pull/75) 已合并正式版本依赖更新，不依赖本地 replace。本轮继续修正部署和验收遗漏，相关验证尚在执行。
+状态：单实例 Redis 8.4+ 原生 CAS 已随 [OwlCron PR #74](https://github.com/soulteary/owlcron/pull/74) 合并，保持既有数据与备份格式。客户端前置能力已随 redis-kit v1.8.0 正式发布；[OwlCron PR #75](https://github.com/soulteary/owlcron/pull/75) 已合并正式版本依赖更新，不依赖本地 replace；[PR #76](https://github.com/soulteary/owlcron/pull/76) 已合并备份与故障 CI 修正。本轮补齐 mTLS 和严格最小 ACL 的真实验收，相关验证尚在执行。
 
 日期：2026-10-25。最初核查基线为 `ff5d6c22f4a854a7c28e1f0ed9a5ebf5d7156d69`；Redis 实现已合并至 OwlCron 主分支 `1b008631e67d767dc4740c81ce2be79a76e47375`。本文保留实现范围、依赖选择与验收要求，并分别记录实现阶段与正式依赖版本更新的验证状态。
 
@@ -228,12 +228,20 @@ redis-kit v1.8.0 已正式发布，OwlCron 已随 [PR #75](https://github.com/so
 本轮复查的修正范围如下，尚未将其列为完整测试或真实服务验收通过：
 
 - 容器前端构建的 Bun 从单独漂移的 1.4.3 对齐到项目、CI 和发行构建已固定的 1.4.2。
-- 双语配置明确非零 DB 需要 `SELECT`，并说明 `HELLO` 的 RESP3 协商与 ACL 拒绝时的 RESP2 回退。现有真实测试账户的权限较宽，不能把它作为最小 ACL 配置已验收的证据。
+- 双语配置明确非零 DB 需要 `SELECT`，并说明 `HELLO` 的 RESP3 协商与 ACL 拒绝时的 RESP2 回退。该轮常规测试账户的权限较宽，不能把它作为最小 ACL 配置已验收的证据。
 - Redis 镜像改为固定 8.4.7 多架构索引，并在启动前核对 Docker 服务与镜像平台；真实联合恢复矩阵在相关 PR 上也必须通过。
 - Redis 与 S3 的探针移入应用 key 不允许使用的私有路径。旧探针只按精确名称和原始载荷识别，不再过滤合法的 `capability/` 业务记录；回归覆盖导入和重新导出。
 - 补充 `Expire` 写入中断与 Redis/S3/Couchbase 双向恢复，核对二进制、列表、绝对过期时间、分块日志和删除栅栏，并将合法 `capability/` 记录纳入迁移用例。
 
-真实 TLS 验收目前覆盖服务端证书验证及错误 CA、主机名和账户拒绝。虽然配置支持 `tls_cert_file`、`tls_key_file`，框架中的 Redis 使用 `tls-auth-clients no`，尚未真实验收客户端证书认证；不将其宣传为 mTLS 验收完成。本轮完整测试和真实故障结果以当前修正提交的实际运行记录为准。
+PR #76 时的真实 TLS 验收覆盖服务端证书验证及错误 CA、主机名和账户拒绝；当时使用 `tls-auth-clients no`，未覆盖客户端证书认证。
+
+### mTLS 和严格最小 ACL 补齐
+
+本轮 Linux 隔离环境改为 `tls-auth-clients yes`，使用独立 CA 签发的 serverAuth 服务端证书、clientAuth 客户端证书，以及另一 CA 签发的有效客户端证书。目标是验证可信身份可以读写、备份与恢复，缺少客户端证书或使用不受信任客户端证书必须失败，并保留错误服务端身份和 Redis 账户的拒绝检查。runner 只挂载客户端测试材料和公开 CA，不挂载 CA 私钥或服务端私钥。
+
+严格 ACL 使用独立账户、DB 1 和 `~acl-test:*` key 规则，先通过 `reset`、`resetchannels` 清除旧有授权和 channel 范围，再精确授予 `-@all +ping +info|server +get +set +scan +unlink +select`，不显式授予 `HELLO`、命令类别、脚本、客户端身份或管理权限；Redis 8.4.7 的认证协商不要求显式 `+hello`。目标是通过真实服务执行启动能力探测、原生 CAS、二进制/列表/TTL、备份恢复，并显式确认禁止的命令和前缀外访问被拒绝。`SELECT` 无法提供 DB 授权隔离，SCAN 也不会按 key ACL 隐藏名称；生产中仍须根据隔离要求使用独立实例。
+
+独立入口为 `make redis-mtls-integration` 与 `make redis-acl-integration`；后者也强制要求 mTLS 测试材料，避免组合用例被跳过。本轮完整测试和真实故障结果以当前修正提交的实际运行记录为准；上述目标不代替测试通过证据。
 
 ## 8. 后续扩展边界
 

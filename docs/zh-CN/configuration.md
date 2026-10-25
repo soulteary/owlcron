@@ -54,9 +54,16 @@ S3 在 `storage_options` 中配置 `bucket`。设置 `access_key`、`secret_key`
 
 `addr` 必填。`username`／`password` 可回退到 `REDIS_USERNAME`／`REDIS_PASSWORD`；示例通过环境变量提供密码。每个部署使用独立 `prefix`，默认 `owlcron:`，`db` 默认 0。`pool_size` 默认基础连接池大小为 10；`min_idle_conns` 默认 min(5, pool_size)，不能超过 pool_size。同一 OwlCron 集群的节点必须共用 DB 和 prefix；Sentinel／Cluster 选项会被拒绝。
 
-通过 `tls: true` 开启证书验证，可设置 `tls_ca_file` 和 `tls_server_name`；双向 TLS 同时提供 `tls_cert_file`、`tls_key_file`。最低 TLS 1.2，不支持跳过验证。真实服务验收目前验证服务端证书认证，验收框架尚未覆盖客户端证书认证。凭据不得进入版本控制。`dial_timeout_ms`、`read_timeout_ms`、`write_timeout_ms`、`pool_timeout_ms`、`startup_timeout_ms` 均为正整数毫秒，默认依次为 5000、3000、3000、4000、10000。客户端传输重试禁用；取消或响应丢失可能使写入结果不确定，不会被当作版本冲突并自动重放。
+通过 `tls: true` 开启证书验证，可设置 `tls_ca_file` 和 `tls_server_name`；双向 TLS 同时提供 `tls_cert_file`、`tls_key_file`。最低 TLS 1.2，不支持跳过验证。Linux 验收环境强制要求客户端证书（`tls-auth-clients yes`），包含有效证书、缺少证书和不受信任客户端身份的用例。凭据不得进入版本控制。`dial_timeout_ms`、`read_timeout_ms`、`write_timeout_ms`、`pool_timeout_ms`、`startup_timeout_ms` 均为正整数毫秒，默认依次为 5000、3000、3000、4000、10000。客户端传输重试禁用；取消或响应丢失可能使写入结果不确定，不会被当作版本冲突并自动重放。
 
-账户需要连接认证、`PING`、`INFO server`、`GET`、`SET`、`SCAN`、`UNLINK` 权限，key 范围覆盖业务命名空间和临时能力探测 key。非零 `db` 还需要 `SELECT` 权限，拒绝该命令会使连接初始化失败。客户端先尝试通过 `HELLO` 协商 RESP3；允许 `HELLO` 可避免协议回退，服务端以 ACL 错误拒绝该命令时，当前客户端会回退到 RESP2，并在已配置密码时通过 `AUTH` 认证，因此 `HELLO` 不是存储必需权限。账户不需要 Lua、CONFIG、ACL 管理或 flush 权限。另行限制管理命令。key ACL 规则不会让 SCAN 隐藏其他 key 名；名称敏感时使用独立 DB／实例。
+账户需要连接认证、`PING`、`INFO server`、`GET`、`SET`、`SCAN`、`UNLINK` 权限，key 范围覆盖业务命名空间和临时能力探测 key。非零 `db` 还需要 `SELECT` 权限，拒绝该命令会使连接初始化失败。客户端通过 `HELLO` 协商 RESP3。Redis 8.4.7 允许认证和协议协商，无须显式授予 `+hello`，所以下列最小白名单支持正常握手；省略该授权不会强制回退到 RESP2。账户不需要 Lua、CONFIG、ACL 管理或 flush 权限。在 `redis.conf` 中创建使用 `owlcron:` 前缀、非零 DB 的新账户时，可使用以下命令白名单：
+
+```text
+user default off
+user owlcron reset on >REPLACE_WITH_A_SECRET ~owlcron:* resetchannels -@all +ping +info|server +get +set +scan +unlink +select
+```
+
+所有连接均使用 DB 0 时可去掉 `+select`。key 规则同时覆盖 `owlcron:.capability/` 下的私有启动探针。`reset` 清除旧有的授权、密码及 selector，`resetchannels` 保持禁止 Pub/Sub channel。此配置不授予命令类别、脚本、客户端身份或管理权限。验收使用具有上述精确命令列表、受限前缀和 DB 1 的独立账户，并显式检查脚本、管理命令及前缀外访问仍被拒绝。`+info|server` 按 INFO 的首个参数限权：`INFO memory` 被拒绝，但在 `server` 后追加其他 section 时，它不是仅返回 server section 的严格过滤器。Redis key ACL 规则跨 DB 生效，允许 `SELECT` 不会限制账户能选择哪个 DB。key ACL 规则不会让 SCAN 隐藏其他 key 名；名称敏感时使用独立实例。
 
 使用 `maxmemory-policy noeviction`、AOF 和持久 Redis 数据卷。崩溃验收配置为 `appendfsync always`；`everysec` 存在最近写入丢失窗口。应用启动检查操作能力，不核验服务端持久化配置。单实例 Redis 本身仍是可用性单点。Redis 还保存任务日志块，须同时规划内存和 AOF 磁盘容量。过期仍为逻辑过期，过期记录和小型底层墓碑不会自动从 Redis 删除；保留策略不等于内存硬配额。OwlCron 本机 `log_dir`、`queue_dir` 也要持久化，离线备份恢复步骤见[部署文档](deployment.md#备份升级与回滚)。
 
