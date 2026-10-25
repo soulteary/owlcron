@@ -56,8 +56,8 @@ github.com/soulteary/otterio-kits/md5-simd v1.2.1 h1:uT0Ma63Mn7PEjNcxRmGQMMoaJE8
 github.com/soulteary/otterio-kits/md5-simd v1.2.1/go.mod h1:B0CHLrx6j4umctX0trs2eCdiLvYBpF7SELkbis7Vo+E=
 github.com/soulteary/otterio-sdk/v7 v7.3.3 h1:Iw+BDCcL5mVYcwxR49Yid4YsH28eggdgnpZr1YWBs8s=
 github.com/soulteary/otterio-sdk/v7 v7.3.3/go.mod h1:VJZchDQXS+fcykAqihpMSHItExcuiNqzz1ibmK8XKOQ=
-github.com/soulteary/redis-kit v1.7.4-0.20261025030452-be10f8cf6ec7 h1:yOb9mHXM+/KDp4Ktvn5DrEpSgZ6t4QtCCv02EUX79+0=
-github.com/soulteary/redis-kit v1.7.4-0.20261025030452-be10f8cf6ec7/go.mod h1:k/lvXA9ecjKhSvNJrGlQ7K0ijp727OYfecG1Mxadv5A=
+github.com/soulteary/redis-kit v1.7.4-0.20261025032353-973602e1662b h1:zI1ELIxaHs2pwLY7tWvkKgMYmnb1EV96cHVB79eSOVg=
+github.com/soulteary/redis-kit v1.7.4-0.20261025032353-973602e1662b/go.mod h1:k/lvXA9ecjKhSvNJrGlQ7K0ijp727OYfecG1Mxadv5A=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.4.0/go.mod h1:YvHI0jy2hoMjB+UWwv71VJQ9isScKT/TqJzVSSt89Yw=
 github.com/stretchr/objx v0.5.0/go.mod h1:Yh+to48EsGEfYuaHDzXPcE3xhTkx73EhmCGUpEOglKo=

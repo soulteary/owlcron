@@ -2,7 +2,7 @@
 
 状态：已实现单实例 Redis 8.4+ 原生 CAS，保持既有数据与备份格式。kit 前置补丁已提交为草稿 PR；OwlCron 已固定该提交，不依赖本地 replace。
 
-日期：2026-10-25。OwlCron 核查基线为 `ff5d6c22f4a854a7c28e1f0ed9a5ebf5d7156d69`。本文记录本次实现范围、依赖选择与验收要求；代码仍在开发分支，尚未合并或发布。
+日期：2026-10-25。OwlCron 核查基线为 `ff5d6c22f4a854a7c28e1f0ed9a5ebf5d7156d69`。实现已同步至主分支 `693076c`。本文记录本次实现范围、依赖选择与验收要求；代码仍在开发分支，尚未合并或发布。
 
 ## 1. 已确定的范围
 
@@ -30,7 +30,7 @@
 3. 保留 `MaxRetries=-1` 禁用重试的能力，并添加覆盖上述映射和取消行为的测试；`0` 在底层并不表示禁用重试。
 4. 保留既有连接池和重试默认值。硬连接数上限的额外 API 不属于本次补丁，不把 `PoolSize` 当作绝对上限。
 
-以上补丁已提交为 [redis-kit PR #13](https://github.com/soulteary/redis-kit/pull/13)，提交 `be10f8cf6ec712dfdd3bed4a1e1396c502f7d46e`。OwlCron 固定 `v1.7.4-0.20261025030452-be10f8cf6ec7`，从公共模块源即可独立构建；未创建发布 tag，也未合并主分支。
+以上补丁已提交为 [redis-kit PR #13](https://github.com/soulteary/redis-kit/pull/13)，提交 `973602e1662bc71af1edd6908394a4a2c33cd200`。OwlCron 固定 `v1.7.4-0.20261025032353-973602e1662b`，从公共模块源即可独立构建；未创建发布 tag，也未合并主分支。
 
 ACL 用户名作为独立、范围很小的 kit 改进已完成：新增 `Username` 字段、可选的 `WithUsername` 和两处构造器透传，保留用户名为空时原有的默认用户认证行为。无需新增依赖或自行发送 AUTH，更不需要在 kit 实现 ACL 用户创建、权限管理、配置下发或管理员账户管理。验收覆盖旧密码模式、禁用 default 用户后的命名账户登录、错误凭据失败，以及业务用户名和 Sentinel 用户名分别映射。命令/key 权限仍由服务端管理员配置。[AUTH 说明](https://redis.io/docs/latest/commands/auth/)
 
@@ -210,6 +210,7 @@ Redis 子包不适合本项目的持久存储协议：
 - 真实网络故障：提交前断连、网络黑洞、提交后响应丢失、导出/导入中断与恢复重跑通过；对未知提交断言发送、回调和实际提交均只有一次。
 - 真实 TLS：可信 CA 正常读写；错误主机名、不受信任 CA、错误命名账户均被拒绝。启动探针超时与途中取消均在预算内返回。
 - Redis 进程：真实 SIGKILL 后 AOF 恢复已确认数据，旧 CAS 被拒绝；测试容器白名单与标签验证通过。
+- Linux 存储：最终版本的 11 项真实 Redis 存储、TLS、备份、网络和强杀用例全部通过，无 skip。套接字 deadline 与 context timer 的错误归一化竞态已修正，确定性回归及真实启动预算测试通过。
 - Linux daemon：race 模式下 ActiveJobAndChunkedLog、MailAndWebHookQueue、ClusterPartitionAndFailover、StorageOutageCompletionSpool 四项全部通过，无 skip，包含真实 daemon 强杀、Redis 暂停/强杀和完成 spool 恢复。
 
 CI 已接入固定 Redis 镜像及 TLS 服务，逐项核对存储、CLI、API/集群及 daemon 用例 PASS，拒绝遗漏或跳过。整套 MinIO/Couchbase/Redis 联合脚本尚待远程 CI 执行；本轮本机真实后端验证聚焦 Redis，并未重跑 S3/Couchbase 服务或验证跨它们的实际迁移。宿主断电、磁盘损坏、Redis 主从切换、硬容量认证不在已验证范围。

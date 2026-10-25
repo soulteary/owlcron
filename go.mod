@@ -8,7 +8,7 @@ require (
 	github.com/redis/go-redis/v9 v9.23.0
 	github.com/soulteary/http-kit/v2 v2.1.0
 	github.com/soulteary/otterio-sdk/v7 v7.3.3
-	github.com/soulteary/redis-kit v1.7.4-0.20261025030452-be10f8cf6ec7
+	github.com/soulteary/redis-kit v1.7.4-0.20261025032353-973602e1662b
 	go.uber.org/zap v1.28.0
 	golang.org/x/crypto v0.58.0
 	golang.org/x/net v0.61.0

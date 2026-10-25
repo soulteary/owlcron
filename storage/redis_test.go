@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -277,5 +278,50 @@ func TestRedisCancelledProbeKeepsStartupBudget(t *testing.T) {
 	}
 	if len(commands) != 2 {
 		t.Fatalf("canceled startup ran %d commands instead of INFO plus one probe", len(commands))
+	}
+}
+
+// Model the interval between a socket deadline firing and the context timer
+// publishing cancellation. Using a real timer would make this regression test
+// depend on which runtime subsystem happened to run first.
+type redisDelayedDeadlineContext struct {
+	context.Context
+	deadline time.Time
+	done     <-chan struct{}
+}
+
+func (c redisDelayedDeadlineContext) Deadline() (time.Time, bool) { return c.deadline, true }
+func (c redisDelayedDeadlineContext) Done() <-chan struct{}       { return c.done }
+
+func TestRedisRequestNormalizesDeadlineBeforeContextTimer(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		expired bool
+		failure error
+		want    error
+	}{
+		{"expired socket timeout", true, &net.OpError{Op: "read", Net: "tcp", Err: os.ErrDeadlineExceeded}, context.DeadlineExceeded},
+		{"expired connection loss", true, io.EOF, context.DeadlineExceeded},
+		{"unexpired connection loss", false, io.EOF, io.EOF},
+		{"unexpired conflict", false, ErrConflict, ErrConflict},
+		{"completed result", true, nil, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			deadline := time.Now().Add(time.Hour)
+			if tc.expired {
+				deadline = time.Now().Add(-time.Hour)
+			}
+			ctx := redisDelayedDeadlineContext{Context: context.Background(), deadline: deadline, done: make(chan struct{})}
+			got, err := redisRequest(ctx, func() (string, error) { return "response", tc.failure })
+			if !errors.Is(err, tc.want) {
+				t.Fatalf("request error=%v, want %v", err, tc.want)
+			}
+			if tc.want == context.DeadlineExceeded && got != "" {
+				t.Fatalf("deadline failure returned a completed result: %q", got)
+			}
+			if tc.failure == nil && got != "response" {
+				t.Fatalf("successful response was replaced: %q", got)
+			}
+		})
 	}
 }

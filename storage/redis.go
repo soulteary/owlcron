@@ -484,6 +484,14 @@ func redisRequest[T any](ctx context.Context, request func() (T, error)) (T, err
 		if err := ctx.Err(); err != nil {
 			return zero, err
 		}
+		// The socket poller can report its deadline before the context timer
+		// publishes Err. Keep that scheduling race from exposing an I/O timeout
+		// in place of the caller's deadline; earlier failures retain their cause.
+		if result.err != nil {
+			if deadline, ok := ctx.Deadline(); ok && !time.Now().Before(deadline) {
+				return zero, context.DeadlineExceeded
+			}
+		}
 		return result.value, result.err
 	}
 }
