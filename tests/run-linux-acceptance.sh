@@ -44,7 +44,9 @@ cleanup() {
         docker rm -f "$container" >/dev/null 2>&1 || true
     done
     docker network rm "$network" >/dev/null 2>&1 || true
-    rm -f "$run_dir/redis-tls/server.key"
+    rm -f "$run_dir/redis-tls/ca.key" "$run_dir/redis-tls/server.key" \
+        "$run_dir/redis-tls/client.key" "$run_dir/redis-tls/untrusted-ca.key" \
+        "$run_dir/redis-tls/untrusted-client.key"
     printf 'finished_utc=%s\nexit=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$code" >"$results/outcome.log"
     echo "Acceptance exit: $code; evidence: $results"
     # Retain the unique run directory for failed-run investigation; no global prune.
@@ -59,29 +61,67 @@ if [[ -n "${OWLCRON_LINUX_MODULE_CACHE:-}" ]]; then
 else
     module_dir="$run_dir/modules"
 fi
-cat >"$run_dir/redis-tls/certificate.conf" <<'CERTIFICATE_CONFIG'
+cat >"$run_dir/redis-tls/ca.conf" <<'CERTIFICATE_CONFIG'
 [req]
 distinguished_name=subject
-x509_extensions=extensions
+x509_extensions=ca
 prompt=no
 [subject]
-CN=localhost
-[extensions]
-subjectAltName=DNS:localhost,IP:127.0.0.1
-basicConstraints=critical,CA:TRUE
-keyUsage=critical,keyCertSign,digitalSignature,keyEncipherment
-extendedKeyUsage=serverAuth
+CN=OwlCron Redis Acceptance CA
+[ca]
+basicConstraints=critical,CA:TRUE,pathlen:0
+keyUsage=critical,keyCertSign,cRLSign
 CERTIFICATE_CONFIG
-openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
-    -config "$run_dir/redis-tls/certificate.conf" \
-    -keyout "$run_dir/redis-tls/server.key" -out "$run_dir/redis-tls/server.crt" \
-    >"$results/redis-tls-generation.log" 2>&1
-# A throwaway test key must be readable by the Redis image's unprivileged UID.
-# Only the public certificate is mounted in the runner.
+cat >"$run_dir/redis-tls/leaf.conf" <<'CERTIFICATE_CONFIG'
+[server]
+subjectAltName=DNS:localhost,IP:127.0.0.1
+basicConstraints=critical,CA:FALSE
+keyUsage=critical,digitalSignature,keyEncipherment
+extendedKeyUsage=serverAuth
+[client]
+basicConstraints=critical,CA:FALSE
+keyUsage=critical,digitalSignature,keyEncipherment
+extendedKeyUsage=clientAuth
+CERTIFICATE_CONFIG
+{
+    # The untrusted CA has the same subject but another key: Go must send its
+    # client certificate, and Redis must reject its signature rather than merely
+    # seeing no certificate after Go filters the acceptable-CA list.
+    for authority in ca untrusted-ca; do
+        openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
+            -config "$run_dir/redis-tls/ca.conf" \
+            -keyout "$run_dir/redis-tls/$authority.key" -out "$run_dir/redis-tls/$authority.crt"
+    done
+    for identity in server client untrusted-client; do
+        authority=ca
+        profile=client
+        if [[ "$identity" == server ]]; then profile=server; fi
+        if [[ "$identity" == untrusted-client ]]; then authority=untrusted-ca; fi
+        openssl req -new -newkey rsa:2048 -nodes -subj "/CN=$identity" \
+            -keyout "$run_dir/redis-tls/$identity.key" -out "$run_dir/redis-tls/$identity.csr"
+        openssl x509 -req -days 1 -in "$run_dir/redis-tls/$identity.csr" \
+            -CA "$run_dir/redis-tls/$authority.crt" -CAkey "$run_dir/redis-tls/$authority.key" \
+            -set_serial "0x$(openssl rand -hex 16)" -extfile "$run_dir/redis-tls/leaf.conf" \
+            -extensions "$profile" -out "$run_dir/redis-tls/$identity.crt"
+    done
+    openssl verify -CAfile "$run_dir/redis-tls/ca.crt" -purpose sslserver "$run_dir/redis-tls/server.crt"
+    openssl verify -CAfile "$run_dir/redis-tls/ca.crt" -purpose sslclient "$run_dir/redis-tls/client.crt"
+    if openssl verify -CAfile "$run_dir/redis-tls/ca.crt" -purpose sslclient "$run_dir/redis-tls/untrusted-client.crt"; then
+        echo 'Untrusted client certificate unexpectedly verifies' >&2
+        exit 1
+    fi
+} >"$results/redis-tls-generation.log" 2>&1
+# Redis receives only its leaf key; the runner receives only client leaf keys.
+# Neither container can access a CA private key.
 chmod 0755 "$run_dir/redis-tls"
-chmod 0644 "$run_dir/redis-tls/server.key" "$run_dir/redis-tls/server.crt"
-openssl x509 -in "$run_dir/redis-tls/server.crt" -noout -subject -dates -fingerprint -sha256 \
-    >"$results/redis-tls-certificate.log"
+chmod 0600 "$run_dir/redis-tls/ca.key" "$run_dir/redis-tls/untrusted-ca.key"
+chmod 0644 "$run_dir/redis-tls/server.key" "$run_dir/redis-tls/server.crt" \
+    "$run_dir/redis-tls/client.key" "$run_dir/redis-tls/client.crt" \
+    "$run_dir/redis-tls/untrusted-client.key" "$run_dir/redis-tls/untrusted-client.crt" \
+    "$run_dir/redis-tls/ca.crt"
+for identity in ca server client untrusted-client; do
+    openssl x509 -in "$run_dir/redis-tls/$identity.crt" -noout -subject -issuer -dates -fingerprint -sha256
+done >"$results/redis-tls-certificate.log"
 docker network create --label io.owlcron.acceptance=true "$network" >/dev/null
 if [[ -n "${OWLCRON_LINUX_MINIO_BINARY:-}" ]]; then
     # The caller must supply a Linux binary for the Docker engine architecture.
@@ -107,8 +147,8 @@ port 6379
 tls-port 6380
 tls-cert-file /tls/server.crt
 tls-key-file /tls/server.key
-tls-ca-cert-file /tls/server.crt
-tls-auth-clients no
+tls-ca-cert-file /tls/ca.crt
+tls-auth-clients yes
 dir /data
 save ""
 appendonly yes
@@ -116,6 +156,8 @@ appendfsync always
 maxmemory-policy noeviction
 user default off
 user owlcron on >owlcron-test-secret ~* &* +@all -config -acl -flushdb -flushall -shutdown -eval -evalsha -eval_ro -evalsha_ro -script -function -fcall -fcall_ro
+user owlcron-minimal reset on >owlcron-minimal-test-secret ~acl-test:* resetchannels -@all +ping +info|server +get +set +scan +unlink +select
+user owlcron-noselect reset on >owlcron-noselect-test-secret ~acl-test:* resetchannels -@all +ping +info|server +get +set +scan +unlink
 user acceptance-admin on >owlcron-admin-test-secret ~* &* +@all
 REDIS_CONFIG
 chmod 0644 "$run_dir/redis.conf"
@@ -126,7 +168,8 @@ printf 'redis=%s\nserver=%s\n' "$redis_platform" "$server_platform" >>"$results/
 [[ "$redis_platform" == "$server_platform" ]] || { echo "Redis image platform $redis_platform does not match Docker server $server_platform" >&2; exit 1; }
 docker run -d --name "$redis" --label io.owlcron.acceptance=true --network "$network" \
     -v "$run_dir/redis-data:/data" -v "$run_dir/redis.conf:/usr/local/etc/redis/redis.conf:ro" \
-    -v "$run_dir/redis-tls:/tls:ro" \
+    -v "$run_dir/redis-tls/ca.crt:/tls/ca.crt:ro" \
+    -v "$run_dir/redis-tls/server.crt:/tls/server.crt:ro" -v "$run_dir/redis-tls/server.key:/tls/server.key:ro" \
     "$redis_image" redis-server /usr/local/etc/redis/redis.conf >/dev/null
 ready=false
 for ((i=0; i<30; i++)); do
@@ -136,14 +179,34 @@ done
 [[ "$ready" == true ]] || { echo 'Isolated Redis initialization failed' >&2; exit 1; }
 [[ $(docker exec "$redis" redis-cli PING) == 'NOAUTH Authentication required.' ]] || { echo 'Redis default user must be disabled' >&2; exit 1; }
 docker exec "$redis" redis-cli --no-auth-warning --user acceptance-admin -a owlcron-admin-test-secret \
-    CONFIG GET appendonly appendfsync maxmemory-policy >"$results/redis-durability.log"
+    CONFIG GET appendonly appendfsync maxmemory-policy tls-auth-clients >"$results/redis-durability.log"
 python3 - "$results/redis-durability.log" <<'VERIFY_REDIS'
 from pathlib import Path
 import sys
 lines = Path(sys.argv[1]).read_text().splitlines()
 actual = dict(zip(lines[::2], lines[1::2]))
-assert actual == {"appendonly": "yes", "appendfsync": "always", "maxmemory-policy": "noeviction"}, actual
+assert actual == {"appendonly": "yes", "appendfsync": "always", "maxmemory-policy": "noeviction", "tls-auth-clients": "yes"}, actual
 VERIFY_REDIS
+for account in owlcron-minimal owlcron-noselect; do
+    docker exec "$redis" redis-cli --json --no-auth-warning --user acceptance-admin -a owlcron-admin-test-secret \
+        ACL GETUSER "$account" >"$results/$account-acl.json"
+done
+python3 - "$results" <<'VERIFY_REDIS_ACL'
+import json
+from pathlib import Path
+import sys
+for account in ("owlcron-minimal", "owlcron-noselect"):
+    data = json.loads((Path(sys.argv[1]) / (account + "-acl.json")).read_text())
+    if isinstance(data, list):
+        data = dict(zip(data[::2], data[1::2]))
+    expected = {"-@all", "+ping", "+info|server", "+get", "+set", "+scan", "+unlink"}
+    if account == "owlcron-minimal":
+        expected.add("+select")
+    assert set(data["commands"].split()) == expected, data["commands"]
+    assert data["keys"] == "~acl-test:*", data["keys"]
+    assert data["channels"] == "" and not data["selectors"], data
+    assert "on" in data["flags"] and "nopass" not in data["flags"], data["flags"]
+VERIFY_REDIS_ACL
 ready=false
 for ((i=0; i<60; i++)); do
     if docker exec "$couchbase" /opt/couchbase/bin/couchbase-cli cluster-init -c 127.0.0.1 \
@@ -160,7 +223,9 @@ python3 "$root/tests/acceptance_control.py" --directory "$run_dir/control" \
 controller_pid=$!
 docker run -d --name "$runner" --label io.owlcron.acceptance=true --network "$network" \
     -v "$root:/workspace:ro" -v "$module_dir:/go/pkg/mod" \
-    -v "$run_dir/redis-tls/server.crt:/tls/server.crt:ro" \
+    -v "$run_dir/redis-tls/ca.crt:/tls/ca.crt:ro" \
+    -v "$run_dir/redis-tls/client.crt:/tls/client.crt:ro" -v "$run_dir/redis-tls/client.key:/tls/client.key:ro" \
+    -v "$run_dir/redis-tls/untrusted-client.crt:/tls/untrusted-client.crt:ro" -v "$run_dir/redis-tls/untrusted-client.key:/tls/untrusted-client.key:ro" \
     -v "$run_dir/control:/control" -v "$build_dir:/build" -w /workspace \
     -e GOCACHE=/build/cache -e GOTMPDIR=/build/work -e GOFLAGS=-p=2 \
     -e "GOPROXY=${GOPROXY:-https://proxy.golang.org,direct}" \
@@ -168,8 +233,13 @@ docker run -d --name "$runner" --label io.owlcron.acceptance=true --network "$ne
     -e "OWLCRON_TEST_S3_ENDPOINT=http://$s3:9000" \
     -e "OWLCRON_TEST_COUCHBASE_CONNECTION=couchbase://$couchbase" \
     -e "OWLCRON_TEST_REDIS_ADDR=$redis:6379" \
-    -e "OWLCRON_TEST_REDIS_TLS_ADDR=$redis:6380" -e OWLCRON_TEST_REDIS_TLS_CA_FILE=/tls/server.crt \
+    -e "OWLCRON_TEST_REDIS_TLS_ADDR=$redis:6380" -e OWLCRON_TEST_REDIS_TLS_CA_FILE=/tls/ca.crt \
+    -e OWLCRON_TEST_REDIS_TLS_CERT_FILE=/tls/client.crt -e OWLCRON_TEST_REDIS_TLS_KEY_FILE=/tls/client.key \
+    -e OWLCRON_TEST_REDIS_TLS_BAD_CERT_FILE=/tls/untrusted-client.crt -e OWLCRON_TEST_REDIS_TLS_BAD_KEY_FILE=/tls/untrusted-client.key \
     -e OWLCRON_TEST_REDIS_USERNAME=owlcron -e OWLCRON_TEST_REDIS_PASSWORD=owlcron-test-secret \
+    -e OWLCRON_TEST_REDIS_MINIMAL_USERNAME=owlcron-minimal -e OWLCRON_TEST_REDIS_MINIMAL_PASSWORD=owlcron-minimal-test-secret \
+    -e OWLCRON_TEST_REDIS_MINIMAL_PREFIX=acl-test: -e OWLCRON_TEST_REDIS_MINIMAL_DB=1 \
+    -e OWLCRON_TEST_REDIS_NOSELECT_USERNAME=owlcron-noselect -e OWLCRON_TEST_REDIS_NOSELECT_PASSWORD=owlcron-noselect-test-secret \
     -e "OWLCRON_TEST_S3_CONTAINER=$s3" -e "OWLCRON_TEST_COUCHBASE_CONTAINER=$couchbase" -e "OWLCRON_TEST_REDIS_CONTAINER=$redis" \
     "$go_image" sleep infinity >/dev/null
 {
@@ -196,12 +266,30 @@ import re
 import sys
 text = Path(sys.argv[1]).read_text()
 for name in ("TestRedisRealStorage", "TestRedisRealExistingEnvelopeAndNativeCAS", "TestRedisRealCapabilityRecordsBackupRoundTrip", "TestRedisRealPrefixIsolation",
-             "TestRedisRealConstructorDeadlineBudget", "TestRedisRealTLSConnection",
+             "TestRedisRealConstructorDeadlineBudget", "TestRedisRealTLSConnection", "TestRedisRealMTLSClientAuthentication", "TestRedisRealMinimalACL",
              "TestRedisRealBackupRoundTrip", "TestRedisRealBackupInterruptedImportCanResume", "TestRedisRealBackupTransportRecovery",
              "TestRedisRealBackupExpiryTransportRecovery", "TestRedisRealBackupCrossBackend/S3", "TestRedisRealBackupCrossBackend/Couchbase",
              "TestRedisRealTransportFaultRecovery", "TestRedisRealCommittedResponseLossRecovery", "TestRedisRealServerSIGKILLRecovery"):
     assert len(re.findall(r"^\s*--- PASS: " + name + r" \(", text, re.M)) == int(sys.argv[2]), name
     assert not re.search(r"^\s*--- SKIP: " + name + r" \(", text, re.M), name
+required_subtests = {
+    "TestRedisRealTLSConnection": ("wrong-server-name", "untrusted-ca", "wrong-acl-user"),
+    "TestRedisRealMTLSClientAuthentication": (
+        "valid-client-storage-and-backup-restore", "missing-client-certificate", "untrusted-client-certificate",
+        "mismatched-client-private-key", "client-certificate-does-not-bypass-acl", "reconnect-requires-client-identity"),
+    "TestRedisRealMinimalACL": (
+        "storage_contract", "native_cas_and_logical_expiry", "list_keys_and_legacy_log", "backup_and_chunked_logs",
+        "mutual_tls", "denied_commands", "namespace_boundary", "missing_select"),
+    "TestRedisRealMinimalACL/denied_commands": (
+        "client_setinfo", "info_all", "info_memory", "config", "acl", "flushdb", "flushall", "eval", "evalsha",
+        "script", "function", "keys", "del", "expire", "ttl", "exists", "mget", "mset", "multi", "watch", "publish"),
+    "TestRedisRealMinimalACL/namespace_boundary": ("get", "set", "set_ifeq", "set_nx", "unlink"),
+}
+for parent, cases in required_subtests.items():
+    for case in cases:
+        name = parent + "/" + case
+        assert len(re.findall(r"^\s*--- PASS: " + re.escape(name) + r" \(", text, re.M)) == int(sys.argv[2]), name
+        assert not re.search(r"^\s*--- SKIP: " + re.escape(name) + r" \(", text, re.M), name
 VERIFY_REDIS_TESTS
 docker exec "$runner" go test -race ./cli -run '^TestRedisRealCLIBackupRestore$' \
     -count="$repeats" -timeout=360s -v | tee "$results/remote-cli.log"

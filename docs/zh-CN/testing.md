@@ -42,7 +42,7 @@ make process-integration-repeat
 
 这些入口使用实际 daemon 进程、Filesystem 后端、SIGKILL、网络分区和 TLS 节点连接，不需要外部 S3/Couchbase/Redis 服务。重复入口会运行三次所选用例。
 
-## Redis 集成与 TLS
+## Redis 集成、mTLS 和最小 ACL
 
 ```sh
 OWLCRON_TEST_REDIS_ADDR=localhost:6379 \
@@ -50,13 +50,19 @@ OWLCRON_TEST_REDIS_ADDR=localhost:6379 \
   OWLCRON_TEST_REDIS_PASSWORD=owlcron-test-secret make redis-integration
 OWLCRON_TEST_REDIS_TLS_ADDR=localhost:6380 \
   OWLCRON_TEST_REDIS_TLS_CA_FILE=/path/to/redis-ca.crt \
+  OWLCRON_TEST_REDIS_TLS_CERT_FILE=/path/to/client.crt \
+  OWLCRON_TEST_REDIS_TLS_KEY_FILE=/path/to/client.key \
+  OWLCRON_TEST_REDIS_TLS_BAD_CERT_FILE=/path/to/untrusted-client.crt \
+  OWLCRON_TEST_REDIS_TLS_BAD_KEY_FILE=/path/to/untrusted-client.key \
   OWLCRON_TEST_REDIS_USERNAME=owlcron \
-  OWLCRON_TEST_REDIS_PASSWORD=owlcron-test-secret make redis-tls-integration
+  OWLCRON_TEST_REDIS_PASSWORD=owlcron-test-secret make redis-mtls-integration
 ```
 
 使用隔离的 Redis 8.4+ 实例。`make redis-integration` 要求设置 `OWLCRON_TEST_REDIS_ADDR`，覆盖存储契约和 CLI 备份恢复，并使用该服务运行 API `TestSingleNodeSystemLifecycle/Redis`，以及 engine `TestClusterAuthenticatedDispatchAndReconnect/Redis` 和 `TestPrimaryOutageAutomaticTakeoverPreservesCursor/Redis`。
 
-TLS 入口可单独选择运行，必须同时设置 `OWLCRON_TEST_REDIS_TLS_ADDR` 和 `OWLCRON_TEST_REDIS_TLS_CA_FILE`，复用 `OWLCRON_TEST_REDIS_USERNAME`、`OWLCRON_TEST_REDIS_PASSWORD`。服务端证书的 Subject Alternative Name 必须包含 `localhost`；测试会验证该名称和指定 CA。
+`make redis-tls-integration` 保留服务端 TLS 验证入口，客户端证书/私钥变量可选。`make redis-mtls-integration` 是显式双向认证验收入口，服务端须配置 `tls-auth-clients yes`。必须设置 `OWLCRON_TEST_REDIS_TLS_ADDR`、`OWLCRON_TEST_REDIS_TLS_CA_FILE`、受信任客户端证书/私钥（`OWLCRON_TEST_REDIS_TLS_CERT_FILE`、`OWLCRON_TEST_REDIS_TLS_KEY_FILE`），以及由另一不受信任 CA 签发的有效客户端证书/私钥（`OWLCRON_TEST_REDIS_TLS_BAD_CERT_FILE`、`OWLCRON_TEST_REDIS_TLS_BAD_KEY_FILE`）。复用 `OWLCRON_TEST_REDIS_USERNAME`、`OWLCRON_TEST_REDIS_PASSWORD`。服务端证书的 Subject Alternative Name 必须包含 `localhost`，且用途为 serverAuth；客户端证书用途须为 clientAuth。测试覆盖可信身份读写，并拒绝缺少或不受信任的客户端证书、错误服务端名称/CA 和错误 Redis 凭据。
+
+`make redis-acl-integration` 运行最小 ACL 用例及其 mTLS 组合检查，须同时提供上述 TLS 地址、CA、可信客户端证书和私钥。配置相应凭据后，该用例也会随 `make redis-integration` 运行。设置 `OWLCRON_TEST_REDIS_MINIMAL_USERNAME`、`OWLCRON_TEST_REDIS_MINIMAL_PASSWORD`、`OWLCRON_TEST_REDIS_MINIMAL_PREFIX`（如 `acl-test:`）和 `OWLCRON_TEST_REDIS_MINIMAL_DB=1`。账户使用 `reset on >A_DISPOSABLE_SECRET ~acl-test:* resetchannels -@all +ping +info|server +get +set +scan +unlink +select`，不显式授予 `HELLO` 或命令类别；Redis 仍允许认证握手。还需通过 `OWLCRON_TEST_REDIS_NOSELECT_USERNAME`、`OWLCRON_TEST_REDIS_NOSELECT_PASSWORD` 提供第二个账户，权限与 key 规则相同但不授予 `+select`；测试要求它连接 DB 1 时初始化失败，而 DB 0 仍可使用。它应与常规集成账户分开，因为其他用例会检查服务器状态，或使用该前缀外的测试命名空间。显式验收须提供全部身份与证书材料；材料缺失不能算作通过。
 
 ## Linux 与远程存储故障
 
@@ -66,7 +72,7 @@ make linux-acceptance
 
 需要 Docker、Python 3、可下载的镜像和 Go 依赖。脚本创建本次运行专属的 MinIO、Couchbase、Redis 8.4+ 和网络，不发布宿主端口，不向测试容器挂载 Docker socket。测试使用可丢弃的专用凭据，结束后清理自己创建的服务。
 
-同一个 Redis 实例同时监听明文端口 6379 和 TLS 端口 6380。每次运行生成有效期一天的自签 CA 和服务端证书，服务端证书 SAN 包含 `localhost`。证书文件保存在本次运行目录中，以只读方式挂载给测试 runner。Redis 使用 AOF、`appendfsync always` 和 `noeviction`；关闭默认 ACL 用户，命名测试用户禁止执行脚本。完整 Linux 验收必须通过 Redis 集成、TLS 和故障用例，跳过用例会导致验收失败。
+同一个 Redis 实例同时监听明文端口 6379 和 TLS 端口 6380。每次运行生成有效期一天的自签 CA、服务端证书、可信客户端身份，以及由另一 CA 签发的客户端身份。服务端证书 SAN 包含 `localhost`，Redis 的 TLS 监听端口强制校验客户端证书。只将客户端测试材料与公开 CA 证书以只读方式挂载给 runner。Redis 使用 AOF、`appendfsync always` 和 `noeviction`；关闭默认 ACL 用户，常规命名测试用户禁止执行脚本。独立账户仅具有文档列出的最小命令白名单和受限 key 前缀，并使用 DB 1。完整 Linux 验收必须通过 Redis 集成、mTLS、最小 ACL 和故障用例，跳过用例会导致验收失败。
 
 `OWLCRON_ACCEPTANCE_RESULTS` 指定外部结果目录；`OWLCRON_ACCEPTANCE_COUNT` 设置 1–3 次重复。镜像和构建缓存选项见 [run-linux-acceptance.sh](../../tests/run-linux-acceptance.sh)。不要让两次测试控制同一组服务。
 
