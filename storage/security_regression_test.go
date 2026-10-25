@@ -10,14 +10,14 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/credentials"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
+	minio "github.com/soulteary/otterio-sdk/v7"
+	"github.com/soulteary/otterio-sdk/v7/pkg/credentials"
 )
 
 func TestFilesystemTransactionDeletesExpiryAndRejectsCorruption(t *testing.T) {
@@ -122,7 +122,9 @@ func (s *recoveryS3Transport) RoundTrip(req *http.Request) (*http.Response, erro
 		return nil, errors.New("transient first probe failure")
 	}
 	response := func(status int, data []byte, headers http.Header) (*http.Response, error) {
-		return &http.Response{StatusCode: status, Header: headers, Body: io.NopCloser(bytes.NewReader(data)), Request: req}, nil
+		headers.Set("Content-Length", strconv.Itoa(len(data)))
+		headers.Set("Last-Modified", time.Unix(1700000000, 0).UTC().Format(http.TimeFormat))
+		return &http.Response{StatusCode: status, Header: headers, Body: io.NopCloser(bytes.NewReader(data)), ContentLength: int64(len(data)), Request: req}, nil
 	}
 	key := req.URL.Path
 	data, exists := s.objects[key]
@@ -135,6 +137,9 @@ func (s *recoveryS3Transport) RoundTrip(req *http.Request) (*http.Response, erro
 		delete(s.objects, key)
 		return response(http.StatusNoContent, nil, make(http.Header))
 	case http.MethodGet:
+		if !exists {
+			return response(http.StatusNotFound, []byte(`<Error><Code>NoSuchKey</Code><Message>Missing object</Message></Error>`), make(http.Header))
+		}
 		return response(http.StatusOK, data, http.Header{"Etag": []string{etag(data)}})
 	case http.MethodPut:
 		if strings.Contains(key, "/capability/") {
@@ -155,11 +160,13 @@ func (s *recoveryS3Transport) RoundTrip(req *http.Request) (*http.Response, erro
 
 func TestS3ConditionalProbeRecoversAfterTransientFailure(t *testing.T) {
 	transport := &recoveryS3Transport{objects: make(map[string][]byte)}
-	client := s3.NewFromConfig(aws.Config{Region: "us-east-1", Credentials: credentials.NewStaticCredentialsProvider("test", "test", ""), HTTPClient: &http.Client{Transport: transport}}, func(options *s3.Options) {
-		options.BaseEndpoint = aws.String("http://storage.invalid")
-		options.UsePathStyle = true
-		options.RetryMaxAttempts = 1
+	client, err := minio.New("https://storage.invalid", &minio.Options{
+		Region: "us-east-1", Creds: credentials.NewStaticV4("test", "test", ""),
+		Secure: true, Transport: transport, BucketLookup: minio.BucketLookupPath, MaxRetries: 1,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	store := &S3Storage{client: client, bucket: "test"}
 	ctx := context.Background()
 	if err := store.compareAndSwap(ctx, "first", []byte("payload"), ""); err == nil {

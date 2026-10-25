@@ -12,8 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/couchbase/gocb/v2"
 )
 
@@ -246,32 +244,7 @@ func (s *FilesystemStorage) ListKeys(ctx context.Context) (keys []string, err er
 	return
 }
 func (s *S3Storage) ListKeys(ctx context.Context) ([]string, error) {
-	prefix := s.prefix
-	if prefix != "" {
-		prefix += "/"
-	}
-	pages := s3.NewListObjectsV2Paginator(s.client, &s3.ListObjectsV2Input{Bucket: aws.String(s.bucket), Prefix: aws.String(prefix)})
-	keys := []string{}
-	for pages.HasMorePages() {
-		page, err := pages.NextPage(ctx)
-		if err != nil {
-			return nil, err
-		}
-		for _, obj := range page.Contents {
-			key := strings.TrimPrefix(aws.ToString(obj.Key), prefix)
-			if strings.HasPrefix(key, "capability/") {
-				continue
-			}
-			if _, err := s.Get(ctx, key); errors.Is(err, ErrNotFound) {
-				continue
-			} else if err != nil {
-				return nil, err
-			}
-			keys = append(keys, key)
-		}
-	}
-	sort.Strings(keys)
-	return keys, nil
+	return s.ListKeysPrefix(ctx, "")
 }
 func (c *CouchbaseStorage) ListKeys(ctx context.Context) ([]string, error) {
 	scan, err := c.collection.Scan(gocb.NewRangeScanForPrefix(c.prefix), &gocb.ScanOptions{Context: ctx, IDsOnly: true})

@@ -12,9 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/credentials"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/couchbase/gocb/v2"
 )
 
@@ -79,16 +76,7 @@ func TestFilesystemLegacyLogRange(t *testing.T) {
 
 func legacyS3Store(t *testing.T, handler http.HandlerFunc) *S3Storage {
 	t.Helper()
-	s, err := NewS3Storage(&StorageConfig{Options: map[string]interface{}{"bucket": "bucket", "access_key": "test", "secret_key": "test", "endpoint": "http://storage.invalid", "prefix": "tenant"}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	s.client = s3.NewFromConfig(aws.Config{Region: "us-east-1", Credentials: credentials.NewStaticCredentialsProvider("test", "test", ""), HTTPClient: &http.Client{Transport: prefixTestTransport{handler: handler}}}, func(o *s3.Options) {
-		o.BaseEndpoint = aws.String("http://storage.invalid")
-		o.UsePathStyle = true
-		o.RetryMaxAttempts = 1
-	})
-	return s
+	return prefixS3Store(t, "tenant", handler)
 }
 
 func TestS3LegacyLogBoundedRanges(t *testing.T) {
@@ -102,6 +90,7 @@ func TestS3LegacyLogBoundedRanges(t *testing.T) {
 					t.Errorf("path %s", r.URL.Path)
 				}
 				w.Header().Set("ETag", `"rev"`)
+				w.Header().Set("Last-Modified", time.Unix(0, 0).UTC().Format(http.TimeFormat))
 				if r.Method == http.MethodHead {
 					w.Header().Set("Content-Length", fmt.Sprint(len(doc)))
 					return
@@ -120,6 +109,7 @@ func TestS3LegacyLogBoundedRanges(t *testing.T) {
 					maxRange = end - start + 1
 				}
 				w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", start, end, len(doc)))
+				w.Header().Set("Content-Length", fmt.Sprint(end-start+1))
 				w.WriteHeader(http.StatusPartialContent)
 				w.Write(doc[start : end+1])
 			})
@@ -168,6 +158,7 @@ func TestS3LegacyLogFailuresAndExpiry(t *testing.T) {
 			body, _ := json.Marshal(doc)
 			s := legacyS3Store(t, func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("ETag", `"rev"`)
+				w.Header().Set("Last-Modified", time.Unix(0, 0).UTC().Format(http.TimeFormat))
 				if r.Method == http.MethodHead {
 					w.Header().Set("Content-Length", fmt.Sprint(len(body)))
 					return
@@ -178,6 +169,7 @@ func TestS3LegacyLogFailuresAndExpiry(t *testing.T) {
 					return
 				}
 				if mode == "ignored" {
+					w.Header().Set("Content-Length", fmt.Sprint(len(body)))
 					w.Write(body)
 					return
 				}
@@ -188,6 +180,7 @@ func TestS3LegacyLogFailuresAndExpiry(t *testing.T) {
 					header = "bytes 0-1/2"
 				}
 				w.Header().Set("Content-Range", header)
+				w.Header().Set("Content-Length", fmt.Sprint(end-start+1))
 				w.WriteHeader(206)
 				w.Write(body[start : end+1])
 			})

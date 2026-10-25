@@ -8,9 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/credentials"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
+	minio "github.com/soulteary/otterio-sdk/v7"
+	"github.com/soulteary/otterio-sdk/v7/pkg/credentials"
 )
 
 type blockedS3ProbeTransport struct {
@@ -28,11 +27,13 @@ func (transport *blockedS3ProbeTransport) RoundTrip(request *http.Request) (*htt
 // first capability check, independently of SDK/network retry timing.
 func TestS3ConditionalProbeWaitHonorsCallerDeadline(t *testing.T) {
 	transport := &blockedS3ProbeTransport{entered: make(chan struct{})}
-	client := s3.NewFromConfig(aws.Config{Region: "us-east-1", Credentials: credentials.NewStaticCredentialsProvider("test", "test", ""), HTTPClient: &http.Client{Transport: transport}}, func(options *s3.Options) {
-		options.BaseEndpoint = aws.String("http://storage.invalid")
-		options.UsePathStyle = true
-		options.RetryMaxAttempts = 1
+	client, err := minio.New("https://storage.invalid", &minio.Options{
+		Region: "us-east-1", Creds: credentials.NewStaticV4("test", "test", ""),
+		Secure: true, Transport: transport, BucketLookup: minio.BucketLookupPath, MaxRetries: 1,
 	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	// Literal construction is supported by the gate's lazy initialization.
 	store := &S3Storage{client: client, bucket: "test"}
 	ownerContext, stopOwner := context.WithCancel(context.Background())

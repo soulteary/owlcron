@@ -9,9 +9,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/couchbase/gocb/v2"
+	minio "github.com/soulteary/otterio-sdk/v7"
 )
 
 // PrefixKeyLister enumerates live keys in one namespace. Implementations may
@@ -100,33 +99,37 @@ func (s *S3Storage) ListKeysPrefix(ctx context.Context, prefix string) ([]string
 	if err := validateKeyPrefix(prefix); err != nil {
 		return nil, err
 	}
-	pages := s3.NewListObjectsV2Paginator(s.client, &s3.ListObjectsV2Input{Bucket: aws.String(s.bucket), Prefix: aws.String(s.objectKey(prefix))})
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	fetchOwner := false
+	options := minio.ListObjectsOptions{Prefix: s.objectKey(prefix), Recursive: true, FetchOwner: &fetchOwner}
 	keys := []string{}
 	namespace := ""
 	if s.prefix != "" {
 		namespace = s.prefix + "/"
 	}
-	for pages.HasMorePages() {
-		page, err := pages.NextPage(ctx)
-		if err != nil {
+	for object := range s.client.ListObjectsIter(ctx, s.bucket, options) {
+		if object.Err != nil {
+			return nil, object.Err
+		}
+		if !strings.HasPrefix(object.Key, namespace+prefix) {
+			continue
+		}
+		key := strings.TrimPrefix(object.Key, namespace)
+		if strings.HasPrefix(key, "capability/") {
+			continue
+		}
+		if _, err := s.Get(ctx, key); errors.Is(err, ErrNotFound) {
+			continue
+		} else if err != nil {
 			return nil, err
 		}
-		for _, obj := range page.Contents {
-			objectKey := aws.ToString(obj.Key)
-			if !strings.HasPrefix(objectKey, namespace+prefix) {
-				continue
-			}
-			key := strings.TrimPrefix(objectKey, namespace)
-			if strings.HasPrefix(key, "capability/") {
-				continue
-			}
-			if _, err := s.Get(ctx, key); errors.Is(err, ErrNotFound) {
-				continue
-			} else if err != nil {
-				return nil, err
-			}
-			keys = append(keys, key)
-		}
+		keys = append(keys, key)
+	}
+	// The iterator can stop without yielding an error when its context is
+	// canceled between pages. Never return a successful partial enumeration.
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
 	sort.Strings(keys)
 	return keys, nil

@@ -53,6 +53,11 @@ licenses/go. These retain MIT, BSD, Apache and other upstream terms rather than
 being relicensed under OwlCron's MIT license. The Go standard library and runtime
 remain under the Go project's BSD-style license (licenses/Go-LICENSE).
 
+The S3 client uses OtterIO SDK v7.3.3, an independently maintained fork of the
+MinIO Go SDK. Its Apache 2.0 LICENSE and upstream MinIO NOTICE are retained in
+the module's directory under licenses/go. OtterIO Kits dependency notices,
+including the separate MD5 implementation licenses, are retained there as well.
+
 ## Updating dependencies or producing releases
 
 When go.mod, bun.lock or bundled resources change, refresh the relevant

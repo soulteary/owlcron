@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -12,9 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/credentials"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
+	minio "github.com/soulteary/otterio-sdk/v7"
+	"github.com/soulteary/otterio-sdk/v7/pkg/credentials"
 )
 
 type prefixTestTransport struct{ handler http.Handler }
@@ -22,7 +22,27 @@ type prefixTestTransport struct{ handler http.Handler }
 func (t prefixTestTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	recorder := httptest.NewRecorder()
 	t.handler.ServeHTTP(recorder, r)
-	return recorder.Result(), nil
+	response := recorder.Result()
+	response.Request = r
+	return response, nil
+}
+
+func prefixS3Store(t *testing.T, prefix string, handler http.Handler) *S3Storage {
+	t.Helper()
+	client, err := minio.New("storage.invalid", &minio.Options{
+		Creds:        credentials.NewStaticV4("test", "test", ""),
+		Secure:       false,
+		Region:       "us-east-1",
+		BucketLookup: minio.BucketLookupPath,
+		Transport:    prefixTestTransport{handler: handler},
+		MaxRetries:   1,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := &S3Storage{client: client, bucket: "bucket", prefix: prefix}
+	store.remoteStorage = &remoteStorage{kv: store}
+	return store
 }
 
 func TestFilesystemListKeysPrefixSkipsOtherNamespacesAndExpired(t *testing.T) {
@@ -83,6 +103,9 @@ func TestS3ListKeysPrefixUsesServerPrefixAndPaginates(t *testing.T) {
 					if got := r.URL.Query().Get("prefix"); got != objectPrefix {
 						t.Errorf("server prefix %q, want %q", got, objectPrefix)
 					}
+					if r.URL.Query().Get("delimiter") != "" || r.URL.Query().Get("fetch-owner") == "true" {
+						t.Errorf("listing must include nested keys without requesting owner metadata: %s", r.URL.RawQuery)
+					}
 					w.Header().Set("Content-Type", "application/xml")
 					if lists == 1 {
 						fmt.Fprintf(w, `<ListBucketResult><IsTruncated>true</IsTruncated><NextContinuationToken>page2</NextContinuationToken><Contents><Key>%slive</Key></Contents><Contents><Key>%sexpired</Key></Contents></ListBucketResult>`, objectPrefix, objectPrefix)
@@ -96,6 +119,7 @@ func TestS3ListKeysPrefixUsesServerPrefixAndPaginates(t *testing.T) {
 				}
 				gets = append(gets, r.URL.Path)
 				w.Header().Set("ETag", `"version"`)
+				w.Header().Set("Last-Modified", time.Unix(0, 0).UTC().Format(http.TimeFormat))
 				doc := remoteDocument{Data: []byte(`{"id":"test"}`), Revision: "1"}
 				switch r.URL.Path {
 				case "/bucket/" + objectPrefix + "expired":
@@ -106,20 +130,14 @@ func TestS3ListKeysPrefixUsesServerPrefixAndPaginates(t *testing.T) {
 				default:
 					t.Errorf("unrelated object read: %s", r.URL.Path)
 				}
-				if err := json.NewEncoder(w).Encode(doc); err != nil {
-					t.Error(err)
+				data, err := json.Marshal(doc)
+				if err != nil {
+					t.Fatal(err)
 				}
+				w.Header().Set("Content-Length", fmt.Sprint(len(data)))
+				w.Write(data)
 			})
-			store, err := NewS3Storage(&StorageConfig{Options: map[string]interface{}{"bucket": "bucket", "access_key": "test", "secret_key": "test", "endpoint": "http://storage.invalid", "prefix": namespace}})
-			if err != nil {
-				t.Fatal(err)
-			}
-			store.prefix = namespace
-			store.client = s3.NewFromConfig(aws.Config{Region: "us-east-1", Credentials: credentials.NewStaticCredentialsProvider("test", "test", ""), HTTPClient: &http.Client{Transport: prefixTestTransport{handler: handler}}}, func(o *s3.Options) {
-				o.BaseEndpoint = aws.String("http://storage.invalid")
-				o.UsePathStyle = true
-				o.RetryMaxAttempts = 1
-			})
+			store := prefixS3Store(t, namespace, handler)
 			keys, err := store.ListKeysPrefix(context.Background(), "events:")
 			if err != nil {
 				t.Fatal(err)
@@ -131,5 +149,63 @@ func TestS3ListKeysPrefixUsesServerPrefixAndPaginates(t *testing.T) {
 				t.Fatalf("list calls %d, get calls %v", lists, gets)
 			}
 		})
+	}
+}
+
+func TestS3ListingCancellationNeverReturnsPartialSuccess(t *testing.T) {
+	for _, afterPage := range []bool{false, true} {
+		t.Run(fmt.Sprint(afterPage), func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			requests := 0
+			store := prefixS3Store(t, "tenant", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				requests++
+				if r.URL.Query().Get("list-type") != "2" {
+					t.Errorf("unexpected request: %s", r.URL)
+				}
+				w.Header().Set("Content-Type", "application/xml")
+				fmt.Fprint(w, `<ListBucketResult><IsTruncated>true</IsTruncated><NextContinuationToken>page2</NextContinuationToken></ListBucketResult>`)
+				cancel()
+			}))
+			if !afterPage {
+				cancel()
+			}
+			keys, err := store.ListKeys(ctx)
+			if !errors.Is(err, context.Canceled) || keys != nil {
+				t.Fatalf("canceled enumeration returned keys=%v err=%v", keys, err)
+			}
+			if afterPage && requests != 1 || !afterPage && requests != 0 {
+				t.Fatalf("unexpected requests after cancellation: %d", requests)
+			}
+		})
+	}
+}
+
+func TestS3ListingLaterPageFailureNeverReturnsPartialSuccess(t *testing.T) {
+	lists := 0
+	store := prefixS3Store(t, "tenant", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("list-type") == "2" {
+			lists++
+			w.Header().Set("Content-Type", "application/xml")
+			if lists == 1 {
+				fmt.Fprint(w, `<ListBucketResult><IsTruncated>true</IsTruncated><NextContinuationToken>page2</NextContinuationToken><Contents><Key>tenant/events:live</Key></Contents></ListBucketResult>`)
+				return
+			}
+			w.WriteHeader(http.StatusForbidden)
+			fmt.Fprint(w, `<Error><Code>AccessDenied</Code></Error>`)
+			return
+		}
+		data, _ := json.Marshal(remoteDocument{Data: []byte(`{"id":"test"}`), Revision: "1"})
+		w.Header().Set("ETag", `"version"`)
+		w.Header().Set("Last-Modified", time.Unix(0, 0).UTC().Format(http.TimeFormat))
+		w.Header().Set("Content-Length", fmt.Sprint(len(data)))
+		w.Write(data)
+	}))
+	keys, err := store.ListKeys(context.Background())
+	if err == nil || keys != nil || lists != 2 {
+		t.Fatalf("failed enumeration returned keys=%v err=%v list calls=%d", keys, err, lists)
+	}
+	if minio.ToErrorResponse(err).Code != "AccessDenied" {
+		t.Fatalf("listing error changed: %v", err)
 	}
 }

@@ -12,10 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/smithy-go"
 	"github.com/couchbase/gocb/v2"
+	minio "github.com/soulteary/otterio-sdk/v7"
 )
 
 func validateLogRange(key string, offset int64, limit int) error {
@@ -101,35 +99,30 @@ func (c *CouchbaseStorage) GetRange(ctx context.Context, key string, offset int6
 	return nil, 0, ErrUnsupported
 }
 
-func mapLogS3Error(err error) error {
-	var api smithy.APIError
-	if errors.As(err, &api) {
-		switch api.ErrorCode() {
-		case "NoSuchKey", "NotFound", "NoSuchObject":
-			return ErrNotFound
-		case "PreconditionFailed":
-			return ErrConflict
-		}
-	}
-	return err
-}
-
 // getLegacyObjectRange rejects servers that ignore Range and caps every body
 // read. IfMatch prevents metadata and payload from different revisions mixing.
 func (s *S3Storage) getLegacyObjectRange(ctx context.Context, key, etag string, start, end int64) ([]byte, error) {
-	out, err := s.client.GetObject(ctx, &s3.GetObjectInput{Bucket: aws.String(s.bucket), Key: aws.String(s.objectKey(key)), Range: aws.String(fmt.Sprintf("bytes=%d-%d", start, end)), IfMatch: aws.String(etag)})
-	if err != nil {
-		return nil, mapLogS3Error(err)
+	options := minio.GetObjectOptions{}
+	if err := options.SetRange(start, end); err != nil {
+		return nil, err
 	}
-	defer out.Body.Close()
-	if out.ContentRange == nil {
+	if err := options.SetMatchETag(etag); err != nil {
+		return nil, err
+	}
+	body, _, headers, err := (minio.Core{Client: s.client}).GetObject(ctx, s.bucket, s.objectKey(key), options)
+	if err != nil {
+		return nil, mapS3Error(err)
+	}
+	defer body.Close()
+	contentRange := headers.Get("Content-Range")
+	if contentRange == "" {
 		return nil, fmt.Errorf("S3 server ignored bounded Range: %w", ErrUnsupported)
 	}
 	expectedPrefix := fmt.Sprintf("bytes %d-%d/", start, end)
-	if !strings.HasPrefix(aws.ToString(out.ContentRange), expectedPrefix) {
+	if !strings.HasPrefix(contentRange, expectedPrefix) {
 		return nil, fmt.Errorf("invalid S3 Content-Range")
 	}
-	data, err := io.ReadAll(io.LimitReader(out.Body, end-start+2))
+	data, err := io.ReadAll(io.LimitReader(body, end-start+2))
 	if err != nil {
 		return nil, err
 	}
@@ -143,12 +136,12 @@ func (s *S3Storage) GetRange(ctx context.Context, key string, offset int64, limi
 	if err := validateLogRange(key, offset, limit); err != nil {
 		return nil, 0, err
 	}
-	head, err := s.client.HeadObject(ctx, &s3.HeadObjectInput{Bucket: aws.String(s.bucket), Key: aws.String(s.objectKey(key))})
+	head, err := s.client.StatObject(ctx, s.bucket, s.objectKey(key), minio.StatObjectOptions{})
 	if err != nil {
-		return nil, 0, mapLogS3Error(err)
+		return nil, 0, mapS3Error(err)
 	}
-	size := aws.ToInt64(head.ContentLength)
-	etag := aws.ToString(head.ETag)
+	size := head.Size
+	etag := head.ETag
 	if size < 11 || etag == "" {
 		return nil, 0, fmt.Errorf("invalid legacy log envelope")
 	}
@@ -264,8 +257,7 @@ func (s *S3Storage) RemoveLegacyJobLog(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	_, err = s.client.DeleteObject(ctx, &s3.DeleteObjectInput{Bucket: aws.String(s.bucket), Key: aws.String(s.objectKey(key))})
-	err = mapLogS3Error(err)
+	err = mapS3Error(s.client.RemoveObject(ctx, s.bucket, s.objectKey(key), minio.RemoveObjectOptions{}))
 	if errors.Is(err, ErrNotFound) {
 		return nil
 	}
