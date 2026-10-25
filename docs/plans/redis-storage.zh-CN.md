@@ -1,8 +1,8 @@
 # Redis 单实例存储支持计划
 
-状态：已实现单实例 Redis 8.4+ 原生 CAS，保持既有数据与备份格式。kit 前置补丁已提交为草稿 PR；OwlCron 已固定该提交，不依赖本地 replace。
+状态：单实例 Redis 8.4+ 原生 CAS 已随 [OwlCron PR #74](https://github.com/soulteary/owlcron/pull/74) 合并，保持既有数据与备份格式。客户端前置能力已随 redis-kit v1.8.0 正式发布；本次依赖更新将 OwlCron 从提交伪版本切换到该正式版本，不依赖本地 replace。
 
-日期：2026-10-25。OwlCron 核查基线为 `ff5d6c22f4a854a7c28e1f0ed9a5ebf5d7156d69`。实现已同步至主分支 `693076c`。本文记录本次实现范围、依赖选择与验收要求；代码仍在开发分支，尚未合并或发布。
+日期：2026-10-25。最初核查基线为 `ff5d6c22f4a854a7c28e1f0ed9a5ebf5d7156d69`；Redis 实现已合并至 OwlCron 主分支 `1b008631e67d767dc4740c81ce2be79a76e47375`。本文保留实现范围、依赖选择与验收要求，并分别记录实现阶段与正式依赖版本更新的验证状态。
 
 ## 1. 已确定的范围
 
@@ -19,26 +19,26 @@
 
 ### redis-kit：采用已补齐的客户端层
 
-核查版本：[v1.7.3](https://github.com/soulteary/redis-kit/releases/tag/v1.7.3)，commit `4708fb0673af1e785323245e2de874ccf5504f8e`。main 为 `5b03fa3155d632f6496319428ee28faa4d06750e`，业务源码与发布版一致，差异为 CI/报告更新。
+采用版本：[v1.8.0](https://github.com/soulteary/redis-kit/releases/tag/v1.8.0)，tag 指向 commit `94c110e8e82eefddd5d89dda8fb0cf679f310be7`。该正式版本包含本次接入所需的 ACL 用户名、TLS 与 context API。
 
-[`client.NewClient`](https://github.com/soulteary/redis-kit/blob/v1.7.3/client/client.go) 返回原生 `*redis.Client`，可以直接调用 `Get().Bytes()`、`Eval`、`Scan` 和 `Close`。已有连接池、密码、DB、拨号/读写/连接池超时和健康检查，无 Zap 耦合。OwlCron 特有的 CAS、key 枚举和 envelope 留在 OwlCron，不应扩展为 kit 的业务协议。
+[`client.NewClient`](https://github.com/soulteary/redis-kit/blob/v1.8.0/client/client.go) 返回原生 `*redis.Client`，可以直接调用 `Get().Bytes()`、原生条件 `SET`、`Scan` 和 `Close`。已有连接池、ACL 用户名/密码、TLS、DB、拨号/读写/连接池超时和健康检查，无 Zap 耦合。OwlCron 特有的 CAS、key 枚举和 envelope 留在 OwlCron，不应扩展为 kit 的业务协议。
 
-已在 kit 提供以下兼容性补丁：
+v1.8.0 已提供以下兼容性能力：
 
-1. `Config` 增加业务 Redis 的 `Username`、`TLSConfig`、`ContextTimeoutEnabled` 并透传到单实例构造器；现有 `SentinelUsername` 不能替代业务 ACL 用户名。`Username` 属于通用认证配置，应同步映射到 `NewClient` 和 `NewUniversalClient` 的底层选项。
-2. 增加接受调用方 context 的构造入口，例如 `NewClientContext(ctx, cfg)`；现有构造器保留，避免破坏既有用户。连接探测应同时服从调用方取消与拨号预算。
+1. `Config` 增加业务 Redis 的 `Username`、`TLSConfig`、`ContextTimeoutEnabled` 并透传到单实例与 universal 构造器；现有 `SentinelUsername` 不能替代业务 ACL 用户名。`Username` 属于通用认证配置，已同步映射到 `NewClient` 和 `NewUniversalClient` 的底层选项。
+2. 增加 `NewClientContext(ctx, cfg)` 和 `NewUniversalClientContext(ctx, cfg)`；现有构造器保留。完整启动过程服从调用方取消与拨号预算，构造成功后的客户端生命周期不受启动 context 控制。
 3. 保留 `MaxRetries=-1` 禁用重试的能力，并添加覆盖上述映射和取消行为的测试；`0` 在底层并不表示禁用重试。
 4. 保留既有连接池和重试默认值。硬连接数上限的额外 API 不属于本次补丁，不把 `PoolSize` 当作绝对上限。
 
-以上补丁已提交为 [redis-kit PR #13](https://github.com/soulteary/redis-kit/pull/13)，提交 `973602e1662bc71af1edd6908394a4a2c33cd200`。OwlCron 固定 `v1.7.4-0.20261025032353-973602e1662b`，从公共模块源即可独立构建；未创建发布 tag，也未合并主分支。
+以上能力已随 [redis-kit PR #13](https://github.com/soulteary/redis-kit/pull/13) 合并，并正式发布为 v1.8.0。OwlCron Redis 实现阶段曾固定该 PR 的提交伪版本；本次依赖更新改为正式版本 `v1.8.0`，同步模块校验和与许可证材料，从公共模块源即可独立构建。
 
 ACL 用户名作为独立、范围很小的 kit 改进已完成：新增 `Username` 字段、可选的 `WithUsername` 和两处构造器透传，保留用户名为空时原有的默认用户认证行为。无需新增依赖或自行发送 AUTH，更不需要在 kit 实现 ACL 用户创建、权限管理、配置下发或管理员账户管理。验收覆盖旧密码模式、禁用 default 用户后的命名账户登录、错误凭据失败，以及业务用户名和 Sentinel 用户名分别映射。命令/key 权限仍由服务端管理员配置。[AUTH 说明](https://redis.io/docs/latest/commands/auth/)
 
-Lua 也不是 kit 待补的客户端能力：`client` 只创建原生客户端并 PING；已有 `lock`、`ratelimit` 子包自身已使用 Eval。是否使用脚本由导入和调用这些功能决定，OwlCron 无需为 CAS 给 kit 新增通用脚本框架。[锁脚本](https://github.com/soulteary/redis-kit/blob/v1.7.3/lock/handle.go)、[限流脚本](https://github.com/soulteary/redis-kit/blob/v1.7.3/ratelimit/manager.go)
+Lua 也不是 kit 待补的客户端能力：`client` 只创建原生客户端并 PING；已有 `lock`、`ratelimit` 子包自身已使用 Eval。是否使用脚本由导入和调用这些功能决定，OwlCron 无需为 CAS 给 kit 新增通用脚本框架。[锁脚本](https://github.com/soulteary/redis-kit/blob/v1.8.0/lock/handle.go)、[限流脚本](https://github.com/soulteary/redis-kit/blob/v1.8.0/ratelimit/manager.go)
 
 不采用 kit 的 `cache`、`lock` 和混合回退作为存储实现。其 cache 会再次 JSON 编码且不提供现有 CAS 协议；锁模块也不能替换 OwlCron 已有的租约与任务协调。`testutil.MockRedis` 仅识别有限的内置 Lua，不支持完整 SCAN/通用 Lua，不能用于证明此次适配正确。
 
-来源：[配置](https://github.com/soulteary/redis-kit/blob/v1.7.3/client/config.go)、[缓存实现](https://github.com/soulteary/redis-kit/blob/v1.7.3/cache/redis.go)、[mock](https://github.com/soulteary/redis-kit/blob/v1.7.3/testutil/mock_redis.go)、[底层重试选项](https://github.com/redis/go-redis/blob/v9.23.0/options.go)、[EOF 重试](https://github.com/redis/go-redis/blob/v9.23.0/error.go)。
+来源：[配置](https://github.com/soulteary/redis-kit/blob/v1.8.0/client/config.go)、[缓存实现](https://github.com/soulteary/redis-kit/blob/v1.8.0/cache/redis.go)、[mock](https://github.com/soulteary/redis-kit/blob/v1.8.0/testutil/mock_redis.go)、[底层重试选项](https://github.com/redis/go-redis/blob/v9.23.0/options.go)、[EOF 重试](https://github.com/redis/go-redis/blob/v9.23.0/error.go)。
 
 ### parser-kit：未来多源数据导入可用，本期不引入
 
@@ -78,7 +78,7 @@ Redis 子包不适合本项目的持久存储协议：
 
 核查时 OwlCron 声明 `go 1.26.0`、`toolchain go1.27.3`；本次已将最低 Go 版本提升到 1.27.3，并同步模块清单与上游许可证材料。
 
-来源：[OwlCron go.mod](../../go.mod)、[redis-kit go.mod](https://github.com/soulteary/redis-kit/blob/v1.7.3/go.mod)、[parser-kit go.mod](https://github.com/soulteary/parser-kit/blob/v3.0.2/go.mod)、[cache-kit go.mod](https://github.com/soulteary/cache-kit/blob/v2.0.3/go.mod)。
+来源：[OwlCron go.mod](../../go.mod)、[redis-kit go.mod](https://github.com/soulteary/redis-kit/blob/v1.8.0/go.mod)、[parser-kit go.mod](https://github.com/soulteary/parser-kit/blob/v3.0.2/go.mod)、[cache-kit go.mod](https://github.com/soulteary/cache-kit/blob/v2.0.3/go.mod)。
 
 ## 3. 存储适配设计
 
@@ -142,7 +142,7 @@ Redis 子包不适合本项目的持久存储协议：
 
 ### 第一步：客户端前置能力
 
-- redis-kit 补齐上面的配置与 context API，测试并提交审阅；OwlCron 固定公开可获取的不可变提交版本。
+- redis-kit 已补齐上面的配置与 context API，PR #13 已合并并发布 v1.8.0；OwlCron 从实现阶段的提交伪版本升级为该正式版本。
 - 更新 OwlCron `go.mod/go.sum`、最低 Go 版本和许可证清单。`licenses-update` 不会自动生成 Go 清单，应核对 `licenses/go-inventory.json` 与 upstream notice。
 
 完成条件：ACL/TLS/context/禁用重试均能通过实际调用验证，不能仅检查字段存在。
@@ -184,7 +184,7 @@ Redis 子包不适合本项目的持久存储协议：
 
 ## 6. 验收矩阵
 
-以下为验收目标，不应将清单本身当作测试通过证据。本轮实际完成的验证记录见下一节。
+以下为验收目标，不应将清单本身当作测试通过证据。实现阶段的验证记录及正式依赖版本更新状态见下一节。
 
 - **格式兼容**：Redis 原始 String 可以解析为原 envelope；二进制往返无二次 JSON 编码；列表仍是原 JSON 数组；日志 chunk 与 manifest 无格式迁移。
 - **跨客户端并发**：复用 40 并发 push 不丢项，shift/pop 无重复消费；首次创建竞争、旧版本、删除后重建、TTL 后重建均拒绝过时 CAS。
@@ -200,7 +200,11 @@ Redis 子包不适合本项目的持久存储协议：
 
 故障证据记录实际镜像 digest、Redis 持久化/淘汰配置、用例名称、时间范围、退出状态和日志；严格区分 pass、fail、skip。进程 SIGKILL 与网络故障验收不能宣传为已验证宿主断电、磁盘损坏或主从故障切换。
 
-## 7. 本轮验证记录
+## 7. 验证记录
+
+### Redis 实现阶段
+
+以下记录来自 PR #74 合并前的实现阶段，依赖当时固定的 redis-kit 提交伪版本；不作为本次正式版本升级的复测结果。
 
 使用 Go 1.27.3 和真实 Redis 8.4.7；AOF `appendfsync always`、持久数据卷、noeviction，默认账户关闭，命名业务账户不允许脚本及管理命令。
 
@@ -213,7 +217,11 @@ Redis 子包不适合本项目的持久存储协议：
 - Linux 存储：最终版本的 11 项真实 Redis 存储、TLS、备份、网络和强杀用例全部通过，无 skip。套接字 deadline 与 context timer 的错误归一化竞态已修正，确定性回归及真实启动预算测试通过。
 - Linux daemon：race 模式下 ActiveJobAndChunkedLog、MailAndWebHookQueue、ClusterPartitionAndFailover、StorageOutageCompletionSpool 四项全部通过，无 skip，包含真实 daemon 强杀、Redis 暂停/强杀和完成 spool 恢复。
 
-CI 已接入固定 Redis 镜像及 TLS 服务，逐项核对存储、CLI、API/集群及 daemon 用例 PASS，拒绝遗漏或跳过。整套 MinIO/Couchbase/Redis 联合脚本尚待远程 CI 执行；本轮本机真实后端验证聚焦 Redis，并未重跑 S3/Couchbase 服务或验证跨它们的实际迁移。宿主断电、磁盘损坏、Redis 主从切换、硬容量认证不在已验证范围。
+实现阶段已将固定 Redis 镜像及 TLS 服务接入 CI，逐项核对存储、CLI、API/集群及 daemon 用例 PASS，拒绝遗漏或跳过。当时整套 MinIO/Couchbase/Redis 联合脚本仍待远程 CI 执行；该阶段本机真实后端验证聚焦 Redis，并未重跑 S3/Couchbase 服务或验证跨它们的实际迁移。宿主断电、磁盘损坏、Redis 主从切换、硬容量认证不在上述验证范围。
+
+### redis-kit v1.8.0 正式版本更新
+
+redis-kit v1.8.0 已正式发布，OwlCron 本次将模块依赖与上游 LICENSE 材料切换到该版本。`make docs-check` 已通过（37 个文档），`make licenses-check` 已通过（29 个 npm 包、43 个 Go 模块），随附 LICENSE 与正式模块缓存中的原文逐字节一致。实现阶段的测试记录保留在上节；本次升级的构建及相关测试结果应以升级分支实际执行的检查为准，不能仅凭版本发布或 PR 合并认定复测通过。
 
 ## 8. 后续扩展边界
 
