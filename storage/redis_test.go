@@ -133,6 +133,119 @@ func TestRedisPrefixScanEscapesAndFilters(t *testing.T) {
 	}
 }
 
+func TestRedisCapabilityRecordsRemainInListingAndBackup(t *testing.T) {
+	ctx := context.Background()
+	physical := map[string]string{
+		"ns:capability/redis-00000000000000000000000000000000": "first",
+		"ns:capability/redis-11111111111111111111111111111111": "second",
+		"ns:capability/redis-22222222222222222222222222222222": "must-not-write",
+		"ns:" + redisCapabilityPrefix + "redis-private":        "second",
+	}
+	reads := map[string]int{}
+	s := hookedRedisStorage(t, "ns:", func(cmd redis.Cmder) error {
+		switch cmd.Name() {
+		case "scan":
+			match := strings.TrimSuffix(cmd.Args()[3].(string), "*")
+			keys := []string{}
+			for key := range physical {
+				if strings.HasPrefix(key, match) {
+					keys = append(keys, key)
+				}
+			}
+			cmd.(*redis.ScanCmd).SetVal(keys, 0)
+		case "get":
+			key := cmd.Args()[1].(string)
+			reads[key]++
+			if strings.HasPrefix(key, "ns:"+redisCapabilityPrefix) {
+				t.Fatal("private probe payload was fetched")
+			}
+			value, exists := physical[key]
+			if !exists {
+				cmd.SetErr(redis.Nil)
+				return redis.Nil
+			}
+			cmd.(*redis.StringCmd).SetVal(value)
+		case "set":
+			args := cmd.Args()
+			key := args[1].(string)
+			old, exists := physical[key]
+			if args[3] == "NX" && exists || args[3] == "IFEQ" && (!exists || old != args[4].(string)) {
+				cmd.SetErr(redis.Nil)
+				return redis.Nil
+			}
+			physical[key] = string(args[2].([]byte))
+			cmd.(*redis.Cmd).SetVal("OK")
+		default:
+			t.Fatalf("unexpected command %v", cmd.Args())
+		}
+		return nil
+	})
+	records := map[string][]byte{
+		"capability/foo": []byte("second"),
+		"capability/redis-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": []byte(strings.Repeat("large application record", 4096)),
+	}
+	for key, data := range records {
+		if err := s.Put(ctx, key, data); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := s.Put(ctx, redisCapabilityPrefix+"user", []byte("invalid")); err == nil {
+		t.Fatal("private probe namespace accepted as an application key")
+	}
+	want := []string{"capability/foo", "capability/redis-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+	for _, prefix := range []string{"", "capability/"} {
+		clear(reads)
+		keys, err := s.ListKeysPrefix(ctx, prefix)
+		if err != nil || !reflect.DeepEqual(keys, want) {
+			t.Fatalf("prefix %q lost application records: %v %v", prefix, keys, err)
+		}
+		for key := range records {
+			if reads["ns:"+key] != 1 {
+				t.Fatalf("enumeration read application payload %q %d times", key, reads["ns:"+key])
+			}
+		}
+	}
+	backup, err := Export(ctx, s)
+	if err != nil || len(backup.Records) != len(records) {
+		t.Fatalf("probe filtering lost backup records: %#v %v", backup, err)
+	}
+	for key, data := range records {
+		if string(backup.Records[key].Data) != string(data) {
+			t.Fatalf("backup changed %q", key)
+		}
+	}
+}
+
+func TestRedisCapabilityFilterDoesNotHideCorruptApplicationRecords(t *testing.T) {
+	for _, key := range []string{
+		"capability/foo",
+		"capability/redis-0000000000000000000000000000000",
+		"capability/redis-000000000000000000000000000000000",
+		"capability/redis-gggggggggggggggggggggggggggggggg",
+		"capability/redis-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+	} {
+		t.Run(key, func(t *testing.T) {
+			s := hookedRedisStorage(t, "ns:", func(cmd redis.Cmder) error {
+				switch cmd.Name() {
+				case "scan":
+					cmd.(*redis.ScanCmd).SetVal([]string{"ns:" + key}, 0)
+				case "get":
+					cmd.(*redis.StringCmd).SetVal("second")
+				default:
+					t.Fatalf("unexpected command %v", cmd.Args())
+				}
+				return nil
+			})
+			if _, err := s.ListKeys(context.Background()); err == nil || !strings.Contains(err.Error(), "decode storage document") {
+				t.Fatalf("corrupt application key %q silently hidden: %v", key, err)
+			}
+		})
+	}
+	if redisLegacyCapabilityProbe("capability/redis-00000000000000000000000000000000", []byte("not a probe")) {
+		t.Fatal("non-probe payload hidden solely because of its key")
+	}
+}
+
 func TestRedisLegacyRemovalDoesNotReadPayload(t *testing.T) {
 	s := hookedRedisStorage(t, "ns:", func(cmd redis.Cmder) error {
 		if !reflect.DeepEqual(cmd.Args(), []interface{}{"unlink", "ns:job_logs:job"}) {
@@ -263,6 +376,9 @@ func TestRedisCancelledProbeKeepsStartupBudget(t *testing.T) {
 			return nil
 		case "set":
 			args := cmd.Args()
+			if err := validateKey(strings.TrimPrefix(args[1].(string), "ns:")); err == nil {
+				t.Errorf("capability probe occupies a valid application key: %v", args[1])
+			}
 			if !reflect.DeepEqual(args[len(args)-2:], []interface{}{"PX", 30000}) {
 				t.Errorf("private probe has no bounded cleanup TTL: %v", args)
 			}
