@@ -9,7 +9,7 @@ import (
 
 func TestReadinessHTTPStatusAndPublicAliases(t *testing.T) {
 	eng, handler := securityServer(t)
-	for _, path := range []string{"/api/app/ready", "/api/app/ready/v1"} {
+	for _, path := range []string{"/api/app/ready", "/api/app/ready/v1", "/api/app/startup", "/api/app/startup/v1"} {
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, httptest.NewRequest(http.MethodGet, path, nil))
 		if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `"code":0`) {
@@ -20,7 +20,7 @@ func TestReadinessHTTPStatusAndPublicAliases(t *testing.T) {
 		}
 	}
 	eng.RequestShutdown()
-	for _, path := range []string{"/api/app/ready", "/api/app/ready/v1"} {
+	for _, path := range []string{"/api/app/ready", "/api/app/ready/v1", "/api/app/startup", "/api/app/startup/v1"} {
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, httptest.NewRequest(http.MethodGet, path, nil))
 		if w.Code != http.StatusServiceUnavailable || w.Body.String() != "{\"code\":1,\"description\":\"Service unavailable\"}\n" {

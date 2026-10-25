@@ -138,7 +138,7 @@ func (jm *JobManager) uploadJobLogToStorage(job *types.Job) error {
 	if size > jm.engine.logHardLimit() {
 		return storage.ErrJobLogLimit
 	}
-	manifest, err := storage.JobLogInfo(ctx, jm.engine.storage, job.ID)
+	manifest, err := jm.engine.jobLogInfo(ctx, job.ID)
 	if err != nil && !errors.Is(err, storage.ErrNotFound) {
 		return err
 	}
@@ -164,7 +164,7 @@ func (jm *JobManager) uploadJobLogToStorage(job *types.Job) error {
 		if _, err := file.ReadAt(data, manifest.Offset); err != nil {
 			return err
 		}
-		manifest, err = storage.JobLogAppend(ctx, jm.engine.storage, job.ID, manifest.Offset, data, job.Complete && end == size, jm.engine.logHardLimit())
+		manifest, err = jm.engine.jobLogAppend(ctx, job.ID, manifest.Offset, data, job.Complete && end == size, jm.engine.logHardLimit())
 		if errors.Is(err, storage.ErrJobLogDeleted) {
 			return nil
 		}
@@ -173,7 +173,7 @@ func (jm *JobManager) uploadJobLogToStorage(job *types.Job) error {
 		}
 	}
 	if job.Complete && !manifest.Final || size == 0 && errors.Is(err, storage.ErrNotFound) {
-		_, err = storage.JobLogAppend(ctx, jm.engine.storage, job.ID, manifest.Offset, nil, job.Complete, jm.engine.logHardLimit())
+		_, err = jm.engine.jobLogAppend(ctx, job.ID, manifest.Offset, nil, job.Complete, jm.engine.logHardLimit())
 		if errors.Is(err, storage.ErrJobLogDeleted) {
 			return nil
 		}
@@ -186,7 +186,7 @@ func (e *Engine) requireDurableJobLog(ctx context.Context, id string, size int64
 	if deleted, err := e.isJobLogDeleted(ctx, id); err != nil || deleted {
 		return err
 	}
-	m, err := storage.JobLogInfo(ctx, e.storage, id)
+	m, err := e.jobLogInfo(ctx, id)
 	if err == nil {
 		if m.Deleted || m.Offset >= size && (!final || m.Final) {
 			return nil
@@ -196,7 +196,7 @@ func (e *Engine) requireDurableJobLog(ctx context.Context, id string, size int64
 	if !errors.Is(err, storage.ErrNotFound) {
 		return err
 	}
-	_, legacy, err := storage.JobLogRead(ctx, e.storage, id, 0, 1)
+	_, legacy, err := e.jobLogRead(ctx, id, 0, 1)
 	if err == nil && legacy.Offset >= size {
 		return nil
 	}
@@ -215,7 +215,7 @@ func (e *Engine) writeJobLog(ctx context.Context, id string, data []byte) error 
 	if deleted, err := e.isJobLogDeleted(ctx, id); err != nil || deleted {
 		return err
 	}
-	m, err := storage.JobLogInfo(ctx, e.storage, id)
+	m, err := e.jobLogInfo(ctx, id)
 	if err != nil && !errors.Is(err, storage.ErrNotFound) {
 		return err
 	}
@@ -233,7 +233,7 @@ func (e *Engine) writeJobLog(ctx context.Context, id string, data []byte) error 
 		if n > compareEnd-at {
 			n = compareEnd - at
 		}
-		previous, _, readErr := storage.JobLogRead(ctx, e.storage, id, at, int(n))
+		previous, _, readErr := e.jobLogRead(ctx, id, at, int(n))
 		if errors.Is(readErr, storage.ErrJobLogDeleted) {
 			return nil
 		}
@@ -259,7 +259,7 @@ func (e *Engine) writeJobLog(ctx context.Context, id string, data []byte) error 
 		if end > int64(len(data)) {
 			return storage.ErrConflict
 		}
-		m, err = storage.JobLogAppend(ctx, e.storage, id, m.Offset, data[m.Offset:end], end == int64(len(data)), e.logHardLimit())
+		m, err = e.jobLogAppend(ctx, id, m.Offset, data[m.Offset:end], end == int64(len(data)), e.logHardLimit())
 		if errors.Is(err, storage.ErrJobLogDeleted) {
 			return nil
 		}
@@ -268,7 +268,7 @@ func (e *Engine) writeJobLog(ctx context.Context, id string, data []byte) error 
 		}
 	}
 	if !m.Final {
-		_, err = storage.JobLogAppend(ctx, e.storage, id, m.Offset, nil, true, e.logHardLimit())
+		_, err = e.jobLogAppend(ctx, id, m.Offset, nil, true, e.logHardLimit())
 		if errors.Is(err, storage.ErrJobLogDeleted) {
 			return nil
 		}
@@ -308,7 +308,7 @@ func (e *Engine) ReadJobLogRange(ctx context.Context, id string, offset, limit i
 			return nil, 0, err
 		}
 	}
-	data, manifest, err := storage.JobLogRead(ctx, e.storage, id, offset, int(limit))
+	data, manifest, err := e.jobLogRead(ctx, id, offset, int(limit))
 	if errors.Is(err, storage.ErrJobLogDeleted) {
 		return nil, 0, storage.ErrNotFound
 	}

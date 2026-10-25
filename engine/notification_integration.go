@@ -55,34 +55,7 @@ func (e *Engine) enqueueNotification(ctx context.Context, id, kind string, paylo
 	if err != nil {
 		return err
 	}
-	f, err := os.CreateTemp(dir, ".notification-*")
-	if err != nil {
-		return err
-	}
-	name := f.Name()
-	defer os.Remove(name)
-	if err = f.Chmod(0600); err == nil {
-		_, err = f.Write(encoded)
-	}
-	if err == nil {
-		err = f.Sync()
-	}
-	closeErr := f.Close()
-	if err == nil {
-		err = closeErr
-	}
-	if err != nil {
-		return err
-	}
-	if err = os.Rename(name, path); err != nil {
-		return err
-	}
-	d, err := os.Open(dir)
-	if err != nil {
-		return err
-	}
-	defer d.Close()
-	return d.Sync()
+	return e.writeSpoolFile(path, encoded, ".notification-*")
 }
 
 func (e *Engine) replayNotificationSpool(ctx context.Context) error {

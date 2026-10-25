@@ -110,6 +110,9 @@ func (jm *JobManager) launchJobWithToken(event *types.Event, timestamp int64, to
 	if jm.engine.ctx.Err() != nil {
 		return nil, fmt.Errorf("engine is shutting down")
 	}
+	if err := jm.engine.checkLogAdmission(jm.engine.ctx); err != nil {
+		return nil, err
+	}
 	if !jm.engine.EnsureLeadership() {
 		return nil, fmt.Errorf("current node does not own leadership")
 	}
@@ -294,6 +297,9 @@ func (jm *JobManager) LaunchRemoteJob(job *types.Job) error {
 	if job == nil || job.Detached || job.ID == "" || job.Command == "" || !regexp.MustCompile(`^[a-zA-Z0-9_-]+$`).MatchString(job.ID) {
 		return fmt.Errorf("invalid remote job")
 	}
+	if err := jm.engine.checkLogAdmission(jm.engine.ctx); err != nil {
+		return err
+	}
 	job = types.CloneJob(job)
 	job.Hostname = jm.getHostname()
 	job.LogFile = filepath.Join(jm.engine.config.LogDir, "jobs", job.ID+".log")
@@ -445,7 +451,7 @@ func (jm *JobManager) launchLocalJob(input *types.Job) {
 			jm.finishLocalJob(job)
 			return
 		}
-		logWriter, writerErr := newBoundedLogWriter(logFile, jm.jobLogLimit(job), func(err error) {
+		logWriter, writerErr := jm.newJobLogWriter(logFile, jm.jobLogLimit(job), func(err error) {
 			jm.engine.mu.Lock()
 			if current := jm.engine.activeJobs[job.ID]; current != nil {
 				current.AbortReason = err.Error()
@@ -1241,7 +1247,7 @@ func (jm *JobManager) createLogFile(job *types.Job) error {
 	// 写入日志头
 	header := fmt.Sprintf("# Job ID: %s\n# Event Title: %s\n# Hostname: %s\n# Date/Time: %s\n\n",
 		job.ID, job.EventTitle, job.Hostname, time.Now().Format(time.RFC3339))
-	writer, err := newBoundedLogWriter(file, jm.jobLogLimit(job), nil)
+	writer, err := jm.newJobLogWriter(file, jm.jobLogLimit(job), nil)
 	if err != nil {
 		_ = file.Close()
 		return err

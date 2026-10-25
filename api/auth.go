@@ -99,6 +99,7 @@ func skipAuth(path string) bool {
 	publicPaths := []string{
 		"/api/app/ping",
 		"/api/app/ready",
+		"/api/app/startup",
 		"/api/app/status",
 		"/api/app/echo",
 		"/api/app/config",

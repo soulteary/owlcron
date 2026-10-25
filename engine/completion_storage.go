@@ -34,31 +34,7 @@ func (jm *JobManager) writeCompletionSpool(job *types.Job) error {
 	if err != nil {
 		return err
 	}
-	file, err := os.CreateTemp(filepath.Dir(path), ".complete-*")
-	if err != nil {
-		return err
-	}
-	name := file.Name()
-	defer os.Remove(name)
-	if _, err = file.Write(raw); err == nil {
-		err = file.Sync()
-	}
-	closeErr := file.Close()
-	if err == nil {
-		err = closeErr
-	}
-	if err != nil {
-		return err
-	}
-	if err = os.Rename(name, path); err != nil {
-		return err
-	}
-	directory, err := os.Open(filepath.Dir(path))
-	if err != nil {
-		return err
-	}
-	defer directory.Close()
-	return directory.Sync()
+	return jm.engine.writeSpoolFile(path, raw, ".complete-*")
 }
 func (jm *JobManager) persistCompletion(job *types.Job) error {
 	started := time.Now()

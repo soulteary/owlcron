@@ -214,14 +214,7 @@ func (q *Queue) EnqueueExternal(task *types.QueueTask) error {
 		return err
 	}
 
-	// 先写入临时文件，然后重命名（原子操作）
-	tmpFile := file + ".tmp"
-	if err := os.WriteFile(tmpFile, data, 0600); err != nil {
-		return err
-	}
-
-	if err := os.Rename(tmpFile, file); err != nil {
-		os.Remove(tmpFile)
+	if err := q.engine.writeSpoolFile(file, data, ".queue-*"); err != nil {
 		return err
 	}
 

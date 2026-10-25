@@ -163,7 +163,7 @@ func (e *Engine) finishHistoryCleanup(ctx context.Context, key string, intent hi
 	if err := e.storage.Put(ctx, "deleted_job_logs:"+id, []byte(`{"deleted":true}`)); err != nil {
 		return err
 	}
-	if err := storage.JobLogDelete(ctx, e.storage, id); err != nil {
+	if err := e.jobLogDelete(ctx, id); err != nil {
 		return err
 	}
 	if err := atomic.Update(ctx, "job_logs:"+id, func([]byte) ([]byte, error) { return deletedLogMarker, nil }); err != nil {

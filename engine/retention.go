@@ -65,9 +65,17 @@ func (e *Engine) RunHistoryMaintenance(ctx context.Context, now time.Time) error
 	if batch <= 0 {
 		batch = 100
 	}
+	if e.spoolBudget != nil {
+		if err := e.spoolBudget.refresh(ctx); err != nil {
+			return err
+		}
+	}
 	if e.IsMaster() && e.EnsureLeadership() {
 		if err := e.RetryHistoryDeletions(ctx); err != nil {
 			return err
+		}
+		if err := e.collectLogObjects(ctx); err != nil {
+			e.logger.Warn("Log object collection will retry", zap.String("error", e.RedactSensitiveText(err.Error())))
 		}
 		// Event-level overrides may expire logs even when the global policy is off.
 		if err := e.cleanSharedHistory(ctx, now, batch); err != nil {
@@ -77,7 +85,13 @@ func (e *Engine) RunHistoryMaintenance(ctx context.Context, now time.Time) error
 	if err := e.evictDeletedHistory(ctx, batch); err != nil {
 		return err
 	}
-	return e.cleanLocalLogs(ctx, now, batch)
+	if err := e.cleanLocalLogs(ctx, now, batch); err != nil {
+		return err
+	}
+	if e.spoolBudget != nil {
+		return e.spoolBudget.refresh(ctx)
+	}
+	return nil
 }
 
 func expiredJob(job *types.Job, now time.Time, days int) bool {
@@ -204,8 +218,26 @@ func (e *Engine) cleanLocalLogs(ctx context.Context, now time.Time, batch int) e
 			if err := json.Unmarshal(raw, &job); err != nil {
 				return err
 			}
-			if !job.Complete || job.StorageError != "" || !expiredJob(&job, now, e.jobLogRetentionDays(&job)) {
+			if !job.Complete || job.StorageError != "" {
 				continue
+			}
+			if !expiredJob(&job, now, e.jobLogRetentionDays(&job)) {
+				// Once a v2 root is sealed, this exact local file is only a
+				// cache. Keeping it until remote retention expires would fill
+				// the recovery budget even while uploads are healthy.
+				if e.jobLogs == nil {
+					continue
+				}
+				manifest, err := e.jobLogInfo(ctx, id)
+				if errors.Is(err, storage.ErrNotFound) {
+					continue
+				}
+				if err != nil {
+					return err
+				}
+				if manifest.Format != 2 || !manifest.Final || manifest.Deleted || manifest.Offset != info.Size() {
+					continue
+				}
 			}
 		}
 		if err := root.Remove(name); err != nil && !os.IsNotExist(err) {
