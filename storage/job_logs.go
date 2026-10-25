@@ -20,6 +20,7 @@ var ErrJobLogDeleted = errors.New("job log deleted")
 var ErrJobLogLimit = errors.New("job log capacity exceeded")
 
 type JobLogManifest struct {
+	Format      int    `json:"format,omitempty"`
 	Offset      int64  `json:"offset"`
 	Final       bool   `json:"final"`
 	Deleted     bool   `json:"deleted"`
@@ -304,6 +305,9 @@ func jobLogDeleteChunk(ctx context.Context, a AtomicStorage, key string) error {
 func decodeJobLogManifest(raw []byte, m *JobLogManifest) error {
 	if err := json.Unmarshal(raw, m); err != nil {
 		return fmt.Errorf("invalid job log manifest: %w", err)
+	}
+	if m.Format != 0 && m.Format != 1 {
+		return ErrJobLogFormat
 	}
 	if m.Offset < 0 || m.Offset > JobLogAbsoluteMax {
 		return fmt.Errorf("invalid job log manifest offset")
