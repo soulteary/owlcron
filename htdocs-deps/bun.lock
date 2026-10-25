@@ -6,7 +6,7 @@
       "name": "owlcron-frontend",
       "dependencies": {
         "async": "3.2.6",
-        "chart.js": "4.5.1",
+        "chart.js": "4.6.1",
         "chartjs-adapter-moment": "1.0.1",
         "font-awesome": "4.7.0",
         "jquery": "4.0.0",
@@ -30,7 +30,7 @@
 
     "async": ["async@3.2.6", "", {}, "sha512-htCUDlxyyCLMgaM3xXg0C0LW2xqfuQ6p05pCEIsXuyQ+a1koYKTuBMzRNwmybfLgvJDMd0r1LTn4+E0Ti6C2AA=="],
 
-    "chart.js": ["chart.js@4.5.1", "", { "dependencies": { "@kurkle/color": "^0.3.0" } }, "sha512-GIjfiT9dbmHRiYi6Nl2yFCq7kkwdkp1W/lp2J99rX0yo9tgJGn3lKQATztIjb5tVtevcBtIdICNWqlq5+E8/Pw=="],
+    "chart.js": ["chart.js@4.6.1", "", { "dependencies": { "@kurkle/color": "^0.3.0" } }, "sha512-hJyniucsFmq//EvXYvJ6c6mahPoI3kaxdjVH8awTaJ/fDNWeSqqqArixMJWkWNN6fcYvPU3HneSANFNYtRi61g=="],
 
     "chartjs-adapter-moment": ["chartjs-adapter-moment@1.0.1", "", { "peerDependencies": { "chart.js": ">=3.0.0", "moment": "^2.10.2" } }, "sha512-Uz+nTX/GxocuqXpGylxK19YG4R3OSVf8326D+HwSTsNw1LgzyIGRo+Qujwro1wy6X+soNSnfj5t2vZ+r6EaDmA=="],
 
