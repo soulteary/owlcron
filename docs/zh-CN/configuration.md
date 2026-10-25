@@ -27,6 +27,10 @@
 - S3 要求真正支持 `If-Match`、`If-None-Match` 及并发条件写入，首次修改前会探测，不支持的兼容服务会被拒绝。账户需要测试及实际命名空间的对象读写和前缀列举权限。
 - Couchbase 使用 SDK CAS；启动恢复与完整枚举需要支持 range scan 的 7.6+ 服务及相应权限。远程后端不提供跨 key ACID 事务，应用采用可重试、幂等的规范记录与索引更新。
 
+S3 在 `storage_options` 中配置 `bucket`。设置 `access_key`、`secret_key` 和可选的 `session_token`，或使用环境变量 `AWS_ACCESS_KEY_ID`、`AWS_SECRET_ACCESS_KEY`、`AWS_SESSION_TOKEN`。缺少 access 或 secret key 会被拒绝。`region` 默认是 `us-east-1`，`prefix` 默认是 `owlcron`；沿用相同的 bucket 和 prefix 可继续访问已有记录。
+
+省略 `endpoint` 时使用对应区域的 AWS S3 端点。自定义端点支持 HTTP(S) URL 或带可选端口的主机名（默认 HTTPS），不能包含基础路径、内嵌凭据、查询参数或片段。自定义端点默认使用路径寻址；`path_style` 可明确选择路径寻址（`true`）或虚拟主机寻址（`false`）。每次 HTTP 请求及响应体读取的超时为 30 秒，最多尝试三次；调用方设置的更短期限优先。分页扫描整体不受 30 秒限制。条件写入冲突返回存储 CAS 重试逻辑，不会退为无条件覆盖。
+
 事件加载读取全部分页；失败保留原内存快照。遗留孤立事件记录通过前缀列举恢复，自定义存储适配器需实现 `storage.PrefixKeyLister`。列表分页仍可能解码整个索引，不能据此推导常量内存或最大事件容量。
 
 执行中的任务遇到 daemon 强杀后，重启核对执行 token 和内核启动身份，再回收已验证的进程组并将任务标记为中断失败。不会自动续跑或重做插件。`OWLCRON_JOB_TOKEN` 是保留环境变量。无法验证的旧版存活 PID 会阻止启动，需人工核查；不要盲目杀死同号 PID。保持重启前后的 OS 身份和进程检查权限一致。主动脱离进程组或删除标记的插件不在该恢复约定内，detached 执行配置也不受支持。

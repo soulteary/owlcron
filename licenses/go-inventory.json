@@ -1,39 +1,5 @@
 [
   {
-    "module": "github.com/aws/aws-sdk-go-v2",
-    "version": "v1.47.4",
-    "notices": "licenses/go/github.com__aws__aws-sdk-go-v2@v1.47.4",
-    "files": [
-      "LICENSE.txt",
-      "NOTICE.txt"
-    ]
-  },
-  {
-    "module": "github.com/aws/aws-sdk-go-v2/credentials",
-    "version": "v1.20.10",
-    "notices": "licenses/go/github.com__aws__aws-sdk-go-v2__credentials@v1.20.10",
-    "files": [
-      "LICENSE.txt"
-    ]
-  },
-  {
-    "module": "github.com/aws/aws-sdk-go-v2/service/s3",
-    "version": "v1.114.5",
-    "notices": "licenses/go/github.com__aws__aws-sdk-go-v2__service__s3@v1.114.5",
-    "files": [
-      "LICENSE.txt"
-    ]
-  },
-  {
-    "module": "github.com/aws/smithy-go",
-    "version": "v1.28.6",
-    "notices": "licenses/go/github.com__aws__smithy-go@v1.28.6",
-    "files": [
-      "LICENSE",
-      "NOTICE"
-    ]
-  },
-  {
     "module": "github.com/couchbase/gocb/v2",
     "version": "v2.13.0",
     "notices": "licenses/go/github.com__couchbase__gocb__v2@v2.13.0",
@@ -56,6 +22,15 @@
     "files": [
       "LICENSE",
       "LICENSE-OWLCRON",
+      "NOTICE"
+    ]
+  },
+  {
+    "module": "github.com/soulteary/otterio-sdk/v7",
+    "version": "v7.3.3",
+    "notices": "licenses/go/github.com__soulteary__otterio-sdk__v7@v7.3.3",
+    "files": [
+      "LICENSE",
       "NOTICE"
     ]
   },
@@ -89,70 +64,6 @@
     "notices": "licenses/go/golang.org__x__sys@v0.49.0",
     "files": [
       "LICENSE"
-    ]
-  },
-  {
-    "module": "github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream",
-    "version": "v1.7.24",
-    "notices": "licenses/go/github.com__aws__aws-sdk-go-v2__aws__protocol__eventstream@v1.7.24",
-    "files": [
-      "LICENSE.txt"
-    ]
-  },
-  {
-    "module": "github.com/aws/aws-sdk-go-v2/internal/configsources",
-    "version": "v1.5.7",
-    "notices": "licenses/go/github.com__aws__aws-sdk-go-v2__internal__configsources@v1.5.7",
-    "files": [
-      "LICENSE.txt"
-    ]
-  },
-  {
-    "module": "github.com/aws/aws-sdk-go-v2/internal/endpoints/v2",
-    "version": "v2.8.7",
-    "notices": "licenses/go/github.com__aws__aws-sdk-go-v2__internal__endpoints__v2@v2.8.7",
-    "files": [
-      "LICENSE.txt"
-    ]
-  },
-  {
-    "module": "github.com/aws/aws-sdk-go-v2/internal/v4a",
-    "version": "v1.5.7",
-    "notices": "licenses/go/github.com__aws__aws-sdk-go-v2__internal__v4a@v1.5.7",
-    "files": [
-      "LICENSE.txt"
-    ]
-  },
-  {
-    "module": "github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding",
-    "version": "v1.13.22",
-    "notices": "licenses/go/github.com__aws__aws-sdk-go-v2__service__internal__accept-encoding@v1.13.22",
-    "files": [
-      "LICENSE.txt"
-    ]
-  },
-  {
-    "module": "github.com/aws/aws-sdk-go-v2/service/internal/checksum",
-    "version": "v1.11.8",
-    "notices": "licenses/go/github.com__aws__aws-sdk-go-v2__service__internal__checksum@v1.11.8",
-    "files": [
-      "LICENSE.txt"
-    ]
-  },
-  {
-    "module": "github.com/aws/aws-sdk-go-v2/service/internal/presigned-url",
-    "version": "v1.14.7",
-    "notices": "licenses/go/github.com__aws__aws-sdk-go-v2__service__internal__presigned-url@v1.14.7",
-    "files": [
-      "LICENSE.txt"
-    ]
-  },
-  {
-    "module": "github.com/aws/aws-sdk-go-v2/service/internal/s3shared",
-    "version": "v1.20.7",
-    "notices": "licenses/go/github.com__aws__aws-sdk-go-v2__service__internal__s3shared@v1.20.7",
-    "files": [
-      "LICENSE.txt"
     ]
   },
   {
@@ -196,6 +107,14 @@
     ]
   },
   {
+    "module": "github.com/dustin/go-humanize",
+    "version": "v1.1.0",
+    "notices": "licenses/go/github.com__dustin__go-humanize@v1.1.0",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
     "module": "github.com/go-logr/logr",
     "version": "v1.4.4",
     "notices": "licenses/go/github.com__go-logr__logr@v1.4.4",
@@ -223,6 +142,82 @@
     "module": "github.com/google/uuid",
     "version": "v1.6.0",
     "notices": "licenses/go/github.com__google__uuid@v1.6.0",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "module": "github.com/klauspost/compress",
+    "version": "v1.20.3",
+    "notices": "licenses/go/github.com__klauspost__compress@v1.20.3",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "module": "github.com/klauspost/cpuid/v2",
+    "version": "v2.4.1",
+    "notices": "licenses/go/github.com__klauspost__cpuid__v2@v2.4.1",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "module": "github.com/klauspost/crc32",
+    "version": "v1.3.0",
+    "notices": "licenses/go/github.com__klauspost__crc32@v1.3.0",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "module": "github.com/philhofer/fwd",
+    "version": "v1.2.0",
+    "notices": "licenses/go/github.com__philhofer__fwd@v1.2.0",
+    "files": [
+      "LICENSE.md"
+    ]
+  },
+  {
+    "module": "github.com/rs/xid",
+    "version": "v1.6.0",
+    "notices": "licenses/go/github.com__rs__xid@v1.6.0",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "module": "github.com/soulteary/otterio-kits/crc64nvme",
+    "version": "v1.1.4",
+    "notices": "licenses/go/github.com__soulteary__otterio-kits__crc64nvme@v1.1.4",
+    "files": [
+      "LICENSE",
+      "NOTICE"
+    ]
+  },
+  {
+    "module": "github.com/soulteary/otterio-kits/md5-simd",
+    "version": "v1.2.1",
+    "notices": "licenses/go/github.com__soulteary__otterio-kits__md5-simd@v1.2.1",
+    "files": [
+      "LICENSE",
+      "LICENSE.Golang",
+      "LICENSE.Igneous",
+      "NOTICE"
+    ]
+  },
+  {
+    "module": "github.com/tinylib/msgp",
+    "version": "v1.6.5",
+    "notices": "licenses/go/github.com__tinylib__msgp@v1.6.5",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "module": "github.com/zeebo/xxh3",
+    "version": "v1.1.0",
+    "notices": "licenses/go/github.com__zeebo__xxh3@v1.1.0",
     "files": [
       "LICENSE"
     ]
@@ -284,6 +279,15 @@
     ]
   },
   {
+    "module": "go.yaml.in/yaml/v3",
+    "version": "v3.0.5",
+    "notices": "licenses/go/go.yaml.in__yaml__v3@v3.0.5",
+    "files": [
+      "LICENSE",
+      "NOTICE"
+    ]
+  },
+  {
     "module": "golang.org/x/text",
     "version": "v0.43.0",
     "notices": "licenses/go/golang.org__x__text@v0.43.0",
@@ -312,6 +316,14 @@
     "module": "google.golang.org/protobuf",
     "version": "v1.36.12",
     "notices": "licenses/go/google.golang.org__protobuf@v1.36.12",
+    "files": [
+      "LICENSE"
+    ]
+  },
+  {
+    "module": "gopkg.in/ini.v1",
+    "version": "v1.67.3",
+    "notices": "licenses/go/gopkg.in__ini.v1@v1.67.3",
     "files": [
       "LICENSE"
     ]

@@ -11,8 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
+	minio "github.com/soulteary/otterio-sdk/v7"
 )
 
 func exerciseStorage(t *testing.T, a, b Storage) {
@@ -166,10 +165,10 @@ func TestS3RealStorage(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
-	_, err = a.client.CreateBucket(ctx, &s3.CreateBucketInput{Bucket: aws.String(a.bucket)})
+	err = a.client.MakeBucket(ctx, a.bucket, minio.MakeBucketOptions{})
 	if err != nil {
 		// Tests may be repeated against the same isolated bucket.
-		if _, e := a.client.HeadBucket(ctx, &s3.HeadBucketInput{Bucket: aws.String(a.bucket)}); e != nil {
+		if exists, e := a.client.BucketExists(ctx, a.bucket); e != nil || !exists {
 			t.Fatal(err)
 		}
 	}

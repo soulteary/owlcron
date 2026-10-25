@@ -25,6 +25,8 @@ OwlCron 原创代码采用 MIT 许可证，见 [LICENSE](LICENSE)。第三方代
 
 [licenses/go-inventory.json](licenses/go-inventory.json)列出 `go.mod` 显式声明的直接和间接依赖及版本。下载模块中的 LICENSE、NOTICE 和版权文件保存在 `licenses/go`，继续遵循上游 MIT、BSD、Apache 等条款，不重新许可为 OwlCron 的 MIT。Go 标准库和运行时使用 Go 项目的 BSD 风格许可，见 `licenses/Go-LICENSE`。
 
+S3 客户端使用 OtterIO SDK v7.3.3，它是独立维护的 MinIO Go SDK 分支。其 Apache 2.0 LICENSE 和上游 MinIO NOTICE 保留在 `licenses/go` 下对应的模块目录中。OtterIO Kits 依赖的声明也一并保留，包括 MD5 实现的单独许可文件。
+
 ## 依赖更新和分发
 
 修改 `go.mod`、`bun.lock` 或随附资源时，应同步刷新版本清单和上游声明。发布压缩包及容器分发时，应包含 `LICENSE`、`THIRD_PARTY_NOTICES.md` 和 `licenses/`；压缩或合并资源时保留版权头。

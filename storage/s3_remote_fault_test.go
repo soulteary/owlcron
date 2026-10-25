@@ -16,8 +16,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
+	minio "github.com/soulteary/otterio-sdk/v7"
 )
 
 // This gate forwards to an independently running S3 service. It does not
@@ -110,8 +109,8 @@ func TestS3RealTransportFaultRecovery(t *testing.T) {
 	direct := newS3FaultClient(t, endpoint, prefix)
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
-	if _, err := direct.client.CreateBucket(ctx, &s3.CreateBucketInput{Bucket: aws.String(direct.bucket)}); err != nil {
-		if _, headErr := direct.client.HeadBucket(ctx, &s3.HeadBucketInput{Bucket: aws.String(direct.bucket)}); headErr != nil {
+	if err := direct.client.MakeBucket(ctx, direct.bucket, minio.MakeBucketOptions{}); err != nil {
+		if exists, headErr := direct.client.BucketExists(ctx, direct.bucket); headErr != nil || !exists {
 			t.Fatal(err)
 		}
 	}
@@ -236,8 +235,8 @@ func TestS3RealCommittedResponseLossRecovery(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	// Shared integration bucket is created explicitly, so this case also runs alone.
-	if _, err := direct.client.CreateBucket(ctx, &s3.CreateBucketInput{Bucket: aws.String(direct.bucket)}); err != nil {
-		if _, e := direct.client.HeadBucket(ctx, &s3.HeadBucketInput{Bucket: aws.String(direct.bucket)}); e != nil {
+	if err := direct.client.MakeBucket(ctx, direct.bucket, minio.MakeBucketOptions{}); err != nil {
+		if exists, e := direct.client.BucketExists(ctx, direct.bucket); e != nil || !exists {
 			t.Fatal(err)
 		}
 	}
@@ -304,8 +303,8 @@ func TestS3RealServerRestartRecovery(t *testing.T) {
 	a, b := newS3FaultClient(t, endpoint, prefix), newS3FaultClient(t, endpoint, prefix)
 	ctx, cancel := context.WithTimeout(context.Background(), 150*time.Second)
 	defer cancel()
-	if _, err := a.client.CreateBucket(ctx, &s3.CreateBucketInput{Bucket: aws.String(a.bucket)}); err != nil {
-		if _, headErr := a.client.HeadBucket(ctx, &s3.HeadBucketInput{Bucket: aws.String(a.bucket)}); headErr != nil {
+	if err := a.client.MakeBucket(ctx, a.bucket, minio.MakeBucketOptions{}); err != nil {
+		if exists, headErr := a.client.BucketExists(ctx, a.bucket); headErr != nil || !exists {
 			t.Fatal(err)
 		}
 	}

@@ -9,21 +9,20 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/credentials"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/smithy-go"
+	minio "github.com/soulteary/otterio-sdk/v7"
+	"github.com/soulteary/otterio-sdk/v7/pkg/credentials"
 )
 
 type S3Storage struct {
 	*remoteStorage
-	client            *s3.Client
+	client            *minio.Client
 	bucket, prefix    string
 	capabilityOnce    sync.Once
 	capabilityGate    chan struct{}
@@ -41,17 +40,48 @@ func NewS3Storage(config *StorageConfig) (*S3Storage, error) {
 	if access == "" || secret == "" {
 		return nil, fmt.Errorf("S3 storage requires access_key and secret_key or AWS credential environment")
 	}
-	cfg := aws.Config{Region: optionString(config.Options, "region", "us-east-1"), Credentials: credentials.NewStaticCredentialsProvider(access, secret, token), HTTPClient: &http.Client{Timeout: 30 * time.Second}}
-	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
-		endpoint := optionString(config.Options, "endpoint", "")
-		if endpoint != "" {
-			o.BaseEndpoint = aws.String(endpoint)
-			o.UsePathStyle = true
+	endpoint := optionString(config.Options, "endpoint", "")
+	lookup := minio.BucketLookupAuto
+	if endpoint == "" {
+		// The SDK resolves the regional AWS endpoint using Options.Region.
+		endpoint = "https://s3.amazonaws.com"
+	} else {
+		lookup = minio.BucketLookupPath
+		if !strings.Contains(endpoint, "://") {
+			endpoint = "https://" + endpoint
 		}
-		if b, ok := config.Options["path_style"].(bool); ok {
-			o.UsePathStyle = b
+	}
+	parsed, err := url.Parse(endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("invalid S3 endpoint: %w", err)
+	}
+	if (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" || (parsed.Path != "" && parsed.Path != "/") {
+		return nil, fmt.Errorf("S3 endpoint must be an HTTP(S) host without credentials, a path, query, or fragment")
+	}
+	if pathStyle, ok := config.Options["path_style"].(bool); ok {
+		lookup = minio.BucketLookupDNS
+		if pathStyle {
+			lookup = minio.BucketLookupPath
 		}
+	}
+	transport, err := minio.DefaultTransport(parsed.Scheme == "https")
+	if err != nil {
+		return nil, fmt.Errorf("initialize S3 transport: %w", err)
+	}
+	client, err := minio.New(endpoint, &minio.Options{
+		Region:       optionString(config.Options, "region", "us-east-1"),
+		Creds:        credentials.NewStaticV4(access, secret, token),
+		Secure:       parsed.Scheme == "https",
+		BucketLookup: lookup,
+		MaxRetries:   3,
+		Transport: s3TimeoutTransport{
+			transport: transport,
+			timeout:   30 * time.Second,
+		},
 	})
+	if err != nil {
+		return nil, fmt.Errorf("initialize S3 client: %w", err)
+	}
 	store := &S3Storage{client: client, bucket: bucket, prefix: strings.Trim(optionString(config.Options, "prefix", "owlcron"), "/")}
 	store.remoteStorage = &remoteStorage{kv: store}
 	return store, nil
@@ -63,34 +93,83 @@ func (s *S3Storage) objectKey(key string) string {
 	return s.prefix + "/" + key
 }
 func (s *S3Storage) read(ctx context.Context, key string) ([]byte, string, error) {
-	out, err := s.client.GetObject(ctx, &s3.GetObjectInput{Bucket: aws.String(s.bucket), Key: aws.String(s.objectKey(key))})
+	body, info, _, err := (minio.Core{Client: s.client}).GetObject(ctx, s.bucket, s.objectKey(key), minio.GetObjectOptions{})
 	if err != nil {
-		var api smithy.APIError
-		if errors.As(err, &api) && (api.ErrorCode() == "NoSuchKey" || api.ErrorCode() == "NotFound") {
-			return nil, "", ErrNotFound
-		}
-		return nil, "", err
+		return nil, "", mapS3Error(err)
 	}
-	defer out.Body.Close()
-	data, err := io.ReadAll(out.Body)
-	return data, aws.ToString(out.ETag), err
+	defer body.Close()
+	if info.ETag == "" {
+		return nil, "", fmt.Errorf("S3 object has no ETag; refusing unversioned storage")
+	}
+	data, err := io.ReadAll(body)
+	// ObjectInfo.ETag is unquoted; SetMatchETag restores the HTTP quotes.
+	// Both the payload and its version must come from this same GET.
+	return data, info.ETag, err
 }
 func (s *S3Storage) compareAndSwap(ctx context.Context, key string, data []byte, version string) error {
 	if err := s.ensureConditionalWrites(ctx); err != nil {
 		return err
 	}
-	in := &s3.PutObjectInput{Bucket: aws.String(s.bucket), Key: aws.String(s.objectKey(key)), Body: bytes.NewReader(data), ContentType: aws.String("application/json")}
+	return mapS3Error(s.putConditional(ctx, s.objectKey(key), data, version))
+}
+
+func (s *S3Storage) putConditional(ctx context.Context, key string, data []byte, version string) error {
+	// A growing state document must never switch to a multipart operation.
+	options := minio.PutObjectOptions{ContentType: "application/json", DisableMultipart: true}
 	if version == "" {
-		in.IfNoneMatch = aws.String("*")
+		options.SetMatchETagExcept("*")
 	} else {
-		in.IfMatch = aws.String(version)
+		options.SetMatchETag(version)
 	}
-	_, err := s.client.PutObject(ctx, in)
-	var api smithy.APIError
-	if errors.As(err, &api) && (api.ErrorCode() == "PreconditionFailed" || api.ErrorCode() == "ConditionalRequestConflict") {
-		return ErrConflict
+	_, err := s.client.PutObject(ctx, s.bucket, key, bytes.NewReader(data), int64(len(data)), options)
+	return err
+}
+
+func mapS3Error(err error) error {
+	var response minio.ErrorResponse
+	if errors.As(err, &response) {
+		switch response.Code {
+		case "NoSuchKey", "NotFound", "NoSuchObject":
+			return ErrNotFound
+		case "PreconditionFailed", "ConditionalRequestConflict":
+			return ErrConflict
+		}
 	}
 	return err
+}
+
+func s3PreconditionFailed(err error) bool {
+	var response minio.ErrorResponse
+	return errors.As(err, &response) && response.Code == "PreconditionFailed"
+}
+
+// The SDK accepts a RoundTripper rather than an http.Client. Preserve the old
+// per-request timeout through response body reads, without limiting an entire
+// paginated backup or detaching the caller's cancellation.
+type s3TimeoutTransport struct {
+	transport http.RoundTripper
+	timeout   time.Duration
+}
+
+func (t s3TimeoutTransport) RoundTrip(request *http.Request) (*http.Response, error) {
+	ctx, cancel := context.WithTimeout(request.Context(), t.timeout)
+	response, err := t.transport.RoundTrip(request.Clone(ctx))
+	if err != nil || response == nil || response.Body == nil {
+		cancel()
+		return response, err
+	}
+	response.Body = &s3TimeoutBody{ReadCloser: response.Body, cancel: cancel}
+	return response, nil
+}
+
+type s3TimeoutBody struct {
+	io.ReadCloser
+	cancel context.CancelFunc
+}
+
+func (body *s3TimeoutBody) Close() error {
+	defer body.cancel()
+	return body.ReadCloser.Close()
 }
 
 // Only a successful probe is cached. A transient outage or cancellation during
@@ -124,17 +203,15 @@ func (s *S3Storage) checkConditionalWrites(ctx context.Context) error {
 		return err
 	}
 	key := s.objectKey("capability/" + hex.EncodeToString(nonce))
-	_, err := s.client.PutObject(ctx, &s3.PutObjectInput{Bucket: aws.String(s.bucket), Key: aws.String(key), Body: bytes.NewReader([]byte("probe")), IfNoneMatch: aws.String("*")})
+	err := s.putConditional(ctx, key, []byte("probe"), "")
 	if err != nil {
 		return fmt.Errorf("S3 conditional insert probe: %w", err)
 	}
-	defer s.client.DeleteObject(context.WithoutCancel(ctx), &s3.DeleteObjectInput{Bucket: aws.String(s.bucket), Key: aws.String(key)})
-	_, err = s.client.PutObject(ctx, &s3.PutObjectInput{Bucket: aws.String(s.bucket), Key: aws.String(key), Body: bytes.NewReader([]byte("must not overwrite")), IfMatch: aws.String("\"invalid-version\"")})
-	var api smithy.APIError
-	if errors.As(err, &api) && api.ErrorCode() == "PreconditionFailed" {
-		_, err = s.client.PutObject(ctx, &s3.PutObjectInput{Bucket: aws.String(s.bucket), Key: aws.String(key), Body: bytes.NewReader([]byte("must not replace")), IfNoneMatch: aws.String("*")})
-		var collision smithy.APIError
-		if errors.As(err, &collision) && collision.ErrorCode() == "PreconditionFailed" {
+	defer s.client.RemoveObject(context.WithoutCancel(ctx), s.bucket, key, minio.RemoveObjectOptions{})
+	err = s.putConditional(ctx, key, []byte("must not overwrite"), "invalid-version")
+	if s3PreconditionFailed(err) {
+		err = s.putConditional(ctx, key, []byte("must not replace"), "")
+		if s3PreconditionFailed(err) {
 			return s.checkAtomicCondition(ctx, key)
 		}
 		if err == nil {
@@ -149,11 +226,14 @@ func (s *S3Storage) checkConditionalWrites(ctx context.Context) error {
 }
 
 func (s *S3Storage) checkAtomicCondition(ctx context.Context, key string) error {
-	original, err := s.client.GetObject(ctx, &s3.GetObjectInput{Bucket: aws.String(s.bucket), Key: aws.String(key)})
+	body, original, _, err := (minio.Core{Client: s.client}).GetObject(ctx, s.bucket, key, minio.GetObjectOptions{})
 	if err != nil {
 		return err
 	}
-	original.Body.Close()
+	body.Close()
+	if original.ETag == "" {
+		return fmt.Errorf("S3 probe object has no ETag; refusing unversioned storage")
+	}
 	gate := make(chan struct{})
 	errs := make(chan error, 8)
 	var wg sync.WaitGroup
@@ -163,13 +243,12 @@ func (s *S3Storage) checkAtomicCondition(ctx context.Context, key string) error 
 		go func(i int) {
 			defer wg.Done()
 			<-gate
-			_, err := s.client.PutObject(ctx, &s3.PutObjectInput{Bucket: aws.String(s.bucket), Key: aws.String(key), Body: bytes.NewReader([]byte(fmt.Sprintf("claim-%d", i))), IfMatch: original.ETag})
+			err := s.putConditional(ctx, key, []byte(fmt.Sprintf("claim-%d", i)), original.ETag)
 			if err == nil {
 				winners.Add(1)
 				return
 			}
-			var api smithy.APIError
-			if errors.As(err, &api) && (api.ErrorCode() == "PreconditionFailed" || api.ErrorCode() == "ConditionalRequestConflict") {
+			if errors.Is(mapS3Error(err), ErrConflict) {
 				return
 			}
 			errs <- err

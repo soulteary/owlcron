@@ -1,0 +1,11 @@
+otterio-kits / crc64nvme
+
+This module is independently maintained as part of otterio-kits.
+Imported source baseline:
+  https://github.com/minio/crc64nvme/tree/v1.1.1
+
+Original Minio Inc. copyright notices are retained in the source files.
+See LICENSE for the Apache License, Version 2.0 terms.
+
+This notice identifies original software sources and their applicable
+license files. It does not replace those license terms or source notices.

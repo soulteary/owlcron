@@ -1,0 +1,17 @@
+otterio-kits / md5-simd
+
+This module is independently maintained as part of otterio-kits.
+Imported source baseline:
+  https://github.com/minio/md5-simd/tree/v1.1.2
+
+Original MinIO Inc. copyright notices are retained in the source files.
+See LICENSE for the Apache License, Version 2.0 terms.
+
+Copyright (c) 2009 The Go Authors. All rights reserved.
+  See the retained upstream LICENSE.Golang for BSD-3-Clause terms.
+
+Copyright (c) 2018 Igneous Systems
+  block8_amd64.s; see LICENSE.Igneous for MIT terms.
+
+This notice identifies original software sources and their applicable
+license files. It does not replace those license terms or source notices.
