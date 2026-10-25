@@ -42,7 +42,7 @@ make process-integration-repeat
 
 These targets use real daemon processes, Filesystem storage, SIGKILL, network partitions, and TLS node connections without external S3/Couchbase/Redis services. The repeat target runs the selected cases three times.
 
-## Redis integration and TLS
+## Redis integration, mTLS, and minimal ACL
 
 ```sh
 OWLCRON_TEST_REDIS_ADDR=localhost:6379 \
@@ -50,13 +50,19 @@ OWLCRON_TEST_REDIS_ADDR=localhost:6379 \
   OWLCRON_TEST_REDIS_PASSWORD=owlcron-test-secret make redis-integration
 OWLCRON_TEST_REDIS_TLS_ADDR=localhost:6380 \
   OWLCRON_TEST_REDIS_TLS_CA_FILE=/path/to/redis-ca.crt \
+  OWLCRON_TEST_REDIS_TLS_CERT_FILE=/path/to/client.crt \
+  OWLCRON_TEST_REDIS_TLS_KEY_FILE=/path/to/client.key \
+  OWLCRON_TEST_REDIS_TLS_BAD_CERT_FILE=/path/to/untrusted-client.crt \
+  OWLCRON_TEST_REDIS_TLS_BAD_KEY_FILE=/path/to/untrusted-client.key \
   OWLCRON_TEST_REDIS_USERNAME=owlcron \
-  OWLCRON_TEST_REDIS_PASSWORD=owlcron-test-secret make redis-tls-integration
+  OWLCRON_TEST_REDIS_PASSWORD=owlcron-test-secret make redis-mtls-integration
 ```
 
 Use an isolated Redis 8.4+ instance. `make redis-integration` requires `OWLCRON_TEST_REDIS_ADDR` and covers storage contracts and CLI backup/restore. It also runs API `TestSingleNodeSystemLifecycle/Redis` and engine `TestClusterAuthenticatedDispatchAndReconnect/Redis` and `TestPrimaryOutageAutomaticTakeoverPreservesCursor/Redis` against that service.
 
-The TLS target is a separate opt-in check. It requires both `OWLCRON_TEST_REDIS_TLS_ADDR` and `OWLCRON_TEST_REDIS_TLS_CA_FILE` and reuses `OWLCRON_TEST_REDIS_USERNAME` and `OWLCRON_TEST_REDIS_PASSWORD`. The server certificate must contain `localhost` in its Subject Alternative Name; the test verifies that name and the supplied CA.
+`make redis-tls-integration` remains available for server-authenticated TLS with optional client certificate/key variables. `make redis-mtls-integration` is a separate explicit check against a server configured with `tls-auth-clients yes`. It requires `OWLCRON_TEST_REDIS_TLS_ADDR`, `OWLCRON_TEST_REDIS_TLS_CA_FILE`, a trusted client certificate/key pair (`OWLCRON_TEST_REDIS_TLS_CERT_FILE`, `OWLCRON_TEST_REDIS_TLS_KEY_FILE`), and a valid client pair signed by an untrusted CA (`OWLCRON_TEST_REDIS_TLS_BAD_CERT_FILE`, `OWLCRON_TEST_REDIS_TLS_BAD_KEY_FILE`). It reuses `OWLCRON_TEST_REDIS_USERNAME` and `OWLCRON_TEST_REDIS_PASSWORD`. The server certificate must contain `localhost` in its Subject Alternative Name, with serverAuth usage; client certificates need clientAuth usage. The checks cover trusted read/write and reject missing/untrusted client certificates, wrong server names/CAs, and incorrect Redis credentials.
+
+`make redis-acl-integration` runs the minimal ACL case, including its combined mTLS check; provide the TLS endpoint, CA, trusted client certificate and key as above. The case also participates in `make redis-integration` when its credentials are configured. Supply `OWLCRON_TEST_REDIS_MINIMAL_USERNAME`, `OWLCRON_TEST_REDIS_MINIMAL_PASSWORD`, `OWLCRON_TEST_REDIS_MINIMAL_PREFIX` (for example `acl-test:`), and `OWLCRON_TEST_REDIS_MINIMAL_DB=1`. Provision that account using `reset on >A_DISPOSABLE_SECRET ~acl-test:* resetchannels -@all +ping +info|server +get +set +scan +unlink +select`; do not explicitly grant `HELLO` or command categories. Redis permits the authentication handshake without a `+hello` grant. A second account, supplied through `OWLCRON_TEST_REDIS_NOSELECT_USERNAME` and `OWLCRON_TEST_REDIS_NOSELECT_PASSWORD`, must have the same permissions and key pattern except for `+select`; the test requires DB 1 startup to fail and DB 0 startup to remain usable. It must be separate from the general integration account because other cases inspect server state or use test namespaces outside that restricted prefix. Explicit acceptance must provide all identities and fixtures; missing fixtures must not be reported as a pass.
 
 ## Linux and remote-storage faults
 
@@ -66,7 +72,7 @@ make linux-acceptance
 
 Docker, Python 3, downloadable images, and Go dependencies are required. The script creates dedicated MinIO, Couchbase, and Redis 8.4+ services and a network for this run. It publishes no host ports and mounts no Docker socket into test containers. Test credentials are disposable; the script cleans up its own services.
 
-The same Redis instance listens on plain port 6379 and TLS port 6380. Each run generates a self-signed CA and a server certificate valid for one day, with `localhost` in the server certificate SAN. Certificate files stay in that run's directory and are mounted read-only into the test runner. Redis uses AOF with `appendfsync always` and `noeviction`; the default ACL user is disabled, and the named test user cannot run scripts. Full Linux acceptance requires the Redis integration, TLS, and fault cases to pass and rejects skipped cases.
+The same Redis instance listens on plain port 6379 and TLS port 6380. Each run generates a self-signed CA, a server certificate, a trusted client identity, and a client identity issued by another CA; all certificates last one day. The server certificate SAN includes `localhost`, and Redis requires client authentication on the TLS listener. Only the client fixtures and public CA certificates are mounted read-only into the runner. Redis uses AOF with `appendfsync always` and `noeviction`; the default ACL user is disabled, and the named general test user cannot run scripts. A separate account has only the documented minimal command allowlist, a restricted key prefix, and uses DB 1. Full Linux acceptance requires Redis integration, mTLS, minimal ACL, and fault cases to pass and rejects skipped cases.
 
 `OWLCRON_ACCEPTANCE_RESULTS` selects an external results directory; `OWLCRON_ACCEPTANCE_COUNT` selects 1–3 repetitions. See [run-linux-acceptance.sh](../tests/run-linux-acceptance.sh) for image and cache options. Never let two test runs control the same services.
 
