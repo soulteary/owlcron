@@ -1,4 +1,4 @@
-FROM oven/bun:1.4.2 AS frontend
+FROM oven/bun:1.4.4 AS frontend
 WORKDIR /src
 COPY htdocs-deps/package.json htdocs-deps/bun.lock htdocs-deps/bunfig.toml htdocs-deps/
 RUN bun install --cwd htdocs-deps --frozen-lockfile
