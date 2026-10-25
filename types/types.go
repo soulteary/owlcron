@@ -155,6 +155,7 @@ type Job struct {
 	PID             int                    `json:"pid"`
 	ProcessIdentity string                 `json:"process_identity,omitempty"`
 	ProcessToken    string                 `json:"process_token,omitempty"`
+	DispatchToken   string                 `json:"dispatch_token,omitempty"`
 	Code            int                    `json:"code"`
 	Description     string                 `json:"description"`
 	Complete        bool                   `json:"complete"`

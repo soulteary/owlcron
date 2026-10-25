@@ -420,11 +420,27 @@ func (c *Communication) handleSlaveMessageFrom(peer *SlaveConnection, conn *gori
 
 	case "job_update":
 		c.handleSlaveJobUpdate(peer, data)
+	case "job_rejected":
+		c.handleSlaveJobRejected(peer, data)
 	case "finish_job":
 		c.handleSlaveFinishJob(peer, data)
 	case "fetch_job_log":
 		c.handleFetchJobLog(peer, data)
 	}
+}
+func (c *Communication) handleSlaveJobRejected(peer *SlaveConnection, data map[string]interface{}) {
+	id, _ := data["id"].(string)
+	token, _ := data["dispatch_token"].(string)
+	reason, _ := data["reason"].(string)
+	if id == "" || token == "" {
+		return
+	}
+	c.engine.jobManager.finishRejectedRemoteJob(peer.Hostname, id, token, c.engine.RedactSensitiveText(reason))
+	c.mu.Lock()
+	if job := peer.ActiveJobs[id]; job != nil && job.DispatchToken == token {
+		delete(peer.ActiveJobs, id)
+	}
+	c.mu.Unlock()
 }
 func (c *Communication) handleFetchJobLog(peer *SlaveConnection, data map[string]interface{}) {
 	id, _ := data["job_id"].(string)

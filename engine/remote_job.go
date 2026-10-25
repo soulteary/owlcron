@@ -7,6 +7,13 @@ import (
 )
 
 func (jm *JobManager) sendJobToRemoteServer(server string, job *types.Job) error {
+	// Retries reuse the job ID. A refusal must identify the particular launch
+	// frame, so a delayed refusal cannot complete its replacement reservation.
+	token, err := newLeadershipToken()
+	if err != nil {
+		return fmt.Errorf("initialize remote dispatch token: %w", err)
+	}
+	job.DispatchToken = token
 	jm.engine.mu.Lock()
 	jm.engine.activeJobs[job.ID] = types.CloneJob(job)
 	jm.engine.mu.Unlock()

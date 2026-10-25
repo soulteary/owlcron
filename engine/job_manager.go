@@ -32,6 +32,7 @@ type JobManager struct {
 	logger          *zap.Logger
 	mu              sync.RWMutex
 	finishMu        sync.Mutex
+	remoteLaunchMu  sync.Mutex
 	logMu           sync.Mutex
 	logLocks        [64]sync.Mutex
 	logUploadSlots  chan struct{}
@@ -291,14 +292,30 @@ func (jm *JobManager) createJob(event *types.Event, hostname string, timestamp i
 
 // LaunchRemoteJob executes the authenticated master's immutable job snapshot.
 func (jm *JobManager) LaunchRemoteJob(job *types.Job) error {
+	if job == nil || job.ID == "" || !regexp.MustCompile(`^[a-zA-Z0-9_-]+$`).MatchString(job.ID) {
+		return fmt.Errorf("invalid remote job")
+	}
+	// Serialize admission with duplicate frames. Once a job is accepted, a
+	// later quota/backend failure must not report that same execution refused.
+	jm.remoteLaunchMu.Lock()
+	locked := true
+	defer func() {
+		if locked {
+			jm.remoteLaunchMu.Unlock()
+		}
+	}()
+	jm.engine.mu.RLock()
+	_, active := jm.engine.activeJobs[job.ID]
+	_, completed := jm.engine.deadJobs[job.ID]
+	jm.engine.mu.RUnlock()
+	if active || completed {
+		return nil
+	}
 	if jm.engine.ctx.Err() != nil {
 		return fmt.Errorf("engine is shutting down")
 	}
-	if job == nil || job.Detached || job.ID == "" || job.Command == "" || !regexp.MustCompile(`^[a-zA-Z0-9_-]+$`).MatchString(job.ID) {
+	if job.Detached || job.Command == "" {
 		return fmt.Errorf("invalid remote job")
-	}
-	if err := jm.engine.checkLogAdmission(jm.engine.ctx); err != nil {
-		return err
 	}
 	job = types.CloneJob(job)
 	job.Hostname = jm.getHostname()
@@ -320,6 +337,9 @@ func (jm *JobManager) LaunchRemoteJob(job *types.Job) error {
 	} else if deleted {
 		return nil
 	}
+	if err := jm.engine.checkLogAdmission(jm.engine.ctx); err != nil {
+		return err
+	}
 	jm.engine.mu.Lock()
 	if _, ok := jm.engine.activeJobs[job.ID]; ok {
 		jm.engine.mu.Unlock()
@@ -331,6 +351,8 @@ func (jm *JobManager) LaunchRemoteJob(job *types.Job) error {
 	}
 	jm.engine.activeJobs[job.ID] = types.CloneJob(job)
 	jm.engine.mu.Unlock()
+	jm.remoteLaunchMu.Unlock()
+	locked = false
 	jm.launchLocalJob(job)
 	return nil
 }
@@ -653,6 +675,17 @@ func (jm *JobManager) CompleteRemoteJob(job *types.Job) bool {
 
 // finishLocalJob 完成本地任务
 func (jm *JobManager) finishLocalJob(job *types.Job) {
+	jm.finishJob(job, "")
+}
+
+func (jm *JobManager) finishRejectedRemoteJob(hostname, id, token, reason string) {
+	if token == "" {
+		return
+	}
+	jm.finishJob(&types.Job{ID: id, Hostname: hostname, Code: 1, Description: reason}, token)
+}
+
+func (jm *JobManager) finishJob(job *types.Job, rejectedToken string) {
 	jm.finishMu.Lock()
 	locked := true
 	defer func() {
@@ -660,6 +693,21 @@ func (jm *JobManager) finishLocalJob(job *types.Job) {
 			jm.finishMu.Unlock()
 		}
 	}()
+	if rejectedToken != "" {
+		// Check while holding the same lock that completes/retries a job. Old
+		// refusals, another worker's IDs and already-finished attempts are inert.
+		jm.engine.mu.RLock()
+		current := jm.engine.activeJobs[job.ID]
+		if current == nil || current.Complete || current.Hostname != job.Hostname || current.DispatchToken != rejectedToken {
+			jm.engine.mu.RUnlock()
+			return
+		}
+		reason := job.Description
+		job = types.CloneJob(current)
+		jm.engine.mu.RUnlock()
+		job.Code = 1
+		job.Description = reason
+	}
 	jm.mu.Lock()
 	delete(jm.running, job.ID)
 	jm.mu.Unlock()
@@ -722,6 +770,7 @@ func (jm *JobManager) finishLocalJob(job *types.Job) {
 		retryJob.TimeEnd = 0
 		retryJob.Elapsed = 0
 		retryJob.PID = 0
+		retryJob.DispatchToken = ""
 		retryJob.Progress = 0
 		retryJob.CPU = nil
 		retryJob.Mem = nil
@@ -742,12 +791,13 @@ func (jm *JobManager) finishLocalJob(job *types.Job) {
 		return
 	}
 
-	if err := jm.writeCompletionSpool(job); err != nil {
-		job.StorageError = err.Error()
-		jm.logger.Error("Failed to save recovery spool", zap.Error(err))
+	job.StorageError = ""
+	spoolErr := jm.writeCompletionSpool(job)
+	if spoolErr != nil {
+		jm.logger.Error("Failed to save recovery spool", zap.Error(spoolErr))
 	}
 	if err := jm.persistCompletion(job); err != nil {
-		job.StorageError = err.Error()
+		job.StorageError = errors.Join(spoolErr, err).Error()
 		jm.logger.Error("Completion persistence pending recovery", zap.String("job_id", job.ID), zap.Error(err))
 	} else {
 		job.StorageError = ""

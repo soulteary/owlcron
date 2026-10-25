@@ -8,6 +8,7 @@ import (
 	"github.com/soulteary/owlcron/types"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 
 	"go.uber.org/zap"
@@ -76,6 +77,9 @@ func (jm *JobManager) persistCompletion(job *types.Job) error {
 
 // RetryPendingCompletions is idempotent and also runs before crash recovery. The
 // local spool survives a backend outage after a plugin has already completed.
+// If even the first spool write failed, the finished in-memory snapshot remains
+// retryable. Try to make it durable before contacting the backend again, so a
+// recovered local disk protects the result across a continued backend outage.
 func (jm *JobManager) RetryPendingCompletions() error {
 	jm.finishMu.Lock()
 	defer jm.finishMu.Unlock()
@@ -83,39 +87,82 @@ func (jm *JobManager) RetryPendingCompletions() error {
 	if err != nil {
 		return err
 	}
+	pending := make(map[string]*types.Job)
+	jm.engine.mu.RLock()
+	for id, job := range jm.engine.deadJobs {
+		if job.Complete && job.StorageError != "" {
+			pending[id] = types.CloneJob(job)
+		}
+	}
+	jm.engine.mu.RUnlock()
+	var retryErrors []error
 	for _, path := range paths {
 		raw, err := os.ReadFile(path)
 		if os.IsNotExist(err) {
 			continue
 		}
 		if err != nil {
-			return err
+			retryErrors = append(retryErrors, err)
+			continue
 		}
 		var job types.Job
 		if err = json.Unmarshal(raw, &job); err != nil {
-			return fmt.Errorf("invalid completion spool: %w", err)
-		}
-		if !job.Complete || job.ID == "" {
-			return fmt.Errorf("invalid completion spool job")
-		}
-		job.StorageError = ""
-		if err = jm.persistCompletion(&job); errors.Is(err, ErrJobHistoryDeleted) {
-			jm.engine.DeleteDeadJob(job.ID)
-			jm.AckRemoteCompletion(job.ID)
-			if err = os.Remove(path); err != nil && !os.IsNotExist(err) {
-				return err
-			}
+			retryErrors = append(retryErrors, fmt.Errorf("invalid completion spool %s: %w", path, err))
 			continue
-		} else if err != nil {
-			return err
 		}
-		jm.engine.AddDeadJob(&job)
-		if !jm.engine.IsMaster() {
-			if err = jm.enqueueRemoteCompletion(&job); err != nil {
-				return err
-			}
+		if !job.Complete || job.ID == "" || jm.completionSpoolPath(job.ID) != path {
+			retryErrors = append(retryErrors, fmt.Errorf("invalid completion spool job: %s", path))
+			continue
 		}
-		if err = os.Remove(path); err != nil && !os.IsNotExist(err) {
+		snapshot := &job
+		if current := pending[job.ID]; current != nil {
+			snapshot = current
+			delete(pending, job.ID)
+		}
+		if err := jm.retryPendingCompletion(snapshot, true); err != nil {
+			retryErrors = append(retryErrors, err)
+		}
+	}
+	ids := make([]string, 0, len(pending))
+	for id := range pending {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	for _, id := range ids {
+		if err := jm.retryPendingCompletion(pending[id], false); err != nil {
+			retryErrors = append(retryErrors, err)
+		}
+	}
+	return errors.Join(retryErrors...)
+}
+
+// The caller holds finishMu, so a retry never repeats completion counters,
+// event updates, or chained jobs, nor races a runtime update of the same job.
+func (jm *JobManager) retryPendingCompletion(job *types.Job, spooled bool) error {
+	job.StorageError = ""
+	var spoolErr error
+	if !spooled {
+		spoolErr = jm.writeCompletionSpool(job)
+		spooled = spoolErr == nil
+	}
+	err := jm.persistCompletion(job)
+	if errors.Is(err, ErrJobHistoryDeleted) {
+		jm.engine.DeleteDeadJob(job.ID)
+		jm.AckRemoteCompletion(job.ID)
+	} else {
+		if err == nil && !jm.engine.IsMaster() {
+			err = jm.enqueueRemoteCompletion(job)
+		}
+		if err != nil {
+			err = errors.Join(spoolErr, err)
+			job.StorageError = err.Error()
+			jm.engine.AddDeadJob(job)
+			return fmt.Errorf("retry completion %s: %w", job.ID, err)
+		}
+		jm.engine.AddDeadJob(job)
+	}
+	if spooled {
+		if err = os.Remove(jm.completionSpoolPath(job.ID)); err != nil && !os.IsNotExist(err) {
 			return err
 		}
 	}
