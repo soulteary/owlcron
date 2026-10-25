@@ -27,6 +27,7 @@ Start with the [project README](../README.md) for a quick setup. English is the 
 - [Operations and metrics](operations.md): collection, alerting and recovery runbooks.
 - [Known limitations](limitations.md): reliability boundaries and unsupported scenarios.
 - [Architecture](architecture.md): components, persistence, and recovery.
+- [Durable delivery queue](delivery-queue.md): storage and delivery contracts, recovery, and extraction boundaries.
 
 ## Development
 

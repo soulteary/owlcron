@@ -76,6 +76,11 @@ func NewStorage(config *StorageConfig) (Storage, error) {
 
 // AtomicStorage serializes read/modify/write across storage instances. Remote
 // stores implement this using server-side compare-and-swap, not a local mutex.
+// Missing or expired records are passed to the callback as nil. A callback may
+// run again after a conflict and must not perform external side effects. A
+// callback error aborts the update; nil bytes with nil error write an empty
+// value. Only a nil Update return confirms persistence: an error may follow a
+// committed write if its acknowledgment is lost.
 type AtomicStorage interface {
 	Update(context.Context, string, func([]byte) ([]byte, error)) error
 }

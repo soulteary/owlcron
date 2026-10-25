@@ -60,7 +60,7 @@ worker 持久保存完成信封后只立即发送该信封；周期和重连重�
 
 HTTP 侧提供规范账户和密钥检查、对象范围授权、登录及 Basic Auth 限流、可信代理配置、安全 Cookie 和请求超时。WebHook 通过 [http-kit/outbound](https://github.com/soulteary/http-kit/tree/v2.1.0/outbound) 对目的地址和解析结果执行 SSRF 约束，由仓内的[薄适配层](../../engine/webhook_policy.go)转换配置和错误。共享客户端逐次校验请求和实际拨号目标，包括连接复用，并禁用代理和重定向。独立签名密钥及输出、错误脱敏仍由 OwlCron 管理。管理员插件仍可运行任意程序，系统没有不可信代码沙箱。
 
-邮件支持 SMTP 认证、TLS、超时和独立收件人投递。邮件与 WebHook 使用持久队列，具有领取租约、重试、死信和本地 spool；投递携带稳定标识。其语义是至少一次：接收方已接受、发送方尚未持久确认时崩溃，恢复后可能再次投递。接收方应按标识去重，不能承诺外部投递恰好一次。见 [通知队列](../../engine/notification_queue.go)、[邮件传输](../../engine/mail_transport.go)、[WebHook 签名](../../engine/webhook_signing.go)。
+邮件支持 SMTP 认证、TLS、超时和独立收件人投递。邮件与 WebHook 使用持久队列，具有领取租约、重试、死信和本地 spool；投递携带稳定标识。其语义是至少一次：接收方已接受、发送方尚未持久确认时崩溃，恢复后可能再次投递。接收方应按标识去重，不能承诺外部投递恰好一次。队列依赖三方法存储契约和投递回调，OwlCron 负责 spool、收件人策略和传输。见[投递契约与拆分评估](delivery-queue.md)、[通知队列](../../engine/notification_queue.go)、[邮件传输](../../engine/mail_transport.go)、[WebHook 签名](../../engine/webhook_signing.go)。
 
 
 账号邮件默认关闭。一次性验证和恢复操作绑定规范用户记录、密码版本、邮箱和有效期，
