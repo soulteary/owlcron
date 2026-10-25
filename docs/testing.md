@@ -95,7 +95,7 @@ Resources, mounts, backends, data volume, and log/notification load affect resul
 
 ## CI and evidence
 
-[CI / Build and Test](../.github/workflows/ci.yml) checks Go 1.27, Bun 1.4.2, builds, unit tests, installation smoke tests, licenses, and vulnerabilities. [CI / Process Fault Acceptance](../.github/workflows/process-acceptance.yml) covers process and Linux fault scenarios.
+[CI / Build and Test](../.github/workflows/ci.yml) checks Go 1.27, Bun 1.4.2, builds, unit tests, installation smoke tests, licenses, and vulnerabilities. [CI / Process Fault Acceptance](../.github/workflows/process-acceptance.yml) runs the real S3/Couchbase/Redis recovery matrix on relevant pull requests. Main-branch, scheduled and manual runs also cover repeated process failures and the full Linux load matrix.
 
 CI runs on pull requests and pushes to `main`; feature-branch pushes do not start a second copy of the same checks. New commits cancel superseded runs. Dependency and Docker layer caches reduce repeated downloads and builds; tests still execute on cache hits. On main, the Linux fault matrix triggers for Go code, its dependencies, the Makefile, acceptance/load harnesses, and its own workflow. Frontend-only tests and container configuration checks use their relevant CI workflows without rerunning unrelated Linux fault scenarios.
 

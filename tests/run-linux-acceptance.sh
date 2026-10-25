@@ -26,7 +26,8 @@ controller_pid=
 go_image=${OWLCRON_LINUX_GO_IMAGE:-golang:1.27.3-trixie}
 s3_image=${OWLCRON_LINUX_S3_IMAGE:-owlcron-acceptance-minio:2025-04-22}
 cb_image=${OWLCRON_LINUX_COUCHBASE_IMAGE:-couchbase/server:community-7.6.2}
-redis_image=${OWLCRON_LINUX_REDIS_IMAGE:-redis:8.4@sha256:64e425955ca42226d6b5e273149c6b3ff566a3849e3071a5507c8d3817d2cc65}
+# Pin the multi-platform index, not one ARM64 manifest: CI runs on AMD64.
+redis_image=${OWLCRON_LINUX_REDIS_IMAGE:-redis:8.4.7@sha256:6a12a187547eb2eac4da4528f9d9787d69f3848e513480baedfd75e3b2ac393e}
 repeats=${OWLCRON_ACCEPTANCE_COUNT:-1}
 [[ "$repeats" =~ ^[1-3]$ ]] || { echo 'OWLCRON_ACCEPTANCE_COUNT must be 1, 2 or 3' >&2; exit 1; }
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s "$root/tests" -p test_acceptance_control.py \
@@ -118,6 +119,11 @@ user owlcron on >owlcron-test-secret ~* &* +@all -config -acl -flushdb -flushall
 user acceptance-admin on >owlcron-admin-test-secret ~* &* +@all
 REDIS_CONFIG
 chmod 0644 "$run_dir/redis.conf"
+docker pull "$redis_image" >"$results/redis-image.log" 2>&1
+redis_platform=$(docker image inspect "$redis_image" --format '{{.Os}}/{{.Architecture}}')
+server_platform=$(docker version --format '{{.Server.Os}}/{{.Server.Arch}}')
+printf 'redis=%s\nserver=%s\n' "$redis_platform" "$server_platform" >>"$results/redis-image.log"
+[[ "$redis_platform" == "$server_platform" ]] || { echo "Redis image platform $redis_platform does not match Docker server $server_platform" >&2; exit 1; }
 docker run -d --name "$redis" --label io.owlcron.acceptance=true --network "$network" \
     -v "$run_dir/redis-data:/data" -v "$run_dir/redis.conf:/usr/local/etc/redis/redis.conf:ro" \
     -v "$run_dir/redis-tls:/tls:ro" \
@@ -189,12 +195,13 @@ from pathlib import Path
 import re
 import sys
 text = Path(sys.argv[1]).read_text()
-for name in ("TestRedisRealStorage", "TestRedisRealExistingEnvelopeAndNativeCAS", "TestRedisRealPrefixIsolation",
+for name in ("TestRedisRealStorage", "TestRedisRealExistingEnvelopeAndNativeCAS", "TestRedisRealCapabilityRecordsBackupRoundTrip", "TestRedisRealPrefixIsolation",
              "TestRedisRealConstructorDeadlineBudget", "TestRedisRealTLSConnection",
              "TestRedisRealBackupRoundTrip", "TestRedisRealBackupInterruptedImportCanResume", "TestRedisRealBackupTransportRecovery",
+             "TestRedisRealBackupExpiryTransportRecovery", "TestRedisRealBackupCrossBackend/S3", "TestRedisRealBackupCrossBackend/Couchbase",
              "TestRedisRealTransportFaultRecovery", "TestRedisRealCommittedResponseLossRecovery", "TestRedisRealServerSIGKILLRecovery"):
-    assert len(re.findall(r"^--- PASS: " + name + r" \(", text, re.M)) == int(sys.argv[2]), name
-    assert not re.search(r"^--- SKIP: " + name + r" \(", text, re.M), name
+    assert len(re.findall(r"^\s*--- PASS: " + name + r" \(", text, re.M)) == int(sys.argv[2]), name
+    assert not re.search(r"^\s*--- SKIP: " + name + r" \(", text, re.M), name
 VERIFY_REDIS_TESTS
 docker exec "$runner" go test -race ./cli -run '^TestRedisRealCLIBackupRestore$' \
     -count="$repeats" -timeout=360s -v | tee "$results/remote-cli.log"

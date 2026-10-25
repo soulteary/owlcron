@@ -1,6 +1,6 @@
 # Redis 单实例存储支持计划
 
-状态：单实例 Redis 8.4+ 原生 CAS 已随 [OwlCron PR #74](https://github.com/soulteary/owlcron/pull/74) 合并，保持既有数据与备份格式。客户端前置能力已随 redis-kit v1.8.0 正式发布；本次依赖更新将 OwlCron 从提交伪版本切换到该正式版本，不依赖本地 replace。
+状态：单实例 Redis 8.4+ 原生 CAS 已随 [OwlCron PR #74](https://github.com/soulteary/owlcron/pull/74) 合并，保持既有数据与备份格式。客户端前置能力已随 redis-kit v1.8.0 正式发布；[OwlCron PR #75](https://github.com/soulteary/owlcron/pull/75) 已合并正式版本依赖更新，不依赖本地 replace。本轮继续修正部署和验收遗漏，相关验证尚在执行。
 
 日期：2026-10-25。最初核查基线为 `ff5d6c22f4a854a7c28e1f0ed9a5ebf5d7156d69`；Redis 实现已合并至 OwlCron 主分支 `1b008631e67d767dc4740c81ce2be79a76e47375`。本文保留实现范围、依赖选择与验收要求，并分别记录实现阶段与正式依赖版本更新的验证状态。
 
@@ -206,7 +206,7 @@ Redis 子包不适合本项目的持久存储协议：
 
 以下记录来自 PR #74 合并前的实现阶段，依赖当时固定的 redis-kit 提交伪版本；不作为本次正式版本升级的复测结果。
 
-使用 Go 1.27.3 和真实 Redis 8.4.7；AOF `appendfsync always`、持久数据卷、noeviction，默认账户关闭，命名业务账户不允许脚本及管理命令。
+使用 Go 1.27.3 和真实 Redis 8.4.7；AOF `appendfsync always`、持久数据卷、noeviction，默认账户关闭，命名业务账户禁用脚本及 CONFIG、ACL、flush、shutdown 命令。
 
 - redis-kit：全量测试、全量 race、vet，以及重复三次的客户端 TCP/TLS 生命周期测试通过。
 - OwlCron：从固定 kit 提交独立构建，全量 `go test -race ./...` 与 vet 通过；34 项 Python 测试、文档、格式、模块校验和许可证检查通过。
@@ -221,7 +221,19 @@ Redis 子包不适合本项目的持久存储协议：
 
 ### redis-kit v1.8.0 正式版本更新
 
-redis-kit v1.8.0 已正式发布，OwlCron 本次将模块依赖与上游 LICENSE 材料切换到该版本。`make docs-check` 已通过（37 个文档），`make licenses-check` 已通过（29 个 npm 包、43 个 Go 模块），随附 LICENSE 与正式模块缓存中的原文逐字节一致。实现阶段的测试记录保留在上节；本次升级的构建及相关测试结果应以升级分支实际执行的检查为准，不能仅凭版本发布或 PR 合并认定复测通过。
+redis-kit v1.8.0 已正式发布，OwlCron 已随 [PR #75](https://github.com/soulteary/owlcron/pull/75) 将模块依赖与上游 LICENSE 材料切换到该版本。该次升级记录了完整 Go 测试、race、前端、构建及安装冒烟通过，19 项真实 Redis 验收全部通过且无跳过，以及 PR CI 通过。`make docs-check` 已通过（37 个文档），`make licenses-check` 已通过（29 个 npm 包、43 个 Go 模块），随附 LICENSE 与正式模块缓存中的原文逐字节一致。这些是该次升级的验证记录，不代替本轮新增修正的验收，也不证明其他平台或联合远程故障工作流已通过。
+
+### 合并后遗漏复查
+
+本轮复查的修正范围如下，尚未将其列为完整测试或真实服务验收通过：
+
+- 容器前端构建的 Bun 从单独漂移的 1.4.3 对齐到项目、CI 和发行构建已固定的 1.4.2。
+- 双语配置明确非零 DB 需要 `SELECT`，并说明 `HELLO` 的 RESP3 协商与 ACL 拒绝时的 RESP2 回退。现有真实测试账户的权限较宽，不能把它作为最小 ACL 配置已验收的证据。
+- Redis 镜像改为固定 8.4.7 多架构索引，并在启动前核对 Docker 服务与镜像平台；真实联合恢复矩阵在相关 PR 上也必须通过。
+- Redis 与 S3 的探针移入应用 key 不允许使用的私有路径。旧探针只按精确名称和原始载荷识别，不再过滤合法的 `capability/` 业务记录；回归覆盖导入和重新导出。
+- 补充 `Expire` 写入中断与 Redis/S3/Couchbase 双向恢复，核对二进制、列表、绝对过期时间、分块日志和删除栅栏，并将合法 `capability/` 记录纳入迁移用例。
+
+真实 TLS 验收目前覆盖服务端证书验证及错误 CA、主机名和账户拒绝。虽然配置支持 `tls_cert_file`、`tls_key_file`，框架中的 Redis 使用 `tls-auth-clients no`，尚未真实验收客户端证书认证；不将其宣传为 mTLS 验收完成。本轮完整测试和真实故障结果以当前修正提交的实际运行记录为准。
 
 ## 8. 后续扩展边界
 

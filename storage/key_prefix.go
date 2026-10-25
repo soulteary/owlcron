@@ -2,12 +2,14 @@ package storage
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/couchbase/gocb/v2"
 	minio "github.com/soulteary/otterio-sdk/v7"
@@ -116,13 +118,27 @@ func (s *S3Storage) ListKeysPrefix(ctx context.Context, prefix string) ([]string
 			continue
 		}
 		key := strings.TrimPrefix(object.Key, namespace)
-		if strings.HasPrefix(key, "capability/") {
+		if strings.HasPrefix(key, s3CapabilityPrefix) {
 			continue
 		}
-		if _, err := s.Get(ctx, key); errors.Is(err, ErrNotFound) {
+		if err := validateKey(key); err != nil {
+			return nil, err
+		}
+		data, _, err := s.read(ctx, key)
+		if errors.Is(err, ErrNotFound) {
 			continue
 		} else if err != nil {
 			return nil, err
+		}
+		if s3LegacyCapabilityProbe(key, data) {
+			continue
+		}
+		var doc remoteDocument
+		if err := json.Unmarshal(data, &doc); err != nil {
+			return nil, fmt.Errorf("decode storage document: %w", err)
+		}
+		if doc.Deleted || doc.Expires > 0 && doc.Expires <= time.Now().Unix() {
+			continue
 		}
 		keys = append(keys, key)
 	}
