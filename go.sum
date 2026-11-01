@@ -52,8 +52,8 @@ github.com/soulteary/http-kit/v2 v2.1.0 h1:BmHQ1ZnPPINkloYiug8YmmbVBL3aeEBY3Y4I0
 github.com/soulteary/http-kit/v2 v2.1.0/go.mod h1:bRSSQY7HnhohsmMGHtTKO8ZgW2STgogp1X/D0LVYmWs=
 github.com/soulteary/otterio-kits/crc64nvme v1.1.4 h1:Lc+NzDjhXaSHdGosPAw9YcJgNkqCeFW34OxwE2cyZJg=
 github.com/soulteary/otterio-kits/crc64nvme v1.1.4/go.mod h1:mZQ9TwmmpzlbanbI4OjlT0Hs1Mxaaix3LUr+rZaeJ1k=
-github.com/soulteary/otterio-kits/md5-simd v1.2.1 h1:uT0Ma63Mn7PEjNcxRmGQMMoaJE8xZ7mWuVs60oKU9JY=
-github.com/soulteary/otterio-kits/md5-simd v1.2.1/go.mod h1:B0CHLrx6j4umctX0trs2eCdiLvYBpF7SELkbis7Vo+E=
+github.com/soulteary/otterio-kits/md5-simd v1.2.2 h1:sgYhbPfhwLCLWOfCF3qzc+fZurqJ5dLD8E0nTGIdhqA=
+github.com/soulteary/otterio-kits/md5-simd v1.2.2/go.mod h1:B0CHLrx6j4umctX0trs2eCdiLvYBpF7SELkbis7Vo+E=
 github.com/soulteary/otterio-sdk/v7 v7.3.3 h1:Iw+BDCcL5mVYcwxR49Yid4YsH28eggdgnpZr1YWBs8s=
 github.com/soulteary/otterio-sdk/v7 v7.3.3/go.mod h1:VJZchDQXS+fcykAqihpMSHItExcuiNqzz1ibmK8XKOQ=
 github.com/soulteary/redis-kit v1.8.0 h1:8nILkb49Q3eLWcuFE+DfyNqX9kFeyuHKoCDvngXgK+k=
