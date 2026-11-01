@@ -44,8 +44,8 @@
   },
   {
     "module": "github.com/soulteary/redis-kit",
-    "version": "v1.8.0",
-    "notices": "licenses/go/github.com__soulteary__redis-kit@v1.8.0",
+    "version": "v1.8.1",
+    "notices": "licenses/go/github.com__soulteary__redis-kit@v1.8.1",
     "files": [
       "LICENSE"
     ]

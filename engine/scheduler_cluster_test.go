@@ -608,7 +608,16 @@ func exercisePrimaryOutage(t *testing.T, backend string) {
 	// Abrupt process loss: stop its loops and listener without running Shutdown
 	// or releasing the shared lease. The standby must wait for lease expiry.
 	primary.cancel()
-	waitForCondition(t, 8*time.Second, func() bool { return secondary.IsMaster() })
+	// goMaster publishes the leadership flag before restoring jobs and loading
+	// scheduler events. Wait for the whole role transition before manual ticks.
+	waitForCondition(t, 8*time.Second, func() bool {
+		if !secondary.roleMu.TryLock() {
+			return false
+		}
+		defer secondary.roleMu.Unlock()
+		_, loaded := secondary.scheduler.GetEvent(event.ID)
+		return secondary.IsMaster() && loaded
+	})
 	if primary.EnsureLeadership() || secondary.ValidateNodeLeadership(primary.Hostname(), primary.LeadershipToken()) {
 		t.Fatal("expired primary remained eligible to dispatch or acknowledge worker messages")
 	}
