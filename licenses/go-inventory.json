@@ -68,10 +68,11 @@
   },
   {
     "module": "golang.org/x/net",
-    "version": "v0.61.0",
-    "notices": "licenses/go/golang.org__x__net@v0.61.0",
+    "version": "v0.62.0",
+    "notices": "licenses/go/golang.org__x__net@v0.62.0",
     "files": [
-      "LICENSE"
+      "LICENSE",
+      "PATENTS"
     ]
   },
   {
@@ -213,8 +214,8 @@
   },
   {
     "module": "github.com/soulteary/otterio-kits/md5-simd",
-    "version": "v1.2.1",
-    "notices": "licenses/go/github.com__soulteary__otterio-kits__md5-simd@v1.2.1",
+    "version": "v1.2.2",
+    "notices": "licenses/go/github.com__soulteary__otterio-kits__md5-simd@v1.2.2",
     "files": [
       "LICENSE",
       "LICENSE.Golang",
