@@ -11,7 +11,7 @@ require (
 	github.com/soulteary/redis-kit v1.8.0
 	go.uber.org/zap v1.28.0
 	golang.org/x/crypto v0.58.0
-	golang.org/x/net v0.61.0
+	golang.org/x/net v0.62.0
 	golang.org/x/sys v0.49.0
 )
 
@@ -32,7 +32,7 @@ require (
 	github.com/philhofer/fwd v1.2.0 // indirect
 	github.com/rs/xid v1.6.0 // indirect
 	github.com/soulteary/otterio-kits/crc64nvme v1.1.4 // indirect
-	github.com/soulteary/otterio-kits/md5-simd v1.2.1 // indirect
+	github.com/soulteary/otterio-kits/md5-simd v1.2.2 // indirect
 	github.com/tinylib/msgp v1.6.5 // indirect
 	github.com/zeebo/xxh3 v1.1.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
