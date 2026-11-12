@@ -27,7 +27,7 @@ started_epoch=$(python3 -c 'import time; print(time.time())')
 build_dir=$(cd "$build_dir" && pwd -P)
 module_dir=$(cd "$module_dir" && pwd -P)
 runner="owlcron-load-$(date +%s)-$$"
-image=${OWLCRON_LINUX_GO_IMAGE:-golang:1.27.3-trixie}
+image=${OWLCRON_LINUX_GO_IMAGE:-golang:1.27.4-trixie}
 repeat=${OWLCRON_LOAD_REPEAT:-3}
 [[ "$repeat" =~ ^[1-9]$ ]] || { echo 'OWLCRON_LOAD_REPEAT must be 1..9' >&2; exit 1; }
 cleanup() {

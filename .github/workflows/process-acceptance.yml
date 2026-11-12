@@ -64,8 +64,8 @@ jobs:
           path: |
             ${{ runner.temp }}/owlcron-remote-build/cache
             ${{ runner.temp }}/owlcron-remote-modules
-          key: ${{ runner.os }}-remote-go1.27.3-${{ hashFiles('go.sum', '**/*.go') }}
-          restore-keys: ${{ runner.os }}-remote-go1.27.3-
+          key: ${{ runner.os }}-remote-go1.27.4-${{ hashFiles('go.sum', '**/*.go') }}
+          restore-keys: ${{ runner.os }}-remote-go1.27.4-
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - name: Build the pinned MinIO test service
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -113,9 +113,9 @@ jobs:
           path: |
             ${{ runner.temp }}/owlcron-load-build/cache
             ${{ runner.temp }}/owlcron-load-modules
-          key: ${{ runner.os }}-load-${{ matrix.stage }}-go1.27.3-${{ hashFiles('go.sum', '**/*.go') }}
+          key: ${{ runner.os }}-load-${{ matrix.stage }}-go1.27.4-${{ hashFiles('go.sum', '**/*.go') }}
           restore-keys: |
-            ${{ runner.os }}-load-${{ matrix.stage }}-go1.27.3-
+            ${{ runner.os }}-load-${{ matrix.stage }}-go1.27.4-
       - name: Run and validate one bounded load stage
         env:
           OWLCRON_LOAD_RESULTS: /tmp/owlcron-load-evidence

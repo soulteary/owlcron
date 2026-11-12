@@ -1,14 +1,14 @@
 module github.com/soulteary/owlcron
 
-go 1.27.3
+go 1.27.4
 
 require (
 	github.com/couchbase/gocb/v2 v2.13.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/redis/go-redis/v9 v9.23.0
-	github.com/soulteary/http-kit/v2 v2.1.0
+	github.com/soulteary/http-kit/v2 v2.1.1
 	github.com/soulteary/otterio-sdk/v7 v7.3.3
-	github.com/soulteary/redis-kit v1.8.1
+	github.com/soulteary/redis-kit v1.8.2
 	go.uber.org/zap v1.28.0
 	golang.org/x/crypto v0.58.0
 	golang.org/x/net v0.62.0
