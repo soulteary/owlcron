@@ -8,7 +8,7 @@ RUN bun run --cwd htdocs-deps build \
     && mkdir -p /out/htdocs \
     && cp -aL htdocs/. /out/htdocs/
 
-FROM golang:1.27.3-trixie AS build
+FROM golang:1.27.4-trixie AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download

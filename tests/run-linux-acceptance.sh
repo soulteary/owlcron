@@ -23,7 +23,7 @@ couchbase="$name-couchbase"
 redis="$name-redis"
 runner="$name-runner"
 controller_pid=
-go_image=${OWLCRON_LINUX_GO_IMAGE:-golang:1.27.3-trixie}
+go_image=${OWLCRON_LINUX_GO_IMAGE:-golang:1.27.4-trixie}
 s3_image=${OWLCRON_LINUX_S3_IMAGE:-owlcron-acceptance-minio:2025-04-22}
 cb_image=${OWLCRON_LINUX_COUCHBASE_IMAGE:-couchbase/server:community-7.6.2}
 # Pin the multi-platform index, not one ARM64 manifest: CI runs on AMD64.
