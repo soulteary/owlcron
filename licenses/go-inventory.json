@@ -17,16 +17,16 @@
   },
   {
     "module": "github.com/redis/go-redis/v9",
-    "version": "v9.23.0",
-    "notices": "licenses/go/github.com__redis__go-redis__v9@v9.23.0",
+    "version": "v9.24.0",
+    "notices": "licenses/go/github.com__redis__go-redis__v9@v9.24.0",
     "files": [
       "LICENSE"
     ]
   },
   {
     "module": "github.com/soulteary/http-kit/v2",
-    "version": "v2.1.1",
-    "notices": "licenses/go/github.com__soulteary__http-kit__v2@v2.1.1",
+    "version": "v2.1.2",
+    "notices": "licenses/go/github.com__soulteary__http-kit__v2@v2.1.2",
     "files": [
       "LICENSE",
       "LICENSE-OWLCRON",
@@ -35,8 +35,8 @@
   },
   {
     "module": "github.com/soulteary/otterio-sdk/v7",
-    "version": "v7.3.3",
-    "notices": "licenses/go/github.com__soulteary__otterio-sdk__v7@v7.3.3",
+    "version": "v7.3.4",
+    "notices": "licenses/go/github.com__soulteary__otterio-sdk__v7@v7.3.4",
     "files": [
       "LICENSE",
       "NOTICE"
@@ -44,8 +44,8 @@
   },
   {
     "module": "github.com/soulteary/redis-kit",
-    "version": "v1.8.2",
-    "notices": "licenses/go/github.com__soulteary__redis-kit@v1.8.2",
+    "version": "v1.8.4",
+    "notices": "licenses/go/github.com__soulteary__redis-kit@v1.8.4",
     "files": [
       "LICENSE"
     ]
@@ -60,16 +60,17 @@
   },
   {
     "module": "golang.org/x/crypto",
-    "version": "v0.58.0",
-    "notices": "licenses/go/golang.org__x__crypto@v0.58.0",
+    "version": "v0.59.0",
+    "notices": "licenses/go/golang.org__x__crypto@v0.59.0",
     "files": [
-      "LICENSE"
+      "LICENSE",
+      "PATENTS"
     ]
   },
   {
     "module": "golang.org/x/net",
-    "version": "v0.62.0",
-    "notices": "licenses/go/golang.org__x__net@v0.62.0",
+    "version": "v0.63.0",
+    "notices": "licenses/go/golang.org__x__net@v0.63.0",
     "files": [
       "LICENSE",
       "PATENTS"
@@ -77,10 +78,11 @@
   },
   {
     "module": "golang.org/x/sys",
-    "version": "v0.49.0",
-    "notices": "licenses/go/golang.org__x__sys@v0.49.0",
+    "version": "v0.50.0",
+    "notices": "licenses/go/golang.org__x__sys@v0.50.0",
     "files": [
-      "LICENSE"
+      "LICENSE",
+      "PATENTS"
     ]
   },
   {
@@ -165,16 +167,16 @@
   },
   {
     "module": "github.com/klauspost/compress",
-    "version": "v1.20.3",
-    "notices": "licenses/go/github.com__klauspost__compress@v1.20.3",
+    "version": "v1.20.5",
+    "notices": "licenses/go/github.com__klauspost__compress@v1.20.5",
     "files": [
       "LICENSE"
     ]
   },
   {
     "module": "github.com/klauspost/cpuid/v2",
-    "version": "v2.4.1",
-    "notices": "licenses/go/github.com__klauspost__cpuid__v2@v2.4.1",
+    "version": "v2.4.2",
+    "notices": "licenses/go/github.com__klauspost__cpuid__v2@v2.4.2",
     "files": [
       "LICENSE"
     ]
@@ -189,8 +191,8 @@
   },
   {
     "module": "github.com/philhofer/fwd",
-    "version": "v1.2.0",
-    "notices": "licenses/go/github.com__philhofer__fwd@v1.2.0",
+    "version": "v1.2.1",
+    "notices": "licenses/go/github.com__philhofer__fwd@v1.2.1",
     "files": [
       "LICENSE.md"
     ]
@@ -205,8 +207,8 @@
   },
   {
     "module": "github.com/soulteary/otterio-kits/crc64nvme",
-    "version": "v1.1.4",
-    "notices": "licenses/go/github.com__soulteary__otterio-kits__crc64nvme@v1.1.4",
+    "version": "v1.1.5",
+    "notices": "licenses/go/github.com__soulteary__otterio-kits__crc64nvme@v1.1.5",
     "files": [
       "LICENSE",
       "NOTICE"
@@ -214,8 +216,8 @@
   },
   {
     "module": "github.com/soulteary/otterio-kits/md5-simd",
-    "version": "v1.2.2",
-    "notices": "licenses/go/github.com__soulteary__otterio-kits__md5-simd@v1.2.2",
+    "version": "v1.2.3",
+    "notices": "licenses/go/github.com__soulteary__otterio-kits__md5-simd@v1.2.3",
     "files": [
       "LICENSE",
       "LICENSE.Golang",
@@ -241,8 +243,8 @@
   },
   {
     "module": "go.opentelemetry.io/auto/sdk",
-    "version": "v1.2.1",
-    "notices": "licenses/go/go.opentelemetry.io__auto__sdk@v1.2.1",
+    "version": "v1.2.2",
+    "notices": "licenses/go/go.opentelemetry.io__auto__sdk@v1.2.2",
     "files": [
       "LICENSE"
     ]
@@ -305,8 +307,8 @@
   },
   {
     "module": "go.yaml.in/yaml/v3",
-    "version": "v3.0.5",
-    "notices": "licenses/go/go.yaml.in__yaml__v3@v3.0.5",
+    "version": "v3.0.6",
+    "notices": "licenses/go/go.yaml.in__yaml__v3@v3.0.6",
     "files": [
       "LICENSE",
       "NOTICE"
@@ -314,24 +316,25 @@
   },
   {
     "module": "golang.org/x/text",
-    "version": "v0.43.0",
-    "notices": "licenses/go/golang.org__x__text@v0.43.0",
+    "version": "v0.44.0",
+    "notices": "licenses/go/golang.org__x__text@v0.44.0",
     "files": [
-      "LICENSE"
+      "LICENSE",
+      "PATENTS"
     ]
   },
   {
     "module": "google.golang.org/genproto/googleapis/rpc",
-    "version": "v0.0.0-20261019180522-ce908d29299b",
-    "notices": "licenses/go/google.golang.org__genproto__googleapis__rpc@v0.0.0-20261019180522-ce908d29299b",
+    "version": "v0.0.0-20261123191846-1e707ab9fbc2",
+    "notices": "licenses/go/google.golang.org__genproto__googleapis__rpc@v0.0.0-20261123191846-1e707ab9fbc2",
     "files": [
       "LICENSE"
     ]
   },
   {
     "module": "google.golang.org/grpc",
-    "version": "v1.84.0",
-    "notices": "licenses/go/google.golang.org__grpc@v1.84.0",
+    "version": "v1.85.0",
+    "notices": "licenses/go/google.golang.org__grpc@v1.85.0",
     "files": [
       "LICENSE",
       "NOTICE.txt"
@@ -347,8 +350,8 @@
   },
   {
     "module": "gopkg.in/ini.v1",
-    "version": "v1.67.3",
-    "notices": "licenses/go/gopkg.in__ini.v1@v1.67.3",
+    "version": "v1.68.0",
+    "notices": "licenses/go/gopkg.in__ini.v1@v1.68.0",
     "files": [
       "LICENSE"
     ]
