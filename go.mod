@@ -4,7 +4,7 @@ go 1.27.4
 
 require (
 	github.com/couchbase/gocb/v2 v2.13.0
-	github.com/gorilla/websocket v1.5.3
+	github.com/gorilla/websocket v1.5.4-0.20240701034025-d67f41855da4
 	github.com/redis/go-redis/v9 v9.24.0
 	github.com/soulteary/http-kit/v2 v2.1.2
 	github.com/soulteary/otterio-sdk/v7 v7.3.4

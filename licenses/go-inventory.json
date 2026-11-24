@@ -9,8 +9,8 @@
   },
   {
     "module": "github.com/gorilla/websocket",
-    "version": "v1.5.3",
-    "notices": "licenses/go/github.com__gorilla__websocket@v1.5.3",
+    "version": "v1.5.4-0.20240701034025-d67f41855da4",
+    "notices": "licenses/go/github.com__gorilla__websocket@v1.5.4-0.20240701034025-d67f41855da4",
     "files": [
       "LICENSE"
     ]
