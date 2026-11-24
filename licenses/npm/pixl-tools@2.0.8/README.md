@@ -103,6 +103,8 @@ This module contains a set of miscellaneous utility functions that don't fit int
 
 # Usage
 
+Requires Node.js v22.12.0 or newer.
+
 Use [npm](https://www.npmjs.com/) to install the module:
 
 ```sh
@@ -1621,7 +1623,7 @@ let sorted = Tools.sortBy( list, "date", { type: "number", dir: 1, copy: true } 
 BOOLEAN includesAny( HAYSTACK, NEEDLES )
 ```
 
-Returns true if `haystack` contains any `needles`, false otherwise.  Both arguments must be arrays.  This is similar to [Array.includes]() except that it searches the first array (haystack) for **any** matches in the second array (needles).  Example use:
+Returns true if `haystack` contains any `needles`, false otherwise.  Both arguments must be arrays.  This is similar to [Array.includes](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/includes) except that it searches the first array (haystack) for **any** matches in the second array (needles).  Example use:
 
 ```js
 var haystack = ['red', 'green', 'yellow', 'blue', 'purple', 'black'];
@@ -1634,7 +1636,7 @@ var matched = Tools.includesAny(haystack, ['red', 'white', 'blue']); // true
 BOOLEAN includesAll( HAYSTACK, NEEDLES )
 ```
 
-Returns true if `haystack` contains all `needles` (in any order), false otherwise.  Both arguments must be arrays.  This is similar to [Array.includes]() except that it searches the first array (haystack) for **all** matches in the second array (needles).  Example use:
+Returns true if `haystack` contains all `needles` (in any order), false otherwise.  Both arguments must be arrays.  This is similar to [Array.includes](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/includes) except that it searches the first array (haystack) for **all** matches in the second array (needles).  Example use:
 
 ```js
 var haystack = ['red', 'green', 'yellow', 'blue', 'purple', 'black'];
@@ -1668,10 +1670,18 @@ Here are a few non-functions available in the `Tools` object.
 
 ## async
 
-This is a reference to the extremely awesome [async](https://npmjs.com/package/async) package from NPM.  I use this so frequently that I decided to include in tools.  Access it like this:
+This is a reference to the [async](https://npmjs.com/package/async) package from NPM.  Access it like this:
 
 ```js
 const async = Tools.async;
+```
+
+## sjson
+
+This is a reference to the [secure-json-parse](https://npmjs.com/package/secure-json-parse) package from NPM.  Access it like this:
+
+```js
+const sjson = Tools.sjson;
 ```
 
 ## isLinux

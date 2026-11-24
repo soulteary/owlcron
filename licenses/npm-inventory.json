@@ -1,11 +1,11 @@
 [
   {
     "name": "@kurkle/color",
-    "version": "0.3.4",
+    "version": "0.6.6",
     "license": "MIT",
-    "notices": "licenses/npm/@kurkle__color@0.3.4",
+    "notices": "licenses/npm/@kurkle__color@0.6.6",
     "files": [
-      "LICENSE.md",
+      "LICENSE",
       "README.md"
     ]
   },
@@ -31,9 +31,9 @@
   },
   {
     "name": "chart.js",
-    "version": "4.5.1",
+    "version": "4.6.2",
     "license": "MIT",
-    "notices": "licenses/npm/chart.js@4.5.1",
+    "notices": "licenses/npm/chart.js@4.6.2",
     "files": [
       "LICENSE.md",
       "README.md"
@@ -61,9 +61,9 @@
   },
   {
     "name": "engine.io-client",
-    "version": "6.6.7",
+    "version": "6.6.8",
     "license": "MIT",
-    "notices": "licenses/npm/engine.io-client@6.6.7",
+    "notices": "licenses/npm/engine.io-client@6.6.8",
     "files": [
       "LICENSE",
       "README.md"
@@ -99,9 +99,9 @@
   },
   {
     "name": "jquery",
-    "version": "4.0.0",
+    "version": "4.1.0",
     "license": "MIT",
-    "notices": "licenses/npm/jquery@4.0.0",
+    "notices": "licenses/npm/jquery@4.1.0",
     "files": [
       "LICENSE.txt",
       "README.md"
@@ -163,9 +163,9 @@
   },
   {
     "name": "moment-timezone",
-    "version": "0.6.5",
+    "version": "0.6.6",
     "license": "MIT",
-    "notices": "licenses/npm/moment-timezone@0.6.5",
+    "notices": "licenses/npm/moment-timezone@0.6.6",
     "files": [
       "LICENSE",
       "README.md"
@@ -182,16 +182,6 @@
     ]
   },
   {
-    "name": "picomatch",
-    "version": "4.0.4",
-    "license": "MIT",
-    "notices": "licenses/npm/picomatch@4.0.4",
-    "files": [
-      "LICENSE",
-      "README.md"
-    ]
-  },
-  {
     "name": "pixl-class",
     "version": "1.0.3",
     "license": "MIT",
@@ -202,9 +192,9 @@
   },
   {
     "name": "pixl-tools",
-    "version": "2.0.5",
+    "version": "2.0.8",
     "license": "MIT",
-    "notices": "licenses/npm/pixl-tools@2.0.5",
+    "notices": "licenses/npm/pixl-tools@2.0.8",
     "files": [
       "LICENSE.md",
       "README.md"
@@ -236,6 +226,16 @@
     "notices": "licenses/npm/prr@1.0.1",
     "files": [
       "LICENSE.md",
+      "README.md"
+    ]
+  },
+  {
+    "name": "secure-json-parse",
+    "version": "4.1.1",
+    "license": "BSD-3-Clause",
+    "notices": "licenses/npm/secure-json-parse@4.1.1",
+    "files": [
+      "LICENSE",
       "README.md"
     ]
   },
